@@ -1,8 +1,8 @@
 <resources>
-    <style name="Theme.SwiftDrop" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">#F6F9FF</item>
-        <item name="android:navigationBarColor">#F6F9FF</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
+    <style name="Theme.SwiftDrop" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#F6F9FC</item>
+        <item name="android:statusBarColor">#0F172A</item>
+        <item name="android:navigationBarColor">#0F172A</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

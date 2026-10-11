@@ -35,6 +35,8 @@ private val Cyan = Color(0xFF03C1DA)
 private val PaleBlue = Color(0xFFEAF3FF)
 private val Midnight = Color(0xFF101A35)
 
+// This app uses ComponentActivity directly, never FragmentActivity or Fragments.
+@android.annotation.SuppressLint("InvalidFragmentVersionForActivityResult")
 class MainActivity : ComponentActivity() {
     private lateinit var manager: NearbyTransferManager
     private var permissionAction: (() -> Unit)? = null
@@ -69,9 +71,13 @@ class MainActivity : ComponentActivity() {
                 add(Manifest.permission.BLUETOOTH_SCAN)
                 add(Manifest.permission.BLUETOOTH_ADVERTISE)
                 add(Manifest.permission.BLUETOOTH_CONNECT)
-                if (Build.VERSION.SDK_INT == 31) add(Manifest.permission.ACCESS_FINE_LOCATION)
+                if (Build.VERSION.SDK_INT == 31) {
+                    add(Manifest.permission.ACCESS_FINE_LOCATION)
+                    add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                }
             } else if (Build.VERSION.SDK_INT >= 29) {
                 add(Manifest.permission.ACCESS_FINE_LOCATION)
+                add(Manifest.permission.ACCESS_COARSE_LOCATION)
             } else {
                 add(Manifest.permission.ACCESS_COARSE_LOCATION)
             }
@@ -103,7 +109,7 @@ private fun SwiftDropApp(manager: NearbyTransferManager, send: () -> Unit, recei
         primary = Blue, background = Color(0xFFF6F9FF), surface = Color.White,
         onSurface = Midnight, onBackground = Midnight
     )
-    MaterialTheme(colorScheme = colors) {
+    app.swiftdrop.ui.theme.SwiftDropTheme(dark = dark) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
