@@ -95,3 +95,6 @@ fun formatBytes(bytes: Long): String = when {
     bytes >= 1024L -> String.format(Locale.getDefault(), "%.1f KB", bytes / 1024.0)
     else -> String.format(Locale.getDefault(), "%d B", bytes)
 }
+
+@Composable
+fun messageText(message: app.swiftdrop.UiMessage): String = stringResource(message.resource,*message.arguments.toTypedArray())

@@ -48,7 +48,7 @@ fun HomeScreen(state: TransferUiState, send: (Array<String>) -> Unit, receive: (
             ActionCard(R.drawable.ic_receive, stringResource(R.string.receive_files), stringResource(R.string.make_visible),
                 Modifier.weight(1f).widthIn(min = 145.dp), secondary = true, onClick = receive)
         }
-        if (state.isDiscovering || state.isAdvertising || state.connectedName != null || state.progress != null) {
+        if (state.isDiscovering || state.isAdvertising || state.connectedName != null || state.progress != null || state.selected.isNotEmpty()) {
             OutlinedButton(resume, Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                 AppIcon(R.drawable.ic_progress)
                 Spacer(Modifier.width(8.dp))

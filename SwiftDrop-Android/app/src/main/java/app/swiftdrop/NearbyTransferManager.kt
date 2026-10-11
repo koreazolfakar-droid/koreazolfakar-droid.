@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.SystemClock
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
@@ -50,7 +51,10 @@ class NearbyTransferManager(private val context: Context) {
     private var outboundPeer = ""
 
     private data class IncomingMetadata(val name: String, val size: Long)
-    private fun info(message: String) { state.update { it.copy(status = message) } }
+    private val measurements = TransferMeasurements()
+    private fun info(resource: Int, vararg arguments: String, error: Boolean = false) {
+        state.update { it.copy(status = UiMessage(resource, arguments.toList()), hasError = error) }
+    }
 
     fun setPage(page: String) { state.update { it.copy(page = page) } }
     fun toggleTheme() { state.update { it.copy(darkTheme = !it.darkTheme) } }
@@ -72,12 +76,12 @@ class NearbyTransferManager(private val context: Context) {
             // BOTH devices must compare authentication digits and explicitly accept.
             state.update {
                 it.copy(pending = PendingConnection(endpointId, details.endpointName,
-                    details.authenticationDigits), status = "Compare the code on both phones")
+                    details.authenticationDigits), status = UiMessage(R.string.compare_codes), connectingId = endpointId)
             }
         }
 
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
-            state.update { it.copy(pending = null) }
+            state.update { it.copy(pending = null, connectingId = null) }
             if (result.status.statusCode == com.google.android.gms.nearby.connection.ConnectionsStatusCodes.STATUS_OK) {
                 connectedId = endpointId
                 client.stopAdvertising()
@@ -86,17 +90,23 @@ class NearbyTransferManager(private val context: Context) {
                     ?: state.value.connectedName ?: "Nearby device"
                 outboundPeer = peerName
                 state.update { it.copy(connectedName = peerName, isAdvertising = false,
-                    isDiscovering = false, page = "transfer", status = "Connected securely") }
+                    isDiscovering = false, page = "transfer", status = UiMessage(R.string.connected), hasError = false) }
                 if (outboundUris.isNotEmpty()) sendNext()
             } else {
-                info("Connection rejected or failed (${result.status.statusCode})")
+                state.update { it.copy(connectedName = null) }
+                info(R.string.connection_failed, result.status.statusCode.toString(), error = true)
             }
         }
 
         override fun onDisconnected(endpointId: String) {
+            if (connectedId != endpointId) return
             connectedId = null
             activeOutboundId = null
-            state.update { it.copy(connectedName = null, status = "Disconnected", pending = null) }
+            outboundUris = emptyList()
+            state.update { it.copy(connectedName = null, status = UiMessage(R.string.disconnected), pending = null,
+                connectingId = null, progress = it.progress?.let { progress ->
+                    if (progress.outcome == TransferOutcome.Running) progress.copy(outcome = TransferOutcome.Failed) else progress
+                }) }
         }
     }
 
@@ -111,7 +121,7 @@ class NearbyTransferManager(private val context: Context) {
                         val name = SafeFileName.normalize(json.getString("name"))
                         incomingMetadata[id] = IncomingMetadata(name, json.optLong("size", -1L))
                         maybePersistReceived(id)
-                    } catch (_: Exception) { info("Invalid file metadata ignored") }
+                    } catch (_: Exception) { info(R.string.invalid_metadata, error = true) }
                 }
                 Payload.Type.FILE -> {
                     incomingPayloads[payload.id] = payload
@@ -128,9 +138,17 @@ class NearbyTransferManager(private val context: Context) {
             val direction = if (sent) "Sending" else "Receiving"
             val name = if (sent) activeOutboundName else incomingMetadata[id]?.name ?: "Incoming file"
             val total = update.totalBytes.coerceAtLeast(0L)
+            val outcome = when (update.status) {
+                PayloadTransferUpdate.Status.SUCCESS -> if (sent) TransferOutcome.Complete else TransferOutcome.Saving
+                PayloadTransferUpdate.Status.FAILURE -> TransferOutcome.Failed
+                PayloadTransferUpdate.Status.CANCELED -> TransferOutcome.Cancelled
+                else -> TransferOutcome.Running
+            }
+            val measurement = measurements.sample(id, update.bytesTransferred, total, SystemClock.elapsedRealtime())
             state.update { it.copy(page = "transfer", progress = TransferProgress(name,
                 direction, update.bytesTransferred.coerceAtLeast(0L), total,
-                finished = update.status == PayloadTransferUpdate.Status.SUCCESS)) }
+                finished = sent && update.status == PayloadTransferUpdate.Status.SUCCESS,
+                outcome = outcome, measurement = measurement)) }
             when (update.status) {
                 PayloadTransferUpdate.Status.SUCCESS -> {
                     if (sent) {
@@ -146,7 +164,7 @@ class NearbyTransferManager(private val context: Context) {
                 }
                 PayloadTransferUpdate.Status.FAILURE, PayloadTransferUpdate.Status.CANCELED -> {
                     if (sent) activeOutboundId = null
-                    info("Transfer stopped (${update.status})")
+                    info(if (update.status == PayloadTransferUpdate.Status.CANCELED) R.string.cancelled else R.string.failed, error = true)
                 }
             }
         }
@@ -157,13 +175,13 @@ class NearbyTransferManager(private val context: Context) {
         client.stopAllEndpoints()
         connectedId = null
         outboundUris = emptyList()
-        state.update { it.copy(page = "receive", status = "Making your phone visible…",
-            peers = emptyList(), selected = emptyList()) }
+        state.update { it.copy(page = "receive", status = UiMessage(R.string.making_visible), hasError = false, progress = null, connectingId = null,
+            peers = emptyList(), selected = emptyList(), selectedFiles = emptyList()) }
         client.startAdvertising(Build.MODEL.take(26), serviceId, connectionCallback,
             AdvertisingOptions.Builder().setStrategy(strategy).build())
             .addOnSuccessListener { state.update { s -> s.copy(isAdvertising = true,
-                status = "Waiting for sender — keep this screen open") } }
-            .addOnFailureListener { info("Cannot receive: ${it.localizedMessage ?: it.javaClass.simpleName}") }
+                status = UiMessage(R.string.waiting_sender)) } }
+            .addOnFailureListener { info(R.string.cannot_receive, it.localizedMessage ?: it.javaClass.simpleName, error = true) }
     }
 
     fun discover(uris: List<Uri>) {
@@ -173,29 +191,34 @@ class NearbyTransferManager(private val context: Context) {
         connectedId = null
         outboundUris = uris
         outboundIndex = 0
-        state.update { it.copy(page = "discover", status = "Searching for nearby devices…",
+        state.update { it.copy(page = "discover", status = UiMessage(R.string.searching), hasError = false, progress = null, connectingId = null,
             peers = emptyList(), selected = uris) }
         client.startDiscovery(serviceId, discoveryCallback,
             DiscoveryOptions.Builder().setStrategy(strategy).build())
             .addOnSuccessListener { state.update { s -> s.copy(isDiscovering = true) } }
-            .addOnFailureListener { info("Cannot search: ${it.localizedMessage ?: it.javaClass.simpleName}") }
+            .addOnFailureListener { info(R.string.cannot_search, it.localizedMessage ?: it.javaClass.simpleName, error = true) }
     }
 
     fun connect(peer: Peer) {
-        info("Connecting to ${peer.name}…")
+        if (state.value.connectingId != null || state.value.pending != null) return
+        state.update { it.copy(connectingId = peer.id, hasError = false) }
+        info(R.string.connecting, peer.name)
         client.requestConnection(Build.MODEL.take(26), peer.id, connectionCallback)
-            .addOnFailureListener { info("Connection request failed: ${it.localizedMessage}") }
+            .addOnFailureListener {
+                state.update { s -> s.copy(connectingId = null) }
+                info(R.string.connection_request_failed, it.localizedMessage ?: it.javaClass.simpleName, error = true)
+            }
     }
 
     fun answerConnection(accept: Boolean) {
         val request = state.value.pending ?: return
-        state.update { it.copy(pending = null, connectedName = request.peerName) }
+        state.update { it.copy(pending = null, connectedName = if (accept) request.peerName else null, connectingId = if (accept) request.endpointId else null) }
         if (accept) {
             client.acceptConnection(request.endpointId, payloadCallback)
-                .addOnFailureListener { info("Accept failed: ${it.localizedMessage}") }
+                .addOnFailureListener { state.update { s -> s.copy(connectingId = null, connectedName = null) }; info(R.string.accept_failed, it.localizedMessage ?: it.javaClass.simpleName, error = true) }
         } else {
             client.rejectConnection(request.endpointId)
-            info("Connection declined")
+            info(R.string.connection_declined)
         }
     }
 
@@ -204,7 +227,7 @@ class NearbyTransferManager(private val context: Context) {
         if (activeOutboundId != null) return
         if (outboundIndex >= outboundUris.size) {
             outboundUris = emptyList()
-            info("All selected files sent")
+            info(R.string.all_sent)
             return
         }
         val uri = outboundUris[outboundIndex++]
@@ -215,6 +238,8 @@ class NearbyTransferManager(private val context: Context) {
                 val filePayload = Payload.fromFile(pfd)
                 activeOutboundId = filePayload.id
                 activeOutboundName = meta.name
+                state.update { it.copy(progress = TransferProgress(meta.name, "Sending", 0, meta.size),
+                    status = UiMessage(R.string.sending), hasError = false) }
                 val metadata = JSONObject().put("type", "file-metadata")
                     .put("id", filePayload.id).put("name", meta.name).put("size", meta.size)
                 client.sendPayload(target, Payload.fromBytes(metadata.toString().toByteArray(Charsets.UTF_8)))
@@ -223,17 +248,17 @@ class NearbyTransferManager(private val context: Context) {
                             .addOnFailureListener { e ->
                                 filePayload.close()
                                 activeOutboundId = null
-                                info("Send failed: ${e.localizedMessage}")
+                                failTransfer(R.string.send_failed, e)
                             }
                     }
                     .addOnFailureListener { e ->
                         filePayload.close()
                         activeOutboundId = null
-                        info("Metadata failed: ${e.localizedMessage}")
+                        failTransfer(R.string.metadata_failed, e)
                     }
             } catch (e: Exception) {
                 activeOutboundId = null
-                info("Could not read file: ${e.localizedMessage}")
+                failTransfer(R.string.read_failed, e)
             }
         }
     }
@@ -263,13 +288,13 @@ class NearbyTransferManager(private val context: Context) {
                 val uri = requireNotNull(file.asFile()?.asUri())
                 val written = saveIntoDownloads(uri, meta.name)
                 try { context.contentResolver.delete(uri, null, null) } catch (_: Exception) {}
-                state.update { s -> s.copy(status = "Saved ${meta.name} to $written",
-                    progress = TransferProgress(meta.name, "Received", meta.size, meta.size, true),
+                state.update { s -> s.copy(status = UiMessage(R.string.saved_file, listOf(meta.name, written.location)), hasError = false,
+                    progress = TransferProgress(meta.name, "Received", written.bytes, written.bytes, true),
                     history = listOf(HistoryEntry(meta.name,
-                        s.connectedName ?: "Nearby device", "Received", meta.size,
+                        s.connectedName ?: context.getString(R.string.nearby_device), "Received", written.bytes,
                         System.currentTimeMillis())) + s.history) }
             } catch (e: Exception) {
-                info("Saving failed: ${e.localizedMessage}")
+                failTransfer(R.string.save_failed, e)
             } finally {
                 incomingPayloads.remove(id)
                 incomingMetadata.remove(id)
@@ -278,7 +303,10 @@ class NearbyTransferManager(private val context: Context) {
         }
     }
 
-    private fun saveIntoDownloads(source: Uri, untrustedName: String): String {
+    private data class SavedFile(val location: String, val bytes: Long)
+
+    private fun saveIntoDownloads(source: Uri, untrustedName: String): SavedFile {
+        var writtenBytes = 0L
         val filename = SafeFileName.normalize(untrustedName)
         if (Build.VERSION.SDK_INT >= 29) {
             val extension = filename.substringAfterLast('.', "").lowercase()
@@ -298,7 +326,7 @@ class NearbyTransferManager(private val context: Context) {
                     requireNotNull(input)
                     resolver.openOutputStream(destination).use { output ->
                         requireNotNull(output)
-                        input.copyTo(output, 64 * 1024)
+                        writtenBytes = input.copyTo(output, 64 * 1024)
                     }
                 }
                 resolver.update(destination, ContentValues().apply {
@@ -308,7 +336,7 @@ class NearbyTransferManager(private val context: Context) {
                 resolver.delete(destination, null, null)
                 throw e
             }
-            return "Downloads/SwiftDrop"
+            return SavedFile("Downloads/SwiftDrop", writtenBytes)
         }
         val appDownloads = requireNotNull(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS))
         val folder = File(appDownloads, "SwiftDrop")
@@ -324,13 +352,13 @@ class NearbyTransferManager(private val context: Context) {
         try {
             context.contentResolver.openInputStream(source).use { input ->
                 requireNotNull(input)
-                FileOutputStream(dest).use { output -> input.copyTo(output, 64 * 1024) }
+                FileOutputStream(dest).use { output -> writtenBytes = input.copyTo(output, 64 * 1024) }
             }
         } catch (e: Exception) {
             dest.delete()
             throw e
         }
-        return "App downloads/SwiftDrop"
+        return SavedFile("App downloads/SwiftDrop", writtenBytes)
     }
 
     fun disconnect() {
@@ -339,12 +367,43 @@ class NearbyTransferManager(private val context: Context) {
         connectedId = null
         activeOutboundId = null
         outboundUris = emptyList()
-        state.update { it.copy(status = "Ready to share", isAdvertising = false,
+        state.update { it.copy(status = UiMessage(), hasError = false, connectingId = null, isAdvertising = false,
             isDiscovering = false, connectedName = null, pending = null, peers = emptyList(),
-            selected = emptyList(), progress = null, page = "home") }
+            selected = emptyList(), selectedFiles = emptyList(), loadingSelection = false, progress = null, page = "home") }
+    }
+
+    fun selectFiles(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        val selected = uris.distinct()
+        state.update { it.copy(page = "selection", selected = selected, selectedFiles = emptyList(),
+            loadingSelection = true, hasError = false) }
+        io.execute {
+            try {
+                val files = selected.map { uri -> readMetadata(uri).let { SelectedFile(uri, it.name, it.size) } }
+                state.update { if (it.selected == selected) it.copy(selectedFiles = files, loadingSelection = false) else it }
+            } catch (e: Exception) {
+                state.update { it.copy(loadingSelection = false) }
+                info(R.string.file_unavailable, error = true)
+            }
+        }
+    }
+
+    private fun failTransfer(resource: Int, exception: Exception) {
+        state.update { it.copy(progress = it.progress?.copy(outcome = TransferOutcome.Failed, finished = false)) }
+        info(resource, exception.localizedMessage ?: exception.javaClass.simpleName, error = true)
+    }
+
+    fun cancelTransfer() {
+        val progress = state.value.progress ?: return disconnect()
+        activeOutboundId?.let { client.cancelPayload(it) }
+        incomingPayloads.keys.forEach { client.cancelPayload(it) }
+        disconnect()
+        state.update { it.copy(page = "transfer", progress = progress.copy(outcome = TransferOutcome.Cancelled, finished = false),
+            status = UiMessage(R.string.cancelled)) }
     }
 
     private fun resetSearching() {
+        measurements.reset()
         client.stopAdvertising()
         client.stopDiscovery()
         state.update { it.copy(isAdvertising = false, isDiscovering = false) }
