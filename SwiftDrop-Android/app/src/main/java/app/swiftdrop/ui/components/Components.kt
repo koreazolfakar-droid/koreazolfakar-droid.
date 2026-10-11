@@ -15,10 +15,13 @@ import androidx.compose.ui.unit.dp
 import app.swiftdrop.HistoryEntry
 import app.swiftdrop.R
 import java.util.Date
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import java.text.DateFormat as JavaDateFormat
 import java.util.Locale
 
 @Composable
-fun AppIcon(@DrawableRes icon: Int, description: String? = null, modifier: Modifier = Modifier,
+fun AppIcon(@DrawableRes icon: Int, modifier: Modifier = Modifier, description: String? = null,
             tint: Color = MaterialTheme.colorScheme.primary) {
     Icon(painterResource(icon), description, modifier.size(24.dp), tint = tint)
 }
@@ -77,7 +80,8 @@ fun TransferHistoryItem(entry: HistoryEntry) {
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                Text(DateFormat.format("MMM d, HH:mm", Date(entry.timestamp)).toString(),
+                val locale = LocalConfiguration.current.locales[0]
+                Text(JavaDateFormat.getDateTimeInstance(JavaDateFormat.MEDIUM,JavaDateFormat.SHORT,locale).format(Date(entry.timestamp)),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(sizeLabel(entry.bytes), style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary)
@@ -87,14 +91,7 @@ fun TransferHistoryItem(entry: HistoryEntry) {
 }
 
 @Composable
-fun sizeLabel(bytes: Long): String = if (bytes < 0) stringResource(R.string.unknown) else formatBytes(bytes)
-
-fun formatBytes(bytes: Long): String = when {
-    bytes >= 1024L * 1024L * 1024L -> String.format(Locale.getDefault(), "%.1f GB", bytes / (1024.0 * 1024 * 1024))
-    bytes >= 1024L * 1024L -> String.format(Locale.getDefault(), "%.1f MB", bytes / (1024.0 * 1024))
-    bytes >= 1024L -> String.format(Locale.getDefault(), "%.1f KB", bytes / 1024.0)
-    else -> String.format(Locale.getDefault(), "%d B", bytes)
-}
+fun sizeLabel(bytes: Long): String = if (bytes < 0) stringResource(R.string.unknown) else android.text.format.Formatter.formatShortFileSize(LocalContext.current,bytes)
 
 @Composable
 fun messageText(message: app.swiftdrop.UiMessage): String = stringResource(message.resource,*message.arguments.toTypedArray())

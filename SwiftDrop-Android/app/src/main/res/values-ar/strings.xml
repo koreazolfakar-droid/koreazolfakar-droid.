@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="brand_tagline">قرّب الأجهزة. وشارك بسهولة.</string>
     <string name="home">الرئيسية</string>
@@ -15,11 +15,11 @@
     <string name="categories">شو بدّك تبعت؟</string>
     <string name="photos">صور</string>
     <string name="videos">فيديو</string>
-    <string name="applications">ملفات APK</string>
+    <string name="applications">التطبيقات</string>
     <string name="documents">مستندات</string>
     <string name="music">موسيقى</string>
     <string name="all_files">كل الملفات</string>
-    <string name="apk_hint">اختار ملف APK من منتقي أندرويد. التطبيقات المثبّتة لا يتم استخراجها.</string>
+    <string name="apk_hint">اختار التطبيقات المثبّتة أو ملفات APK. التطبيقات المقسّمة تُرسَل مع أجزائها المطلوبة.</string>
     <string name="recent">آخر عمليات النقل</string>
     <string name="see_all">عرض الكل</string>
     <string name="no_transfers">بلّش أول عملية نقل</string>
@@ -33,7 +33,6 @@
     <string name="connecting">عم نتصل بـ %1$s…</string>
     <string name="cancel">إلغاء</string>
     <string name="retry">إعادة المحاولة</string>
-    <string name="selected_summary">%1$d ملفات · %2$s</string>
     <string name="selection_title">جاهز للإرسال</string>
     <string name="selection_caption">راجع الملفات وبعدين ابحث عن الجهاز المستقبِل.</string>
     <string name="find_receiver">البحث عن مستقبِل</string>
@@ -65,7 +64,6 @@
     <string name="remaining">الوقت المتبقّي التقريبي</string>
     <string name="measuring">جاري القياس…</string>
     <string name="unknown">غير معروف</string>
-    <string name="eta_seconds">%1$d ثانية</string>
     <string name="speed_value">%1$s/ث</string>
     <string name="connection">الاتصال</string>
     <string name="engine_value">Nearby Connections · اتصال مباشر</string>
@@ -116,4 +114,32 @@
     <string name="confirm_leave">إيقاف الجلسة الحالية؟</string>
     <string name="leave_caption">رح ينقطع الاتصال وتنلغى أي عملية نقل غير مكتملة.</string>
     <string name="keep_session">متابعة المشاركة</string>
+    <string name="file_library">اختيار الملفات</string>
+    <string name="library_caption">اختار القسم والملفات، وبعدين راجعها قبل الإرسال.</string>
+    <string name="apps_caption">اختار التطبيقات المثبّتة الظاهرة بقائمة تطبيقاتك.</string>
+    <string name="split_apk_notice">التطبيقات المقسّمة تشمل ملف APK الرئيسي وكل الأجزاء المثبّتة. الجهاز المستقبِل قد يحتاج مثبّت APK يدعم الأجزاء. بيانات التطبيق لا تُرسَل.</string>
+    <string name="choose_apk">اختيار ملف APK</string>
+    <string name="preparing_apps">جاري تجهيز ملفات APK الفعلية…</string>
+    <string name="loading_apps">جاري تحميل التطبيقات المثبّتة…</string>
+    <string name="apps_failed">تعذّر تجهيز التطبيقات. حاول مجدداً أو اختار ملف APK.</string>
+    <string name="no_apps">ما لقينا تطبيقات ظاهرة قابلة للمشاركة. فيك تختار ملف APK.</string>
+    <string name="prepare_selected">تجهيز التطبيقات المحدّدة (%1$d)</string>
+    <string name="split_app">APK مقسّم · عدة ملفات</string>
+    <string name="refresh_apps">تحديث قائمة التطبيقات</string>
+    <plurals name="selected_summary">
+        <item quantity="zero">%1$d ملفات · %2$s</item>
+        <item quantity="one">%1$d ملف · %2$s</item>
+        <item quantity="two">%1$d ملفان · %2$s</item>
+        <item quantity="few">%1$d ملفات · %2$s</item>
+        <item quantity="many">%1$d ملفاً · %2$s</item>
+        <item quantity="other">%1$d ملف · %2$s</item>
+    </plurals>
+    <plurals name="eta_seconds">
+        <item quantity="zero">%1$d ثوانٍ</item>
+        <item quantity="one">%1$d ثانية</item>
+        <item quantity="two">%1$d ثانيتان</item>
+        <item quantity="few">%1$d ثوانٍ</item>
+        <item quantity="many">%1$d ثانية</item>
+        <item quantity="other">%1$d ثانية</item>
+    </plurals>
 </resources>

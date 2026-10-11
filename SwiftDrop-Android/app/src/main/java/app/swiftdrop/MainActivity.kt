@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         model = ViewModelProvider(this)[SwiftDropViewModel::class.java]
         setContent {
-            SwiftDropApp(manager,model.settings,send={mime -> pickFiles.launch(mime)},
+            SwiftDropApp(manager,model.settings,model.apps,send={mime -> pickFiles.launch(mime)},
                 receive={withNearbyPermissions(PendingNearbyAction.Receive)},
                 discover={withNearbyPermissions(PendingNearbyAction.Discover)},
                 openSettings={startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))})

@@ -16,7 +16,7 @@ import app.swiftdrop.ui.components.*
 
 @Composable
 fun HomeScreen(state: TransferUiState, send: (Array<String>) -> Unit, receive: () -> Unit,
-               seeAll: () -> Unit, resume: () -> Unit, status: String) {
+               seeAll: () -> Unit, resume: () -> Unit, status: String, openFiles: () -> Unit = { send(arrayOf("*/*")) }, openApps: () -> Unit = { send(arrayOf("application/vnd.android.package-archive")) }) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -44,7 +44,7 @@ fun HomeScreen(state: TransferUiState, send: (Array<String>) -> Unit, receive: (
         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             maxItemsInEachRow = 2) {
             ActionCard(R.drawable.ic_send, stringResource(R.string.send_files), stringResource(R.string.choose_files),
-                Modifier.weight(1f).widthIn(min = 145.dp)) { send(arrayOf("*/*")) }
+                Modifier.weight(1f).widthIn(min = 145.dp), onClick = openFiles)
             ActionCard(R.drawable.ic_receive, stringResource(R.string.receive_files), stringResource(R.string.make_visible),
                 Modifier.weight(1f).widthIn(min = 145.dp), secondary = true, onClick = receive)
         }
@@ -63,7 +63,7 @@ fun HomeScreen(state: TransferUiState, send: (Array<String>) -> Unit, receive: (
                 Triple(R.drawable.ic_documents,R.string.documents,arrayOf("application/pdf","text/*","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document")),
                 Triple(R.drawable.ic_music,R.string.music,arrayOf("audio/*")),
                 Triple(R.drawable.ic_folder,R.string.all_files,arrayOf("*/*"))).forEach { (icon,label,mime) ->
-                OutlinedButton({ send(mime) }, Modifier.heightIn(min = 48.dp),
+                OutlinedButton({ if(label==R.string.applications) openApps() else send(mime) }, Modifier.heightIn(min = 48.dp),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)) {
                     AppIcon(icon)
                     Spacer(Modifier.width(8.dp))

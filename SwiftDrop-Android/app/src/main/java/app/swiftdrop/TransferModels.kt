@@ -15,7 +15,8 @@ data class TransferProgress(
     val total: Long,
     val finished: Boolean = false,
     val outcome: TransferOutcome = if (finished) TransferOutcome.Complete else TransferOutcome.Running,
-    val measurement: TransferMeasurement = TransferMeasurement()
+    val measurement: TransferMeasurement = TransferMeasurement(),
+    val payloadId: Long? = null
 ) {
     val fraction: Float get() = if (total <= 0) 0f else (bytes.coerceIn(0,total).toDouble() / total).toFloat()
     val percent: Int get() = (fraction * 100).toInt()

@@ -9,6 +9,7 @@ enum class PendingNearbyAction { Discover, Receive }
 class SwiftDropViewModel(application: Application) : AndroidViewModel(application) {
     val manager = NearbyTransferManager(application)
     val settings = AppSettings(application)
+    val apps = InstalledAppsController(application,manager)
     var pendingAction: PendingNearbyAction? = null
-    override fun onCleared() { manager.close() }
+    override fun onCleared() { apps.close();manager.close() }
 }

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="brand_tagline">A little closer. A lot faster.</string>
     <string name="home">Home</string>
@@ -15,11 +15,11 @@
     <string name="categories">What would you like to send?</string>
     <string name="photos">Photos</string>
     <string name="videos">Videos</string>
-    <string name="applications">APK files</string>
+    <string name="applications">Applications</string>
     <string name="documents">Documents</string>
     <string name="music">Music</string>
     <string name="all_files">All files</string>
-    <string name="apk_hint">Select an APK file using the Android picker. Installed apps are not exported.</string>
+    <string name="apk_hint">Choose installed apps or APK files. Split apps are shared with their required files.</string>
     <string name="recent">Recent transfers</string>
     <string name="see_all">See all</string>
     <string name="no_transfers">Your next transfer starts here</string>
@@ -33,7 +33,6 @@
     <string name="connecting">Connecting to %1$s…</string>
     <string name="cancel">Cancel</string>
     <string name="retry">Try again</string>
-    <string name="selected_summary">%1$d files · %2$s</string>
     <string name="selection_title">Ready to send</string>
     <string name="selection_caption">Review your selection, then find a nearby receiver.</string>
     <string name="find_receiver">Find a receiver</string>
@@ -65,7 +64,6 @@
     <string name="remaining">Estimated remaining</string>
     <string name="measuring">Measuring…</string>
     <string name="unknown">Unknown</string>
-    <string name="eta_seconds">%1$d seconds</string>
     <string name="speed_value">%1$s/s</string>
     <string name="connection">Connection</string>
     <string name="engine_value">Nearby Connections · Point-to-point</string>
@@ -116,4 +114,24 @@
     <string name="confirm_leave">Stop the current session?</string>
     <string name="leave_caption">This will disconnect the device and cancel any unfinished transfer.</string>
     <string name="keep_session">Keep sharing</string>
+    <string name="file_library">Choose files</string>
+    <string name="library_caption">Choose a category, select your files, then review before sending.</string>
+    <string name="apps_caption">Select installed user apps visible in your launcher.</string>
+    <string name="split_apk_notice">Split apps include the base APK and all installed splits. The receiver may need a compatible split-APK installer. App data is not shared.</string>
+    <string name="choose_apk">Choose an APK file instead</string>
+    <string name="preparing_apps">Preparing actual APK files…</string>
+    <string name="loading_apps">Loading installed apps…</string>
+    <string name="apps_failed">Could not prepare apps. Try again or choose an APK file.</string>
+    <string name="no_apps">No shareable launcher apps found. You can still choose an APK file.</string>
+    <string name="prepare_selected">Prepare selected apps (%1$d)</string>
+    <string name="split_app">Split APK · multiple files</string>
+    <string name="refresh_apps">Refresh app list</string>
+    <plurals name="selected_summary">
+        <item quantity="one">%1$d file · %2$s</item>
+        <item quantity="other">%1$d files · %2$s</item>
+    </plurals>
+    <plurals name="eta_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
 </resources>

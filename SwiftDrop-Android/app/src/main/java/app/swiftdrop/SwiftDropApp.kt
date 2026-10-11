@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import app.swiftdrop.ui.screens.settings.SettingsScreen
 import java.util.Locale
+import app.swiftdrop.ui.screens.files.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,7 +29,7 @@ import app.swiftdrop.ui.screens.history.HistoryScreen
 import app.swiftdrop.ui.theme.*
 
 @Composable
-fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,send: (Array<String>) -> Unit,
+fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: InstalledAppsController,send: (Array<String>) -> Unit,
                  receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit) {
     val settings by preferences.state.collectAsState()
     val systemDark = isSystemInDarkTheme()
@@ -58,15 +59,16 @@ fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,send: (
     }
     CompositionLocalProvider(LocalContext provides localized,LocalConfiguration provides configuration,
         LocalLayoutDirection provides if(configuration.layoutDirection == android.view.View.LAYOUT_DIRECTION_RTL) LayoutDirection.Rtl else LayoutDirection.Ltr) {
-        SwiftDropContent(manager,settings,dark,preferences::setAppearance,preferences::setLanguage,send,receive,discover,openSettings)
+        SwiftDropContent(manager,apps,settings,dark,preferences::setAppearance,preferences::setLanguage,send,receive,discover,openSettings)
     }
 }
 
 @Composable
-private fun SwiftDropContent(manager: NearbyTransferManager,settings: SettingsState,dark: Boolean,
+private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsController,settings: SettingsState,dark: Boolean,
     appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit,send: (Array<String>) -> Unit,
     receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit) {
     val state by manager.state.collectAsState()
+    val appsState by apps.state.collectAsState()
     var leaveAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering || state.connectingId != null
     val guardedSend: (Array<String>) -> Unit = { mime ->
@@ -94,7 +96,11 @@ private fun SwiftDropContent(manager: NearbyTransferManager,settings: SettingsSt
                         "home" -> HomeScreen(state,guardedSend,guardedReceive,{manager.setPage("history")},{
                             manager.setPage(if(state.connectedName!=null || state.progress!=null) "transfer"
                                 else if(state.isAdvertising) "receive" else if(state.selectedFiles.isNotEmpty() && !state.isDiscovering) "selection" else "discover")
-                        },messageText(state.status))
+                        },messageText(state.status),openFiles={manager.setPage("files")},openApps={apps.load();manager.setPage("apps")})
+                        "files" -> FileLibraryScreen(guardedSend,{apps.load();manager.setPage("apps")})
+                        "apps" -> InstalledAppsScreen(appsState,{apps.load(true)},{ selection ->
+                            if(sessionActive) leaveAction={manager.disconnect();apps.export(selection)} else apps.export(selection)
+                        },{guardedSend(arrayOf("application/vnd.android.package-archive"))})
                         "selection" -> SelectionScreen(state,discover,{guardedSend(arrayOf("*/*"))})
                         "discover" -> DiscoveryScreen(state,manager::connect,discover,manager::disconnect)
                         "receive" -> ReceiveScreen(state,receive,manager::disconnect)

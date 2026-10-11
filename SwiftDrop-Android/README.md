@@ -1,33 +1,45 @@
-# SwiftDrop Android — 0.1.0-alpha
+# SwiftDrop Android — 0.2.0-alpha
 
-Open-source style MVP **source project**, not a prebuilt APK. Native Android application with Kotlin, Jetpack Compose, and Google's Nearby Connections API.
+Native Kotlin / Jetpack Compose file sharing using Google's Nearby Connections API. The existing `app.swiftdrop` identity, `app.swiftdrop.nearby` service, metadata protocol and `P2P_POINT_TO_POINT` transport are preserved.
 
-## Implemented in this milestone
-- Ad-free home screen (Send / Receive), device discovery, connection confirmation code, file selection, transfer progress, history, settings.
-- Nearby Connections high-bandwidth `P2P_POINT_TO_POINT` strategy. No account, upload server, or Internet connection required for the transfer.
-- Multiple file selection via Android system document picker (`OpenMultipleDocuments`). File descriptors are streamed to Nearby without making an up-front copy.
-- Both endpoints must accept the connection after comparing the displayed authentication digits.
-- Files are saved to `Downloads/SwiftDrop` via `MediaStore` (Android 10+) or app-private downloads (Android 8/9). Received payload is copied only *after* its transfer succeeded.
-- Transfer history is in memory in v0.1 (clears upon restart). Dark theme setting applies for the current app process only.
+## Features
 
-## Build (Android Studio, JDK 17)
-1. Open the project folder in Android Studio with Android SDK API 36 installed.
-2. Ensure `gradle` version 8.13 available. If the distribution has no wrapper JAR, use **Android Studio > Settings > Build Tools > Gradle > Use local Gradle distribution** OR run `gradle wrapper --gradle-version 8.13` once on a machine with Gradle installed. The wrapper properties are included; the wrapper executable/JAR aren't packaged.
-3. Sync dependencies and run **app** on **two real Android devices with Google Play Services**.
-4. Install the same APK on both. Enable Bluetooth and Wi-Fi; grant requested Nearby permissions.
-5. On recipient tap Receive; on sender tap Send and select files; pick the discovered device; compare PIN on BOTH phones and accept; confirm files appear in Downloads/SwiftDrop.
+- Material 3 dashboard, rounded vector icons, original adaptive blue/cyan launcher icon and Android 13 monochrome layer.
+- Dedicated file library: photos, videos, documents, music and all files use Android's Storage Access Framework. Multiple selections show actual names, sizes and a review step before discovery.
+- Applications lists real launcher-visible installed user applications. Selecting apps exports their base and split APK files into scoped app cache for sharing; application data is never exported. Existing APK files can also be selected through the system picker. Split applications require a compatible split APK installer on the recipient; automatic installation is not implemented.
+- Real nearby discovery, waiting/connection states, animated radar, retry/cancel and explicit authentication-code matching on both devices.
+- Per-file progress from Nearby callbacks, transferred bytes, total size, peer name, rotating activity arc, measured speed and estimated time only when sufficient real samples exist. Received files show a saving state until the copy succeeds.
+- Files are saved to `Downloads/SwiftDrop` through MediaStore on Android 10+, or app-private downloads on Android 8/9. Original safe filename normalization and collision handling are retained.
+- Session history with file sizes, direction, peer and timestamp. History survives Activity rotation but is not persistent across process death.
+- Persistent Light / Dark / System appearance and Arabic / English / System language preferences, with immediate RTL/LTR switching.
+- Scrollable layouts, adaptive home actions, system insets, font scaling, Material touch feedback and at least 48dp interactive controls. Compose previews cover small phones, large text, RTL, dark mode and tablets; runtime accessibility testing remains required.
 
-## Verification checklist (required before public release)
-- Gradle assembleDebug and JUnit tests in Android SDK environment (NOT run in this environment — no Android SDK or Gradle installed).
-- Two-device transfer: small PDF, APK and >2GB file; Android 8–16, permissions denied/allowed, airplane mode with Wi-Fi/Bluetooth enabled, screen rotation, connection drops, storage full, duplicate filenames, corrupted bytes, and concurrent requests.
-- Test payload metadata arriving before or after FILE payload; verify bytes SHA-256 before using for high-assurance integrity (not yet implemented).
-- Reconnect/resume after interruption (not implemented); Android ↔ Windows and Wi-Fi Direct independent transport (not implemented).
-- Background transfer, notifications, accessibility and Arabic translation (not yet implemented).
+## Build
 
-## Security / limitations
-- The built-in Nearby handshake uses authentication digits that users must compare before acceptance.
-- No INTERNET permission; network interactions go through Google Play Services; zero app ads/analytics.
-- Google Play Services required in v0.1; native Wi-Fi Direct fallback / Wi-Fi 7 optimization require future work and measurement on compatible hardware.
-- Progress is per-file; transferred-file history is not persisted; no pause/resume or QR scanning in this version.
-- Connection lifecycle is tied to MainActivity. Avoid leaving the screen or rotating while transferring until a foreground service is added.
-- This code is a source baseline, **not** a tested production release.
+Use JDK 17, Android SDK API 36, build tools 35.0.0 and Gradle 8.13. Open this directory in Android Studio, or run:
+
+```sh
+gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+```
+
+The wrapper properties are included but the wrapper executable/JAR are not packaged; use a local Gradle distribution. The existing GitHub workflow `.github/workflows/swiftdrop-android-ci.yml` runs the same checks on pushes to `swiftdrop-android-v0.1-alpha` and uploads `swiftdrop-v0.2.0-alpha-debug-apk` and validation reports for 14 days. The Debug APK is installable but is not a signed production release.
+
+## Automated validation
+
+All five implementation stages passed debug compilation, unit tests and lint locally. Final validation: **21 unit tests passed, 0 failures; lint 0 errors / 12 warnings; assembleDebug passed**. APK signature verification passed (v2), and packaged metadata confirmed `app.swiftdrop`, version code 2 and `0.2.0-alpha`. Tests cover safe filenames, API-specific permissions, real-measurement timing/reset conditions, and progress arithmetic including large files and unknown sizes.
+
+No connected Android device, emulator or KVM was available. Compilation and unit tests do not prove radio discovery, Android provider behavior or successful transfers on hardware. See [implementation report](docs/WORKDIR/reports/PHASE05_PREMIUM_UI.md).
+
+## Required device validation
+
+1. Install the same APK on two real devices with Google Play Services. Enable Wi-Fi/Bluetooth and grant the requested API-specific permissions.
+2. Recipient: Receive. Sender: Send Files, choose a category, select actual files, review, Send, select the real discovered recipient. Compare the displayed authentication code on both devices before accepting.
+3. Check PDF, music, photos, videos, ordinary APK, split APK sets, multiple files and a file larger than 2 GB; compare SHA-256 of source and saved bytes externally.
+4. Exercise permission denial/retry/settings, rejection, cancellation, disconnect, rediscovery, rotation, navigation during transfer, duplicate filenames, full storage and providers with unknown size.
+5. Test Android 8–16, Arabic/English, RTL, Light/Dark/System, TalkBack, 200% text, small phones, tablets, cutouts and gesture navigation. Check protocol compatibility with 0.1.0-alpha on the other device.
+
+## Privacy and limitations
+
+No ads, analytics, paid services, account, upload server, app INTERNET permission, QUERY_ALL_PACKAGES, MANAGE_EXTERNAL_STORAGE or installation permission were added. Launcher package visibility is declared solely for the applications list. Required Nearby Bluetooth/Wi-Fi/location permissions vary by Android version; READ_EXTERNAL_STORAGE remains limited to API 32 and below for Nearby FILE payloads. File selection uses explicit system-picker grants. App-export cache is scoped to the app and may be reclaimed by Android or cleared in Android app storage settings.
+
+QR connection is clearly marked upcoming. Pause/resume, foreground/background transfer service, persistent history, checksum verification, Windows transport and independent Wi-Fi Direct fallback are not implemented. The transfer manager is retained by a ViewModel across Activity rotation; leaving the process or OS termination can interrupt transfers. Google Play Services is required. This alpha requires the device checks above before a production release.

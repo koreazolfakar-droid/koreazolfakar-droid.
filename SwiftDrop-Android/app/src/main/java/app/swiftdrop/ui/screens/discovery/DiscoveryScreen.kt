@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import app.swiftdrop.*
 import app.swiftdrop.R
@@ -107,7 +108,7 @@ fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: (
     val known = state.selectedFiles.all { it.bytes >= 0 }
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item { PageHeading(stringResource(R.string.selection_title),stringResource(R.string.selection_caption)) }
-        item { Text(stringResource(R.string.selected_summary,state.selected.size,
+        item { Text(pluralStringResource(R.plurals.selected_summary,state.selected.size,state.selected.size,
             if(known) sizeLabel(state.selectedFiles.sumOf { it.bytes }) else stringResource(R.string.unknown)),
             style=MaterialTheme.typography.titleMedium) }
         if(state.loadingSelection) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
