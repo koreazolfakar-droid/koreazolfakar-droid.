@@ -8,6 +8,7 @@ enum class PendingNearbyAction { Discover, Receive }
 /** Keeps the authenticated session, permissions action and history through rotation. */
 class SwiftDropViewModel(application: Application) : AndroidViewModel(application) {
     val manager = NearbyTransferManager(application)
+    val settings = AppSettings(application)
     var pendingAction: PendingNearbyAction? = null
     override fun onCleared() { manager.close() }
 }

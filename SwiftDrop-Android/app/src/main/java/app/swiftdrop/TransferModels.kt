@@ -35,6 +35,5 @@ data class TransferUiState(
     val history: List<HistoryEntry> = emptyList(),
     val isAdvertising: Boolean = false,
     val isDiscovering: Boolean = false,
-    val hasError: Boolean = false,
-    val darkTheme: Boolean = false
+    val hasError: Boolean = false
 )

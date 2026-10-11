@@ -57,7 +57,6 @@ class NearbyTransferManager(private val context: Context) {
     }
 
     fun setPage(page: String) { state.update { it.copy(page = page) } }
-    fun toggleTheme() { state.update { it.copy(darkTheme = !it.darkTheme) } }
 
     private val discoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, details: DiscoveredEndpointInfo) {
@@ -87,7 +86,7 @@ class NearbyTransferManager(private val context: Context) {
                 client.stopAdvertising()
                 client.stopDiscovery()
                 val peerName = state.value.peers.find { it.id == endpointId }?.name
-                    ?: state.value.connectedName ?: "Nearby device"
+                    ?: state.value.connectedName ?: context.getString(R.string.nearby_device)
                 outboundPeer = peerName
                 state.update { it.copy(connectedName = peerName, isAdvertising = false,
                     isDiscovering = false, page = "transfer", status = UiMessage(R.string.connected), hasError = false) }
@@ -136,7 +135,7 @@ class NearbyTransferManager(private val context: Context) {
             // Ignore progress callbacks belonging to tiny metadata messages.
             if (!sent && !incomingPayloads.containsKey(id) && !incomingMetadata.containsKey(id)) return
             val direction = if (sent) "Sending" else "Receiving"
-            val name = if (sent) activeOutboundName else incomingMetadata[id]?.name ?: "Incoming file"
+            val name = if (sent) activeOutboundName else incomingMetadata[id]?.name ?: context.getString(R.string.ready_files)
             val total = update.totalBytes.coerceAtLeast(0L)
             val outcome = when (update.status) {
                 PayloadTransferUpdate.Status.SUCCESS -> if (sent) TransferOutcome.Complete else TransferOutcome.Saving

@@ -1,6 +1,17 @@
 package app.swiftdrop
 
+import android.content.res.Configuration
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import app.swiftdrop.ui.screens.settings.SettingsScreen
+import java.util.Locale
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,8 +28,44 @@ import app.swiftdrop.ui.screens.history.HistoryScreen
 import app.swiftdrop.ui.theme.*
 
 @Composable
-fun SwiftDropApp(manager: NearbyTransferManager,send: (Array<String>) -> Unit,receive: () -> Unit,
-                 discover: () -> Unit,openSettings: () -> Unit) {
+fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,send: (Array<String>) -> Unit,
+                 receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit) {
+    val settings by preferences.state.collectAsState()
+    val systemDark = isSystemInDarkTheme()
+    val dark = when(settings.appearance) {
+        Appearance.System -> systemDark
+        Appearance.Light -> false
+        Appearance.Dark -> true
+    }
+    val context = LocalContext.current
+    val systemConfiguration = LocalConfiguration.current
+    val configuration = remember(systemConfiguration,settings.language) {
+        Configuration(systemConfiguration).apply {
+            val locale = when(settings.language) {
+                AppLanguage.English -> Locale.ENGLISH
+                AppLanguage.Arabic -> Locale.forLanguageTag("ar")
+                AppLanguage.System -> systemConfiguration.locales[0]
+            }
+            setLocale(locale)
+            setLayoutDirection(locale)
+        }
+    }
+    val localized = remember(context,configuration) { context.createConfigurationContext(configuration) }
+    SideEffect {
+        (context as? ComponentActivity)?.enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT) { dark },
+            navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT) { dark })
+    }
+    CompositionLocalProvider(LocalContext provides localized,LocalConfiguration provides configuration,
+        LocalLayoutDirection provides if(configuration.layoutDirection == android.view.View.LAYOUT_DIRECTION_RTL) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+        SwiftDropContent(manager,settings,dark,preferences::setAppearance,preferences::setLanguage,send,receive,discover,openSettings)
+    }
+}
+
+@Composable
+private fun SwiftDropContent(manager: NearbyTransferManager,settings: SettingsState,dark: Boolean,
+    appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit,send: (Array<String>) -> Unit,
+    receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit) {
     val state by manager.state.collectAsState()
     var leaveAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering || state.connectingId != null
@@ -29,7 +76,7 @@ fun SwiftDropApp(manager: NearbyTransferManager,send: (Array<String>) -> Unit,re
         if(sessionActive) leaveAction = { manager.disconnect();receive() } else receive()
     }
     BackHandler(state.page != "home" && state.pending == null && leaveAction == null) { manager.setPage("home") }
-    SwiftDropTheme(state.darkTheme) {
+    SwiftDropTheme(dark) {
         Scaffold(bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                 listOf(Triple("home",R.string.home,R.drawable.ic_home),
@@ -55,7 +102,7 @@ fun SwiftDropApp(manager: NearbyTransferManager,send: (Array<String>) -> Unit,re
                             if(state.progress?.outcome==TransferOutcome.Running) manager.cancelTransfer() else manager.disconnect()
                         })
                         "history" -> HistoryScreen(state.history)
-                        "settings" -> SettingsPage(state,manager)
+                        "settings" -> SettingsScreen(settings,appearance,language)
                         "permissions" -> PermissionsScreen({if(state.selected.isNotEmpty()) discover() else guardedSend(arrayOf("*/*"))},guardedReceive,openSettings)
                     }
                 }
@@ -67,7 +114,9 @@ fun SwiftDropApp(manager: NearbyTransferManager,send: (Array<String>) -> Unit,re
                     Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
                         Text(stringResource(R.string.connect_to,request.peerName))
                         Text(stringResource(R.string.security_hint))
-                        Text(request.code,style=MaterialTheme.typography.headlineLarge,color=MaterialTheme.colorScheme.primary)
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                            Text(request.code,style=MaterialTheme.typography.headlineLarge,color=MaterialTheme.colorScheme.primary)
+                        }
                     }
                 },confirmButton={Button({manager.answerConnection(true)}) {Text(stringResource(R.string.accept_codes))}},
                 dismissButton={TextButton({manager.answerConnection(false)}) {Text(stringResource(R.string.decline))}})
