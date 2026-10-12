@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class NearbyTransferManager(private val context: Context) {
     val state = MutableStateFlow(TransferUiState())
+    val ultraHotspot = UltraHotspotController(context)
     @Volatile private var closed = false
     private val client = Nearby.getConnectionsClient(context)
     private val serviceId = "app.swiftdrop.nearby"
@@ -130,7 +131,26 @@ class NearbyTransferManager(private val context: Context) {
             isAdvertising = false, hasError = true, recoveryAction = recovery, diagnostics = diagnostics) }
     }
 
-    fun setPage(page: String) { state.update { it.copy(page = page) } }
+    fun setPage(page: String) {
+        // No hotspot should keep running invisibly after leaving its receive screen.
+        if (page != "receive") ultraHotspot.stop()
+        state.update { it.copy(page = page) }
+    }
+
+    fun startUltraHotspot() {
+        if (closed || connectedId != null) return
+        // Nearby and the user-owned AP are mutually exclusive radio modes here.
+        resetSearching()
+        client.stopAllEndpoints()
+        ultraHotspot.start()
+        state.update { it.copy(page = "receive", hasError = false, diagnostics = null,
+            receiverQrPayload = null, isAdvertising = false) }
+    }
+
+    fun stopUltraHotspot() {
+        ultraHotspot.stop()
+        if (!closed) advertise() // restore the existing compatible Nearby receive path
+    }
 
     fun armQrTarget(token: String?) {
         require(token == null || QrPairing.parsePayload(QrPairing.payload(token)) == token)
@@ -270,6 +290,7 @@ class NearbyTransferManager(private val context: Context) {
     }
 
     fun advertise() {
+        ultraHotspot.stop()
         resetSearching()
         qrTarget = null
         client.stopAllEndpoints()
@@ -523,6 +544,7 @@ class NearbyTransferManager(private val context: Context) {
     }
 
     fun disconnect() {
+        ultraHotspot.stop()
         resetSearching()
         qrTarget = null
         client.stopAllEndpoints()
