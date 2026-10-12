@@ -38,10 +38,13 @@ fun ReceiverQrCard(payload: String) {
             horizontalAlignment=Alignment.CenterHorizontally,
             verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.qr_receiver_title),style=MaterialTheme.typography.titleMedium)
-            Box(Modifier.background(androidx.compose.ui.graphics.Color.White, RoundedCornerShape(16.dp)).padding(12.dp),
-                contentAlignment=Alignment.Center) {
-                Image(bitmap,contentDescription=stringResource(R.string.qr_receiver_title),
-                    modifier=Modifier.size(240.dp))
+            BoxWithConstraints(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
+                val qrSize = (maxWidth - 24.dp).coerceAtMost(240.dp).coerceAtLeast(120.dp)
+                Box(Modifier.background(androidx.compose.ui.graphics.Color.White, RoundedCornerShape(16.dp))
+                    .padding(12.dp),contentAlignment=Alignment.Center) {
+                    Image(bitmap,contentDescription=stringResource(R.string.qr_receiver_title),
+                        modifier=Modifier.size(qrSize))
+                }
             }
             Text(stringResource(R.string.qr_receiver_hint),textAlign=TextAlign.Center,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)

@@ -177,7 +177,7 @@ private fun DiagnosticDetails(report: String) {
     val clipboard = LocalClipboardManager.current
     Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-            TextButton(onClick={expanded=!expanded},Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+            TextButton(onClick={expanded=!expanded},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                 Text(stringResource(if(expanded) R.string.hide_diagnostics else R.string.show_diagnostics))
             }
             if(expanded) {

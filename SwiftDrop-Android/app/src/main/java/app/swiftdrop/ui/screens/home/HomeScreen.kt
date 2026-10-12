@@ -29,6 +29,7 @@ fun HomeScreen(state: TransferUiState,send: (Array<String>) -> Unit,receive: () 
                         Text(stringResource(R.string.connection_status_title),style=MaterialTheme.typography.titleMedium)
                         Text(when {
                             state.connectedName!=null -> stringResource(R.string.home_connected_to,state.connectedName)
+                            state.hasError -> stringResource(R.string.home_connection_attention)
                             state.isDiscovering -> stringResource(R.string.searching)
                             state.isAdvertising -> stringResource(R.string.waiting_sender)
                             else -> stringResource(R.string.home_ready_to_share)

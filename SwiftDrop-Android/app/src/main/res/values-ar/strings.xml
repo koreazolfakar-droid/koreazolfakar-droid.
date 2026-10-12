@@ -188,4 +188,5 @@
     <string name="history_total_size">إجمالي الحجم المنقول</string>
     <string name="show_diagnostics">عرض تفاصيل التشخيص</string>
     <string name="hide_diagnostics">إخفاء تفاصيل التشخيص</string>
+    <string name="home_connection_attention">الاتصال بحاجة لمراجعة. افتح الجلسة وحاول مجدداً.</string>
 </resources>

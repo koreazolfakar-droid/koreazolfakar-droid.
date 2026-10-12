@@ -180,4 +180,5 @@
     <string name="history_total_size">Total transferred</string>
     <string name="show_diagnostics">Show technical diagnostics</string>
     <string name="hide_diagnostics">Hide technical diagnostics</string>
+    <string name="home_connection_attention">Connection needs attention. Open the active session to retry.</string>
 </resources>
