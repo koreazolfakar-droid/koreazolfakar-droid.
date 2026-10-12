@@ -50,7 +50,8 @@ fun InstalledAppsScreen(state: AppsState,refresh: () -> Unit,export: (List<Share
     var search by rememberSaveable { mutableStateOf("") }
     val shown=remember(state.apps,search) {state.apps.filter {it.name.contains(search,true) || it.packageName.contains(search,true)}}
     val selectedApps = state.apps.filter { it.packageName in selected }
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(if(embedded) 12.dp else 20.dp),
+        verticalArrangement=Arrangement.spacedBy(if(embedded) 8.dp else 12.dp)) {
         if(!embedded) {
             item { PageHeading(stringResource(R.string.applications),stringResource(R.string.apps_caption)) }
             item {FileTabs(true,openFiles,{})}

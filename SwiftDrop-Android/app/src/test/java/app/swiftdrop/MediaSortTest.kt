@@ -14,7 +14,7 @@ class MediaSortTest {
     @Test fun sortDirectionsReflectUserSelection() {
         assertTrue(mediaSortOrder(MediaSort.Newest).contains("DESC"))
         assertTrue(mediaSortOrder(MediaSort.Oldest).contains("ASC"))
-        assertTrue(mediaSortOrder(MediaSort.Name).contains("DISPLAY_NAME"))
-        assertTrue(mediaSortOrder(MediaSort.Largest).contains("SIZE"))
+        assertTrue(mediaSortOrder(MediaSort.Name).contains("_display_name"))
+        assertTrue(mediaSortOrder(MediaSort.Largest).contains("_size"))
     }
 }

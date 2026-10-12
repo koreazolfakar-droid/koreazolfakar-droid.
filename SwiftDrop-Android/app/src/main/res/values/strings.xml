@@ -212,4 +212,11 @@
     <string name="media_pause">Pause</string>
     <string name="media_play">Play</string>
     <string name="media_playback_failed">Could not play this file.</string>
+    <string name="media_gallery_caption">Browse, preview and share</string>
+    <string name="media_storage_free">%1$s free</string>
+    <string name="media_sort">Sort</string>
+    <string name="media_sort_newest">Newest first</string>
+    <string name="media_sort_oldest">Oldest first</string>
+    <string name="media_sort_name">Name (A to Z)</string>
+    <string name="media_sort_largest">Largest first</string>
 </resources>

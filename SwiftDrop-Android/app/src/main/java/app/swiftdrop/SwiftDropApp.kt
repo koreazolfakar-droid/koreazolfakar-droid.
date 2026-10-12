@@ -101,7 +101,7 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
     SwiftDropTheme(dark) {
         CompositionLocalProvider(LocalPageBack provides {manager.setPage("home")}) {
         Scaffold(modifier=Modifier.imePadding(),bottomBar = {
-            if(state.page!="welcome") NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+            if(state.page!="welcome" && state.page!="files") NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                 listOf(Triple("home",R.string.home,R.drawable.ic_home),
                     Triple("history",R.string.history,R.drawable.ic_history),
                     Triple("settings",R.string.settings,R.drawable.ic_settings)).forEach { (page,label,icon) ->

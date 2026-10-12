@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.swiftdrop.ui.screens.files.MediaGalleryScreen
@@ -41,7 +42,7 @@ class MediaGalleryUiTest {
                 }
             }
         }
-        compose.onNodeWithText("Applications").performClick()
+        compose.onNodeWithText("Applications").performScrollTo().performClick()
         compose.onNodeWithText("Choose an APK file instead").assertIsDisplayed()
     }
 }

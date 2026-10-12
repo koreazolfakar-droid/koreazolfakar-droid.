@@ -84,6 +84,7 @@ internal fun VideoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MusicRow(item:LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit,onPlay:()->Unit) {
     Surface(shape=RoundedCornerShape(10.dp),color=MaterialTheme.colorScheme.surface) {
