@@ -74,6 +74,15 @@ internal fun cleanMusicTitle(filename:String):String =
     filename.trim().replace(Regex("(?i)\\.(mp3|m4a|aac|flac|wav|ogg|opus|wma)$"),"")
         .trim().ifBlank { filename }
 
+/** MediaSession strips LocalConfiguration from remote controllers. SwiftDrop's stable
+ * mediaId is the real local URI, so other UI controllers can still resolve artwork/player UI. */
+internal fun localMusicUri(item:MediaItem?):Uri? {
+    item?.localConfiguration?.uri?.let { return it }
+    val id=item?.mediaId?.takeIf(String::isNotBlank) ?: return null
+    val uri=runCatching { Uri.parse(id) }.getOrNull() ?: return null
+    return uri.takeIf { it.scheme=="content" || it.scheme=="file" }
+}
+
 /** Reopening an existing controller must never restart a paused or progressing song. */
 internal fun startLocalMusic(controller:MediaController,item:LocalMedia) {
     val id=item.uri.toString()
@@ -215,7 +224,7 @@ internal fun BackgroundMusicControls(
         while(isActive) {
             playing=player?.isPlaying == true
             val mediaItem=player?.currentMediaItem
-            currentUri=mediaItem?.localConfiguration?.uri ?: item.uri
+            currentUri=localMusicUri(mediaItem) ?: item.uri
             currentTitle=mediaItem?.mediaMetadata?.title?.toString() ?: cleanMusicTitle(item.name)
             hasPrevious=player?.hasPreviousMediaItem()==true
             hasNext=player?.hasNextMediaItem()==true
@@ -388,15 +397,20 @@ internal fun BackgroundMusicControls(
 fun HomeMusicMiniPlayer(onOpen:()->Unit) {
     val player=rememberMusicSessionController()
     var item by remember { mutableStateOf<LocalMedia?>(null) }
-    LaunchedEffect(player) {
-        while(isActive) {
+    DisposableEffect(player) {
+        fun update() {
             val media=player?.currentMediaItem
-            val uri=media?.localConfiguration?.uri
-            item=if(uri==null) null else LocalMedia(uri,
+            val uri=localMusicUri(media)
+            item=if(uri==null || media==null) null else LocalMedia(uri,
                 media.mediaMetadata.title?.toString().orEmpty(),0,0,
                 artist=media.mediaMetadata.artist?.toString(),album=media.mediaMetadata.albumTitle?.toString())
-            delay(500L)
         }
+        val listener=object:Player.Listener {
+            override fun onEvents(player:Player,events:Player.Events) { update() }
+        }
+        player?.addListener(listener)
+        update()
+        onDispose { player?.removeListener(listener) }
     }
     item?.let { BackgroundMusicControls(it,compact=true,autoStart=false,onOpen=onOpen) }
 }
@@ -408,8 +422,8 @@ fun PersistentMusicPlayer() {
     var show by remember { mutableStateOf(false) }
     HomeMusicMiniPlayer(onOpen={show=true})
     val media=controller?.currentMediaItem
-    val uri=media?.localConfiguration?.uri
-    if(show && uri!=null) MusicPlayerDialog(LocalMedia(uri,
+    val uri=localMusicUri(media)
+    if(show && uri!=null && media!=null) MusicPlayerDialog(LocalMedia(uri,
         media.mediaMetadata.title?.toString().orEmpty(),0,0),close={show=false})
 }
 

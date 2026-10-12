@@ -207,22 +207,26 @@ class NativeProMainActivityUiTest {
         wave.put("data".toByteArray()).putInt(samples*2)
         repeat(samples) { wave.putShort(0) }
         track.writeBytes(wave.array())
+        val secondTrack=File(context.cacheDir,"swiftdrop-ui-qa-two.wav")
+        secondTrack.writeBytes(wave.array())
         val future=MediaController.Builder(context,
             SessionToken(context,ComponentName(context,SwiftDropMusicService::class.java))).buildAsync()
         val controller=future.get(20,TimeUnit.SECONDS)
         try {
             compose.runOnUiThread {
-                controller.setMediaItems(listOf("QA track one","QA track two").map { title ->
-                    MediaItem.Builder().setUri(Uri.fromFile(track)).setMediaId(title)
+                controller.setMediaItems(listOf(track to "QA track one",secondTrack to "QA track two").map { (file,title) ->
+                    val uri=Uri.fromFile(file)
+                    MediaItem.Builder().setUri(uri).setMediaId(uri.toString())
                         .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist("SwiftDrop QA").build()).build()
                 })
                 controller.prepare();controller.play()
             }
             compose.waitUntil(20_000) { musicState { controller.isPlaying } }
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("QA track one").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("QA track one").performClick()
             compose.onNodeWithText("Queue").performScrollTo().performClick()
             compose.onNodeWithText("QA track two").performClick()
-            compose.waitUntil(10_000) { musicState { controller.currentMediaItem?.mediaId=="QA track two" } }
+            compose.waitUntil(10_000) { musicState { controller.currentMediaItem?.mediaId==Uri.fromFile(secondTrack).toString() } }
             screenshot("music-now-playing")
             compose.onNodeWithText("Close").performClick()
             compose.onNodeWithText("Settings").performClick()
@@ -244,7 +248,7 @@ class NativeProMainActivityUiTest {
                 controller.stop();controller.clearMediaItems()
                 MediaController.releaseFuture(future)
             }
-            track.delete()
+            track.delete();secondTrack.delete()
         }
     }
 }
