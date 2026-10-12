@@ -91,15 +91,23 @@ internal fun startLocalMusic(controller:MediaController,item:LocalMedia) {
     controller.play()
 }
 
+/** Upgrade early single-item playback to a real playlist when the gallery becomes ready. */
+internal fun shouldUpgradeMusicQueue(currentCount:Int,availableCount:Int):Boolean =
+    currentCount<=1 && availableCount>1
+
 /** Replace queue only on explicit user selection; avoid destroying an existing seek position. */
 internal fun startLocalPlaylist(controller:MediaController,items:List<LocalMedia>,chosen:LocalMedia) {
     val playable = items.take(600)
     val index = playable.indexOfFirst { it.uri==chosen.uri }
     if(index<0) { startLocalMusic(controller,chosen);return }
-    if(controller.currentMediaItem?.mediaId==chosen.uri.toString()) {
+    val sameSong=controller.currentMediaItem?.mediaId==chosen.uri.toString()
+    // Another screen may have started a single item before this controller connected.
+    // Expand it into the actual queue without losing playback position.
+    if(sameSong && !shouldUpgradeMusicQueue(controller.mediaItemCount,playable.size)) {
         controller.play()
         return
     }
+    val resumeAt=if(sameSong) controller.currentPosition.coerceAtLeast(0L) else 0L
     val mediaItems = playable.map { file ->
         MediaItem.Builder()
             .setUri(file.uri)
@@ -109,7 +117,7 @@ internal fun startLocalPlaylist(controller:MediaController,items:List<LocalMedia
                 .setIsPlayable(true).build())
             .build()
     }
-    controller.setMediaItems(mediaItems,index,0L)
+    controller.setMediaItems(mediaItems,index,resumeAt)
     controller.prepare()
     controller.play()
 }

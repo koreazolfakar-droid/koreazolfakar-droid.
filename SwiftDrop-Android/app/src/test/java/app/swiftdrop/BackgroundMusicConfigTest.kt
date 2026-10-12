@@ -20,6 +20,13 @@ class BackgroundMusicConfigTest {
         assertEquals("song",cleanMusicTitle(" song.OPUS "))
     }
 
+    @Test fun expandsSingleItemIntoPlaylistButKeepsExistingQueue() {
+        assertTrue(app.swiftdrop.music.shouldUpgradeMusicQueue(1,6))
+        assertTrue(app.swiftdrop.music.shouldUpgradeMusicQueue(0,6))
+        assertFalse(app.swiftdrop.music.shouldUpgradeMusicQueue(6,6))
+        assertFalse(app.swiftdrop.music.shouldUpgradeMusicQueue(1,1))
+    }
+
     @Test fun mergedManifestDeclaresMediaPlaybackForegroundService() {
         val path=System.getProperty("swiftdrop.mergedManifest")
             ?: error("Merged manifest missing: CI must build it first")
