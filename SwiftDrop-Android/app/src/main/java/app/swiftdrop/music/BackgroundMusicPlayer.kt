@@ -115,7 +115,7 @@ internal fun BackgroundMusicControls(
                         Text("${formatPosition(position)} / ${formatPosition(duration)}",
                             style=MaterialTheme.typography.labelSmall)
                     }
-                    TextButton(onClick={player?.let { p -> {if(p.isPlaying)p.pause() else p.play()} } ?: {}},
+                    TextButton(onClick={player?.let { p -> if(p.isPlaying) p.pause() else p.play() }; Unit},
                         enabled=player!=null) {
                         Text(stringResource(if(playing) R.string.media_pause else R.string.media_play))
                     }
@@ -153,7 +153,7 @@ internal fun BackgroundMusicControls(
             )
             Text("${formatPosition(position)} / ${formatPosition(duration)}",color=Color.White)
             Spacer(Modifier.height(18.dp))
-            Button(onClick={ player?.let { p -> {if(p.isPlaying)p.pause() else p.play()} } ?: {} },
+            Button(onClick={ player?.let { p -> if(p.isPlaying) p.pause() else p.play() }; Unit },
                 enabled=player!=null) {
                 Text(stringResource(if(playing) R.string.media_pause else R.string.media_play))
             }
