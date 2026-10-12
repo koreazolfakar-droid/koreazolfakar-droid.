@@ -31,6 +31,7 @@ import app.swiftdrop.R
 import app.swiftdrop.ui.components.AppIcon
 import app.swiftdrop.ui.components.CategoryBadge
 import app.swiftdrop.ui.components.sizeLabel
+import app.swiftdrop.music.cleanMusicTitle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -111,7 +112,7 @@ internal fun MusicRow(item:LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:(
             }
             Column(Modifier.weight(1f).combinedClickable(onClick=onOpen,onLongClick=onToggle),
                 verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                Text(item.name,maxLines=1,overflow=TextOverflow.Ellipsis,
+                Text(cleanMusicTitle(item.name),maxLines=1,overflow=TextOverflow.Ellipsis,
                     style=MaterialTheme.typography.titleSmall)
                 Text(formatMediaDuration(item.duration)+" · "+sizeLabel(item.size),
                     style=MaterialTheme.typography.labelSmall,

@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -181,6 +183,9 @@ internal fun BackgroundMusicControls(
     var currentTitle by remember(item.uri) { mutableStateOf(cleanMusicTitle(item.name)) }
     var hasPrevious by remember { mutableStateOf(false) }
     var hasNext by remember { mutableStateOf(false) }
+    var shuffleEnabled by remember { mutableStateOf(false) }
+    var repeatMode by remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
+    var playbackError by remember { mutableStateOf(false) }
     val context=LocalContext.current
     val artwork by produceState<SongArtwork?>(null,currentUri) {
         value=withContext(Dispatchers.IO) { readSongArtwork(context,currentUri) }
@@ -195,6 +200,9 @@ internal fun BackgroundMusicControls(
             currentTitle=mediaItem?.mediaMetadata?.title?.toString() ?: cleanMusicTitle(item.name)
             hasPrevious=player?.hasPreviousMediaItem()==true
             hasNext=player?.hasNextMediaItem()==true
+            shuffleEnabled=player?.shuffleModeEnabled==true
+            repeatMode=player?.repeatMode ?: Player.REPEAT_MODE_OFF
+            playbackError=player?.playerError!=null
             position=player?.currentPosition?.coerceAtLeast(0L) ?: 0L
             duration=player?.duration?.takeIf { it>0L } ?: 0L
             delay(if(compact) 500L else 250L)
@@ -233,8 +241,10 @@ internal fun BackgroundMusicControls(
             }
         }
     } else {
-        Column(modifier.fillMaxWidth().padding(horizontal=22.dp),
-            verticalArrangement=Arrangement.SpaceEvenly,horizontalAlignment=Alignment.CenterHorizontally) {
+        Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(horizontal=22.dp,vertical=14.dp),
+            verticalArrangement=Arrangement.spacedBy(20.dp),
+            horizontalAlignment=Alignment.CenterHorizontally) {
             AlbumCover(currentUri,Modifier.fillMaxWidth().widthIn(max=310.dp).aspectRatio(1f))
             Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                 Text(currentTitle,color=Color.White,
@@ -279,6 +289,36 @@ internal fun BackgroundMusicControls(
                     AppIcon(R.drawable.ic_player_next,Modifier.size(30.dp),tint=Color.White)
                 }
             }
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.SpaceEvenly) {
+                TextButton(onClick={player?.shuffleModeEnabled=!shuffleEnabled; Unit},
+                    enabled=player!=null) {
+                    AppIcon(R.drawable.ic_player_shuffle,Modifier.size(20.dp),
+                        tint=if(shuffleEnabled) Color(0xFF7AB7FF) else SecondaryInk)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.music_shuffle),color=if(shuffleEnabled)
+                        Color(0xFF7AB7FF) else SecondaryInk)
+                }
+                TextButton(onClick={
+                    player?.repeatMode=when(repeatMode) {
+                        Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                        Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                        else -> Player.REPEAT_MODE_OFF
+                    }
+                },enabled=player!=null) {
+                    AppIcon(R.drawable.ic_player_repeat,Modifier.size(20.dp),
+                        tint=if(repeatMode!=Player.REPEAT_MODE_OFF) Color(0xFF7AB7FF) else SecondaryInk)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(when(repeatMode) {
+                        Player.REPEAT_MODE_ONE -> R.string.music_repeat_one
+                        Player.REPEAT_MODE_ALL -> R.string.music_repeat_all
+                        else -> R.string.music_repeat
+                    }),color=if(repeatMode!=Player.REPEAT_MODE_OFF)
+                        Color(0xFF7AB7FF) else SecondaryInk)
+                }
+            }
+            if(playbackError) Text(stringResource(R.string.media_playback_failed),
+                color=Color(0xFFFFA4A4),style=MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.music_background_hint),color=SecondaryInk,
                 style=MaterialTheme.typography.bodySmall,textAlign=TextAlign.Center,maxLines=2)
         }

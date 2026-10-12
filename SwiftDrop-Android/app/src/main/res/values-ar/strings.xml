@@ -238,4 +238,8 @@
     <string name="music_now_playing">قيد التشغيل</string>
     <string name="music_local_audio">موسيقى محلية</string>
     <string name="music_album_art">صورة الألبوم</string>
+    <string name="music_shuffle">خلط</string>
+    <string name="music_repeat">تكرار</string>
+    <string name="music_repeat_all">تكرار الكل</string>
+    <string name="music_repeat_one">تكرار واحدة</string>
 </resources>

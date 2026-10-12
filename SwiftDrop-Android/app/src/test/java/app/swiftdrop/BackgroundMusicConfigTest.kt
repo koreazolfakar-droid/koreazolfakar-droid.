@@ -14,6 +14,12 @@ class BackgroundMusicConfigTest {
         assertEquals("recording.mp4",cleanMusicTitle("recording.mp4"))
     }
 
+    @Test fun keepsUnicodeTitlesAndAvoidsRemovingNonAudioExtensions() {
+        assertEquals("حسين عجمي - أغنية",cleanMusicTitle("حسين عجمي - أغنية.mp3"))
+        assertEquals("notes.pdf",cleanMusicTitle("notes.pdf"))
+        assertEquals("song",cleanMusicTitle(" song.OPUS "))
+    }
+
     @Test fun mergedManifestDeclaresMediaPlaybackForegroundService() {
         val path=System.getProperty("swiftdrop.mergedManifest")
             ?: error("Merged manifest missing: CI must build it first")

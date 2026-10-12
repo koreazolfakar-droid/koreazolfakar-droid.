@@ -226,4 +226,8 @@
     <string name="music_now_playing">NOW PLAYING</string>
     <string name="music_local_audio">Local audio</string>
     <string name="music_album_art">Album artwork</string>
+    <string name="music_shuffle">Shuffle</string>
+    <string name="music_repeat">Repeat</string>
+    <string name="music_repeat_all">Repeat all</string>
+    <string name="music_repeat_one">Repeat one</string>
 </resources>
