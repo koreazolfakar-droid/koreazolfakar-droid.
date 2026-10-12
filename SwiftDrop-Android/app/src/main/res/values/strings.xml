@@ -230,4 +230,13 @@
     <string name="music_repeat">Repeat</string>
     <string name="music_repeat_all">Repeat all</string>
     <string name="music_repeat_one">Repeat one</string>
+    <string name="doc_browser_subtitle">Your documents and folders</string>
+    <string name="doc_choose_folder">Choose folder</string>
+    <string name="doc_choose_files">Choose files</string>
+    <string name="doc_folder_intro">Browse documents inside SwiftDrop</string>
+    <string name="doc_folder_privacy">Choose a folder to display its files here. Android grants access only to that folder. You can also choose individual files.</string>
+    <string name="doc_browser_error">Could not access this folder. Choose it again or use the file picker.</string>
+    <string name="doc_empty_folder">No files found in this folder.</string>
+    <string name="doc_no_viewer">No compatible viewer found for this file.</string>
+    <string name="doc_selected_count">%1$d selected</string>
 </resources>

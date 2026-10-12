@@ -242,4 +242,13 @@
     <string name="music_repeat">تكرار</string>
     <string name="music_repeat_all">تكرار الكل</string>
     <string name="music_repeat_one">تكرار واحدة</string>
+    <string name="doc_browser_subtitle">مستنداتك ومجلداتك</string>
+    <string name="doc_choose_folder">اختيار مجلد</string>
+    <string name="doc_choose_files">اختيار ملفات</string>
+    <string name="doc_folder_intro">تصفّح المستندات داخل SwiftDrop</string>
+    <string name="doc_folder_privacy">اختار مجلد لتظهر ملفاته هون. أندرويد بيعطي صلاحية لهيدا المجلد فقط، وفيك كمان تختار ملفات بشكل منفصل.</string>
+    <string name="doc_browser_error">تعذّر الوصول للمجلد. اختاره مجدداً أو استخدم منتقي الملفات.</string>
+    <string name="doc_empty_folder">ما في ملفات بهالمجلد.</string>
+    <string name="doc_no_viewer">ما في تطبيق متوافق لفتح هيدا الملف.</string>
+    <string name="doc_selected_count">المحدد: %1$d</string>
 </resources>
