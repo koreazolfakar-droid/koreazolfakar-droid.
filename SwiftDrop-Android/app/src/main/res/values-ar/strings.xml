@@ -284,4 +284,15 @@
     <string name="music_queue_empty">قائمة التشغيل فارغة</string>
     <string name="nearby_active">المشاركة القريبة نشطة</string>
     <plurals name="browser_item_count"><item quantity="zero">لا عناصر</item><item quantity="one">عنصر واحد</item><item quantity="two">عنصران</item><item quantity="few">%1$d عناصر</item><item quantity="many">%1$d عنصرًا</item><item quantity="other">%1$d عنصر</item></plurals>
+    <string name="ultra_hotspot_title">Ultra · نقطة اتصال Wi-Fi محلية (تجريبي)</string>
+    <string name="ultra_hotspot_description">إنشاء شبكة Wi-Fi محلية ليتصل بها الهاتف الثاني. لا تحتاج إلى إنترنت.</string>
+    <string name="ultra_hotspot_start">إنشاء نقطة اتصال محلية</string>
+    <string name="ultra_hotspot_stop">إيقاف نقطة الاتصال</string>
+    <string name="ultra_hotspot_active">نقطة الاتصال جاهزة</string>
+    <string name="ultra_hotspot_ssid">اسم الشبكة: %1$s</string>
+    <string name="ultra_hotspot_password">كلمة المرور: %1$s</string>
+    <string name="ultra_hotspot_join">على الهاتف الثاني، افتح إعدادات Wi-Fi واتصل بهذه الشبكة. اضغط إيقاف للعودة إلى النقل القريب العادي.</string>
+    <string name="ultra_hotspot_failed">تعذّر تشغيل نقطة الاتصال المحلية. تحقّق من صلاحيات Wi-Fi وأوقف أي نقطة اتصال أخرى.</string>
+    <string name="ultra_hotspot_use_nearby">العودة إلى Nearby</string>
+    <string name="ultra_hotspot_preview_notice">مرحلة تطوير: إنشاء شبكة Wi-Fi فقط. نقل Ultra لم يُربط بعد، لذا استخدم Nearby لإرسال الملفات.</string>
 </resources>
