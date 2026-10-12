@@ -187,7 +187,7 @@
     <string name="home_your_files">Your files</string>
     <string name="home_browse_all">Browse all</string>
     <string name="home_apps_short">Apps</string>
-    <string name="home_docs_short">Docs</string>
+    <string name="home_docs_short">Storage</string>
     <string name="home_no_recent">No recent transfers</string>
     <string name="home_recent_hint">Completed files from this session appear here.</string>
     <string name="transfer_queue_position">File %1$d of %2$d</string>
@@ -239,4 +239,14 @@
     <string name="doc_empty_folder">No files found in this folder.</string>
     <string name="doc_no_viewer">No compatible viewer found for this file.</string>
     <string name="doc_selected_count">%1$d selected</string>
+
+    <string name="doc_storage_title">Internal storage</string>
+    <string name="doc_open_internal_storage">Open internal storage</string>
+    <string name="doc_access_explanation">To browse all shared folders inside SwiftDrop, grant optional All files access in Android Settings. Or choose a folder for limited access instead.</string>
+    <string name="doc_allow_storage">Allow internal storage access</string>
+    <string name="doc_access_settings_failed">Could not open storage access settings. Try choosing a folder instead.</string>
+    <string name="doc_search_files">Search this folder</string>
+    <string name="doc_reset_folder">Choose a different folder</string>
+    <string name="doc_item_count">%1$d items</string>
+    <string name="doc_folder_label">Folder</string>
 </resources>
