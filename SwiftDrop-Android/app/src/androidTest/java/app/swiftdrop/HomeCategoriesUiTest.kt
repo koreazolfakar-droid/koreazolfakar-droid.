@@ -38,7 +38,7 @@ class HomeCategoriesUiTest {
         compose.runOnIdle { assertEquals(MediaKind.Music,target) }
         compose.onNodeWithText("Apps").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(apps) }
-        compose.onNodeWithText("Docs").performScrollTo().performClick()
+        compose.onNodeWithText("Storage").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(documents); assertEquals(false,generic) }
     }
 
