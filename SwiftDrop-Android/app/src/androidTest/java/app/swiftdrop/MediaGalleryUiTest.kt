@@ -3,6 +3,7 @@ package app.swiftdrop
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -50,6 +51,33 @@ class MediaGalleryUiTest {
         compose.onNodeWithText("Videos").performClick()
         compose.onNodeWithText("Allow access").performClick()
         compose.runOnIdle { assertEquals(MediaKind.Videos,requested) }
+    }
+
+    @Test fun standalonePhotosDoesNotShowGenericCategoryTabs() {
+        compose.setContent {
+            SwiftDropTheme(false) {
+                MediaGalleryScreen({}, {}, AppsState(), {}, {}, {}, 0, {},
+                    initialTab=0,standaloneCategory=true)
+            }
+        }
+        compose.onNodeWithText("Photos").assertIsDisplayed()
+        compose.onNodeWithText("Allow access").assertIsDisplayed()
+        compose.onNodeWithText("Videos").assertDoesNotExist()
+        compose.onNodeWithText("Applications").assertDoesNotExist()
+    }
+
+    @Test fun standaloneMusicOpensItsOwnPermissionAndTitle() {
+        var requested:MediaKind?=null
+        compose.setContent {
+            SwiftDropTheme(false) {
+                MediaGalleryScreen({}, {}, AppsState(), {}, {}, {}, 0,
+                    {requested=it},initialTab=2,standaloneCategory=true)
+            }
+        }
+        compose.onNodeWithText("Music").assertIsDisplayed()
+        compose.onNodeWithText("Allow access").performClick()
+        compose.runOnIdle { assertEquals(MediaKind.Music,requested) }
+        compose.onNodeWithText("Photos").assertDoesNotExist()
     }
 
     @Test fun appSectionRemainsAvailableWithoutMediaPermissionInRtl() {

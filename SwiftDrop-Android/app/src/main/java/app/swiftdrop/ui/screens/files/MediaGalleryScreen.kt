@@ -70,7 +70,7 @@ private fun galleryDisplay(rows: List<LocalMedia>,sort: MediaSort): List<Gallery
 fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
     appsState: AppsState, refreshApps: () -> Unit, exportApps: (List<ShareableApp>) -> Unit,
     sendSelected: (List<Uri>) -> Unit, permissionRevision: Int, requestMedia: (MediaKind) -> Unit,
-    initialTab:Int=0) {
+    initialTab:Int=0,standaloneCategory:Boolean=false) {
     var tab by rememberSaveable { mutableIntStateOf(initialTab.coerceIn(0,3)) }
     LaunchedEffect(initialTab) { tab=initialTab.coerceIn(0,3) }
     val galleryStates = rememberSaveableStateHolder()
@@ -109,7 +109,13 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
                 }
             }
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.file_library),
+                Text(stringResource(
+                    if(standaloneCategory) when(tab) {
+                        0 -> R.string.photos
+                        1 -> R.string.videos
+                        2 -> R.string.music
+                        else -> R.string.applications
+                    } else R.string.file_library),
                     style=MaterialTheme.typography.headlineSmall)
                 Text(stringResource(R.string.media_gallery_caption),
                     style=MaterialTheme.typography.bodySmall,
@@ -133,7 +139,7 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+        if(!standaloneCategory) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
             .padding(horizontal=16.dp,vertical=6.dp),
             horizontalArrangement=Arrangement.spacedBy(8.dp),
             verticalAlignment=Alignment.CenterVertically) {

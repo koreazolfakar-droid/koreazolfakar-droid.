@@ -25,9 +25,10 @@ import app.swiftdrop.ui.components.*
 fun FileLibraryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
     appsState: AppsState, refreshApps: () -> Unit, exportApps: (List<ShareableApp>) -> Unit,
     sendSelected: (List<android.net.Uri>) -> Unit, mediaPermissionRevision: Int,
-    requestMedia: (app.swiftdrop.MediaKind) -> Unit,initialTab:Int=0) {
+    requestMedia: (app.swiftdrop.MediaKind) -> Unit,initialTab:Int=0,
+    standaloneCategory:Boolean=false) {
     MediaGalleryScreen(choose, apps, appsState, refreshApps, exportApps, sendSelected,
-        mediaPermissionRevision, requestMedia,initialTab)
+        mediaPermissionRevision, requestMedia,initialTab,standaloneCategory)
 }
 
 @Composable

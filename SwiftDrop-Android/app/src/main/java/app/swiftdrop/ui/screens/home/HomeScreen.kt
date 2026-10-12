@@ -48,7 +48,8 @@ fun HomeScreen(
     openFiles: () -> Unit = { send(arrayOf("*/*")) },
     openApps: () -> Unit = { send(arrayOf("application/vnd.android.package-archive")) },
     onSettings: (() -> Unit)? = null,
-    openMedia: ((app.swiftdrop.MediaKind) -> Unit)? = null
+    openMedia: ((app.swiftdrop.MediaKind) -> Unit)? = null,
+    openDocuments: () -> Unit = { send(arrayOf("application/pdf","text/*")) }
 ) {
     var showMusic by remember { mutableStateOf(false) }
     val musicController=rememberMusicSessionController()
@@ -79,10 +80,7 @@ fun HomeScreen(
             openMedia?.invoke(app.swiftdrop.MediaKind.Music) ?: send(arrayOf("audio/*"))
         }),
         HomeCategory(R.drawable.ic_applications, R.string.home_apps_short, openApps),
-        HomeCategory(R.drawable.ic_documents, R.string.home_docs_short, {
-            send(arrayOf("application/pdf", "text/*", "application/msword",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-        })
+        HomeCategory(R.drawable.ic_documents, R.string.home_docs_short, openDocuments)
     )
 
     Column(

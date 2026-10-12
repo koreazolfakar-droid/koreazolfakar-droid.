@@ -16,6 +16,7 @@ import app.swiftdrop.ui.screens.settings.SettingsScreen
 import app.swiftdrop.ui.screens.onboarding.WelcomeScreen
 import java.util.Locale
 import app.swiftdrop.ui.screens.files.*
+import app.swiftdrop.ui.screens.files.DocumentBrowserScreen
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,10 +33,25 @@ import app.swiftdrop.ui.screens.permissions.PermissionsScreen
 import app.swiftdrop.ui.screens.history.HistoryScreen
 import app.swiftdrop.ui.theme.*
 
+/** Named destinations prevent Home categories from silently opening the generic file picker. */
+fun galleryDestination(kind:MediaKind):String=when(kind) {
+    MediaKind.Photos -> "gallery_photos"
+    MediaKind.Videos -> "gallery_videos"
+    MediaKind.Music -> "gallery_music"
+}
+
+fun galleryCategory(page:String):MediaKind?=when(page) {
+    "gallery_photos" -> MediaKind.Photos
+    "gallery_videos" -> MediaKind.Videos
+    "gallery_music" -> MediaKind.Music
+    else -> null
+}
+
 /** Navigation returns to the actual parent instead of jumping to Home from every screen. */
 fun backDestination(page:String,appsParent:String="home"):String=when(page) {
     "apps" -> if(appsParent=="files") "files" else "home"
     "selection" -> "files"
+    "gallery_photos", "gallery_videos", "gallery_music", "documents" -> "home"
     else -> "home"
 }
 
@@ -134,10 +150,19 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                             manager.setPage(if(state.connectedName!=null || state.progress!=null) "transfer"
                                 else if(state.isAdvertising) "receive" else if(state.selectedFiles.isNotEmpty() && !state.isDiscovering) "selection" else "discover")
                         },messageText(state.status),openFiles={chosenFileTab=0;manager.setPage("files")},openApps={appsParent="home";apps.load();manager.setPage("apps")},onSettings={manager.setPage("settings")},
-                            openMedia={ kind ->
-                                chosenFileTab=kind.ordinal
-                                manager.setPage("files")
-                            })
+                            openMedia={kind->manager.setPage(galleryDestination(kind))},
+                            openDocuments={manager.setPage("documents")})
+                        "gallery_photos","gallery_videos","gallery_music" -> {
+                            val kind=galleryCategory(state.page) ?: MediaKind.Photos
+                            FileLibraryScreen(guardedSend,{
+                                appsParent="files";apps.load();manager.setPage("apps")
+                            },appsState,{apps.load(true)},guardedAppExport,guardedMediaSelect,
+                                mediaPermissionRevision,requestMedia,kind.ordinal,
+                                standaloneCategory=true)
+                        }
+                        "documents" -> DocumentBrowserScreen(
+                            back={manager.setPage("home")},
+                            onSend=guardedMediaSelect)
                         "files" -> FileLibraryScreen(guardedSend,{
                             appsParent="files";apps.load();manager.setPage("apps")
                         },
