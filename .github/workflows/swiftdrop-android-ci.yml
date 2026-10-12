@@ -9,6 +9,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write
+concurrency:
+  group: swiftdrop-android-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,6 +22,17 @@ jobs:
         working-directory: SwiftDrop-Android
     steps:
       - uses: actions/checkout@v4
+      - name: Stop obsolete SwiftDrop validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for run in $(gh run list --repo "$GITHUB_REPOSITORY" \
+            --workflow swiftdrop-android-ci.yml --branch swiftdrop-android-v0.1-alpha \
+            --status in_progress --json databaseId --jq '.[].databaseId'); do
+            if [ "$run" != "$GITHUB_RUN_ID" ]; then
+              gh run cancel "$run" --repo "$GITHUB_REPOSITORY"
+            fi
+          done
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -67,10 +82,11 @@ jobs:
           api-level: 36
           target: google_apis
           arch: x86_64
+          emulator-boot-timeout: 180
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 3072
           script: |
             adb shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural
-            (cd SwiftDrop-Android && gradle --no-daemon :app:connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true); result=$?; mkdir -p SwiftDrop-Android/app/build/reports/visual-qa; adb pull /sdcard/Download/SwiftDrop-visual-qa SwiftDrop-Android/app/build/reports/visual-qa || true; exit "$result"
+            (cd SwiftDrop-Android && timeout --signal=TERM --kill-after=15s 180s gradle --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.timeout_msec=90000 -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true); result=$?; mkdir -p SwiftDrop-Android/app/build/reports/visual-qa; adb logcat -d > SwiftDrop-Android/app/build/reports/visual-qa/logcat-normal.txt; adb pull /sdcard/Download/SwiftDrop-visual-qa SwiftDrop-Android/app/build/reports/visual-qa || true; exit "$result"
             mkdir -p SwiftDrop-Android/app/build/reports/ui-normal
             cp -R SwiftDrop-Android/app/build/reports/androidTests/connected/. SwiftDrop-Android/app/build/reports/ui-normal/
             adb shell settings put system font_scale 1.3
@@ -81,14 +97,14 @@ jobs:
             adb shell pm grant app.swiftdrop android.permission.READ_MEDIA_IMAGES
             adb shell pm grant app.swiftdrop android.permission.READ_MEDIA_VIDEO
             adb shell pm grant app.swiftdrop android.permission.READ_MEDIA_AUDIO
-            (cd SwiftDrop-Android && gradle --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.swiftdrop.StorageFromMainActivityUiTest,app.swiftdrop.NativeProMainActivityUiTest -Pandroid.testInstrumentationRunnerArguments.requireLibraryAccess=true -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true); result=$?; adb pull /sdcard/Download/SwiftDrop-visual-qa SwiftDrop-Android/app/build/reports/visual-qa || true; exit "$result"
+            (cd SwiftDrop-Android && timeout --signal=TERM --kill-after=15s 180s gradle --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.timeout_msec=90000 -Pandroid.testInstrumentationRunnerArguments.class=app.swiftdrop.StorageFromMainActivityUiTest,app.swiftdrop.NativeProMainActivityUiTest -Pandroid.testInstrumentationRunnerArguments.requireLibraryAccess=true -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true); result=$?; adb logcat -d > SwiftDrop-Android/app/build/reports/visual-qa/logcat-granted.txt; adb pull /sdcard/Download/SwiftDrop-visual-qa SwiftDrop-Android/app/build/reports/visual-qa || true; exit "$result"
             mkdir -p SwiftDrop-Android/app/build/reports/visual-qa
             adb pull /sdcard/Download/SwiftDrop-visual-qa SwiftDrop-Android/app/build/reports/visual-qa
             adb shell settings put system font_scale 1.0
             adb shell wm size reset
             adb shell wm density reset
             adb shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.threebutton
-            (cd SwiftDrop-Android && gradle --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.swiftdrop.StorageFromMainActivityUiTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true); result=$?; adb pull /sdcard/Download/SwiftDrop-visual-qa SwiftDrop-Android/app/build/reports/visual-qa || true; exit "$result"
+            (cd SwiftDrop-Android && timeout --signal=TERM --kill-after=15s 180s gradle --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.timeout_msec=90000 -Pandroid.testInstrumentationRunnerArguments.class=app.swiftdrop.StorageFromMainActivityUiTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true); result=$?; adb logcat -d > SwiftDrop-Android/app/build/reports/visual-qa/logcat-three-button.txt; adb pull /sdcard/Download/SwiftDrop-visual-qa SwiftDrop-Android/app/build/reports/visual-qa || true; exit "$result"
       - uses: actions/upload-artifact@v4
         with:
           name: swiftdrop-v0.5.0-alpha-debug-apk
