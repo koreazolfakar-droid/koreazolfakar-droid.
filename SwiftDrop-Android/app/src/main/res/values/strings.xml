@@ -249,4 +249,10 @@
     <string name="doc_reset_folder">Choose a different folder</string>
     <string name="doc_item_count">%1$d items</string>
     <string name="doc_folder_label">Folder</string>
+
+    <string name="crash_report_title">SwiftDrop closed unexpectedly</string>
+    <string name="crash_report_info">A crash report was saved on this phone. Tap Copy report and paste it into your support chat so we can identify the cause. No report is sent automatically.</string>
+    <string name="crash_report_copy">Copy report</string>
+    <string name="crash_report_close">Dismiss</string>
+    <string name="crash_report_copied">Crash report copied</string>
 </resources>

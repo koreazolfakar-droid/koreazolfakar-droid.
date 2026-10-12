@@ -2,6 +2,8 @@ package app.swiftdrop
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.swiftdrop.ui.screens.files.DocumentBrowserScreen
 import app.swiftdrop.ui.theme.SwiftDropTheme
@@ -21,6 +23,6 @@ class DocumentBrowserUiTest {
             }
         }
         compose.onNodeWithText("Choose files").assertExists()
-        compose.onNodeWithText("Choose folder").assertExists()
+        compose.onAllNodesWithText("Choose folder").onFirst().assertExists()
     }
 }

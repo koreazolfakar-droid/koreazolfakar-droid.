@@ -13,6 +13,17 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.ViewModelProvider
 import android.widget.Toast
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
@@ -25,6 +36,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 class MainActivity : ComponentActivity() {
     private lateinit var model: SwiftDropViewModel
     private var mediaPermissionRevision by mutableIntStateOf(0)
+    private var previousCrash by mutableStateOf<String?>(null)
     private val manager get() = model.manager
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         val action = model.pendingAction
@@ -41,6 +53,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashDiagnostics.install(this)
+        previousCrash = CrashDiagnostics.read(this)
         enableEdgeToEdge()
         model = ViewModelProvider(this)[SwiftDropViewModel::class.java]
         setContent {
@@ -52,6 +66,34 @@ class MainActivity : ComponentActivity() {
                 openSettings={startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))},
                  openLocationSettings={startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))},
                  scanQr={scanReceiverQr()})
+            previousCrash?.let { report ->
+                AlertDialog(
+                    onDismissRequest = { previousCrash = null; CrashDiagnostics.clear(this@MainActivity) },
+                    title = { Text(stringResource(R.string.crash_report_title)) },
+                    text = {
+                        Column(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState())) {
+                            Text(stringResource(R.string.crash_report_info))
+                            Spacer(Modifier.height(12.dp))
+                            Text(report.take(900), style = MaterialTheme.typography.bodySmall)
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("SwiftDrop crash report", report))
+                            Toast.makeText(this@MainActivity, R.string.crash_report_copied, Toast.LENGTH_SHORT).show()
+                            previousCrash = null
+                            CrashDiagnostics.clear(this@MainActivity)
+                        }) { Text(stringResource(R.string.crash_report_copy)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            previousCrash = null
+                            CrashDiagnostics.clear(this@MainActivity)
+                        }) { Text(stringResource(R.string.crash_report_close)) }
+                    }
+                )
+            }
         }
     }
 

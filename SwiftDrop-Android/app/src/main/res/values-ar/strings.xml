@@ -261,4 +261,10 @@
     <string name="doc_reset_folder">اختيار مجلد آخر</string>
     <string name="doc_item_count">%1$d عنصر</string>
     <string name="doc_folder_label">مجلد</string>
+
+    <string name="crash_report_title">SwiftDrop تسكّر بشكل غير متوقّع</string>
+    <string name="crash_report_info">حفظنا تقرير الكراش على تلفونك فقط. اضغط نسخ التقرير وابعتلي النص هون لنعرف السبب الحقيقي. ما رح ينبعت شي تلقائي.</string>
+    <string name="crash_report_copy">نسخ التقرير</string>
+    <string name="crash_report_close">إغلاق</string>
+    <string name="crash_report_copied">تم نسخ تقرير الكراش</string>
 </resources>
