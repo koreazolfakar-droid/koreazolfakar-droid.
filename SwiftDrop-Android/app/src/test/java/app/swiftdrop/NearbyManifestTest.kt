@@ -31,14 +31,14 @@ class NearbyManifestTest {
         }
     }
 
-    @Test fun approximateLocationAvailableThroughAndroid16WithoutPreciseModernAccess() {
+    @Test fun approximateAndPreciseLocationAvailableThroughAndroid16() {
         val coarse = requireNotNull(permissions["android.permission.ACCESS_COARSE_LOCATION"])
         val fine = requireNotNull(permissions["android.permission.ACCESS_FINE_LOCATION"])
         assertFalse(coarse.hasAttributeNS(namespace,"maxSdkVersion"))
-        assertEquals(32,fine.getAttributeNS(namespace,"maxSdkVersion").toInt())
+        assertFalse(fine.hasAttributeNS(namespace,"maxSdkVersion"))
         for (sdk in 33..36) {
             assertTrue(requiredNearbyPermissions(sdk).contains("android.permission.ACCESS_COARSE_LOCATION"))
-            assertFalse(requiredNearbyPermissions(sdk).contains("android.permission.ACCESS_FINE_LOCATION"))
+            assertTrue(requiredNearbyPermissions(sdk).contains("android.permission.ACCESS_FINE_LOCATION"))
         }
     }
 

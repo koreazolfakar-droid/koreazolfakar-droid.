@@ -83,7 +83,7 @@
     <string name="about">About SwiftDrop</string>
     <string name="version">Version %1$s</string>
     <string name="permissions_title">Allow nearby connections</string>
-    <string name="permissions_caption">Allow Bluetooth, Nearby Wi-Fi and approximate Location when prompted. Some Google Play services devices require Location permission for discovery. SwiftDrop does not read GPS coordinates or use background location.</string>
+    <string name="permissions_caption">Allow Bluetooth, Nearby Wi-Fi and Precise location when asked to share. Some Google Play services versions require this permission for discovery. SwiftDrop never reads your coordinates or requests background location.</string>
     <string name="open_settings">Open app settings</string>
     <string name="retry_send">Try sending again</string>
     <string name="back">Back</string>
@@ -158,4 +158,5 @@
     <string name="open_location_settings">Open Location settings</string>
     <string name="nearby_diagnostics_title">Connection diagnostics (no personal data)</string>
     <string name="copy_diagnostics">Copy diagnostics</string>
+    <string name="nearby_precise_location_required">Google Nearby requires Precise location on this device. Open SwiftDrop App permissions, choose Location, turn on Precise location, then retry. Location is used only for Nearby permission compatibility; SwiftDrop does not access GPS coordinates.</string>
 </resources>

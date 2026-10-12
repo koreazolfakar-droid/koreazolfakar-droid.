@@ -8,13 +8,15 @@ internal enum class NearbyFailure {
     LocationOff,
     LocationDependency,
     MissingPermission,
+    PreciseLocationRequired,
     RadioBusy,
     Other
 }
 
 internal fun classifyNearbyFailure(statusCode: Int?, locationEnabled: Boolean): NearbyFailure =
     when (statusCode) {
-        8034, 8036, 8025 -> if (locationEnabled) NearbyFailure.LocationDependency else NearbyFailure.LocationOff
+        8034, 8025 -> if (locationEnabled) NearbyFailure.LocationDependency else NearbyFailure.LocationOff
+        8036 -> NearbyFailure.PreciseLocationRequired
         8029, 8032, 8033 -> NearbyFailure.MissingPermission
         8050 -> NearbyFailure.RadioBusy
         else -> NearbyFailure.Other

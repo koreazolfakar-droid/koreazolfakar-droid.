@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
         } else {
             // Android 12+ requires COARSE and FINE to be requested in a single
             // runtime call whenever FINE is requested. Preserve that invariant.
-            val request = if (Build.VERSION.SDK_INT in 31..32 &&
+            val request = if (Build.VERSION.SDK_INT >= 31 &&
                 missing.any { it == Manifest.permission.ACCESS_COARSE_LOCATION ||
                     it == Manifest.permission.ACCESS_FINE_LOCATION }
             ) {

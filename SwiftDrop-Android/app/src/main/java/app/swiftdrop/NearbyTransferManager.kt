@@ -94,6 +94,7 @@ class NearbyTransferManager(private val context: Context) {
             "Android API: " + Build.VERSION.SDK_INT,
             "System location ON: " + isDeviceLocationEnabled(),
             "SwiftDrop coarse location granted: " + allowed(android.Manifest.permission.ACCESS_COARSE_LOCATION),
+            "SwiftDrop fine location granted: " + allowed(android.Manifest.permission.ACCESS_FINE_LOCATION),
             "SwiftDrop Bluetooth scan granted: " + (Build.VERSION.SDK_INT < 31 || allowed(android.Manifest.permission.BLUETOOTH_SCAN)),
             "SwiftDrop Bluetooth connect granted: " + (Build.VERSION.SDK_INT < 31 || allowed(android.Manifest.permission.BLUETOOTH_CONNECT)),
             "SwiftDrop Bluetooth advertise granted: " + (Build.VERSION.SDK_INT < 31 || allowed(android.Manifest.permission.BLUETOOTH_ADVERTISE)),
@@ -111,6 +112,7 @@ class NearbyTransferManager(private val context: Context) {
             NearbyFailure.LocationOff -> R.string.nearby_location_off to NearbyRecoveryAction.LocationSettings
             NearbyFailure.LocationDependency -> R.string.nearby_location_dependency to NearbyRecoveryAction.LocationSettings
             NearbyFailure.MissingPermission -> R.string.nearby_permission_problem to NearbyRecoveryAction.AppSettings
+            NearbyFailure.PreciseLocationRequired -> R.string.nearby_precise_location_required to NearbyRecoveryAction.AppSettings
             NearbyFailure.RadioBusy -> R.string.nearby_radio_busy to NearbyRecoveryAction.None
             NearbyFailure.Other -> {
                 state.update { it.copy(

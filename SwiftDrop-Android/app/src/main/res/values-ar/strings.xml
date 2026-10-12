@@ -83,7 +83,7 @@
     <string name="about">حول SwiftDrop</string>
     <string name="version">الإصدار %1$s</string>
     <string name="permissions_title">السماح بالاتصال بالأجهزة القريبة</string>
-    <string name="permissions_caption">اسمح بالبلوتوث وNearby Wi-Fi والموقع التقريبي عند الطلب. بعض أجهزة Google Play بتحتاج صلاحية الموقع لاكتشاف الهواتف. SwiftDrop ما بيقرأ إحداثيات GPS ولا بيطلب الموقع بالخلفية.</string>
+    <string name="permissions_caption">اسمح بالبلوتوث وNearby Wi-Fi واختار الموقع الدقيق (Precise) عند نقل الملفات. بعض نسخ Google Play services بتطلب هالصلاحية للبحث عن الأجهزة. SwiftDrop ما بيقرأ الإحداثيات ولا بيطلب الموقع بالخلفية.</string>
     <string name="open_settings">فتح إعدادات التطبيق</string>
     <string name="retry_send">إعادة محاولة الإرسال</string>
     <string name="back">رجوع</string>
@@ -166,4 +166,5 @@
     <string name="open_location_settings">فتح إعدادات الموقع</string>
     <string name="nearby_diagnostics_title">تشخيص الاتصال (بدون بيانات شخصية)</string>
     <string name="copy_diagnostics">نسخ التقرير</string>
+    <string name="nearby_precise_location_required">خدمة Google Nearby بحاجة لصلاحية الموقع الدقيق بهالجهاز. افتح إعدادات تطبيق SwiftDrop ثم الموقع واختار Precise location وبعدها جرّب مجدداً. التطبيق ما بيقرأ إحداثيات GPS.</string>
 </resources>

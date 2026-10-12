@@ -10,8 +10,9 @@ class NearbyFailureTest {
     @Test fun missingCoarseLocationWithLocationOnNeedsServiceDiagnostics() {
         assertEquals(NearbyFailure.LocationDependency,classifyNearbyFailure(8034,true))
     }
-    @Test fun missingFineLocationUsesSameRecoveryPath() {
-        assertEquals(NearbyFailure.LocationOff,classifyNearbyFailure(8036,false))
+    @Test fun missingFineLocationRequiresPreciseLocationPermissionNotSystemLocationToggle() {
+        assertEquals(NearbyFailure.PreciseLocationRequired,classifyNearbyFailure(8036,false))
+        assertEquals(NearbyFailure.PreciseLocationRequired,classifyNearbyFailure(8036,true))
     }
     @Test fun nearbyWifiPermissionHasDistinctRecovery() {
         assertEquals(NearbyFailure.MissingPermission,classifyNearbyFailure(8029,true))
