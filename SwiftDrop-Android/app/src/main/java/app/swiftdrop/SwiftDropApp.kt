@@ -8,6 +8,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.result.ActivityResultRegistryOwner
+import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -109,9 +110,12 @@ internal fun SwiftDropLocalizedProviders(
     content: @Composable () -> Unit
 ) {
     val activityContext = LocalContext.current
-    val activityResultOwner = LocalActivityResultRegistryOwner.current
-        ?: (activityContext as? ActivityResultRegistryOwner)
-    val backPressedOwner = LocalOnBackPressedDispatcherOwner.current
+    val activityResultOwner = requireNotNull(
+        LocalActivityResultRegistryOwner.current ?: (activityContext as? ActivityResultRegistryOwner)
+    ) { "An ActivityResultRegistryOwner is required for SwiftDrop file pickers" }
+    val backPressedOwner = requireNotNull(
+        LocalOnBackPressedDispatcherOwner.current ?: (activityContext as? OnBackPressedDispatcherOwner)
+    ) { "An OnBackPressedDispatcherOwner is required for SwiftDrop navigation" }
     val localized = remember(activityContext, configuration) {
         activityContext.createConfigurationContext(configuration)
     }
