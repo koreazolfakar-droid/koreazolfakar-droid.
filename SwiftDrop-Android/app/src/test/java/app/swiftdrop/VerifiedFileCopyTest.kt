@@ -42,6 +42,16 @@ class VerifiedFileCopyTest {
             fail("Expected invalid length")
         } catch (_: IllegalArgumentException) {}
     }
+    @Test fun cancellationDuringLargeFileStopsMidStream() {
+        val destination=ByteArrayOutputStream()
+        var checks=0
+        try {
+            VerifiedFileCopy.copy(ByteArrayInputStream(ByteArray(800_000)),destination,
+                isSessionActive={ ++checks == 1 })
+            fail("Expected cancellation")
+        } catch (_: IOException) {}
+        assertTrue(destination.size() in 1 until 800_000)
+    }
     @Test fun cancelledSessionStopsCopyBeforePublishing() {
         try {
             VerifiedFileCopy.copy(ByteArrayInputStream(ByteArray(4096)),ByteArrayOutputStream(),

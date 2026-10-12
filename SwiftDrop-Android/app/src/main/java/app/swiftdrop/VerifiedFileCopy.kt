@@ -18,12 +18,17 @@ object VerifiedFileCopy {
     ): Long {
         require(metadataLength >= -1 && transportLength >= -1) { "Invalid expected size" }
         var total = 0L
+        var noProgressReads = 0
         val buffer = ByteArray(256 * 1024)
         while (true) {
             if (!isSessionActive()) throw IOException("Transfer session cancelled")
             val count = input.read(buffer)
             if (count == -1) break
-            if (count == 0) continue
+            if (count == 0) {
+                if (++noProgressReads > 16) throw IOException("File input made no progress")
+                continue
+            }
+            noProgressReads = 0
             if (Long.MAX_VALUE - total < count) throw IOException("File too large")
             total += count
             if ((metadataLength >= 0 && total > metadataLength) ||

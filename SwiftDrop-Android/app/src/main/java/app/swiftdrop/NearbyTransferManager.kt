@@ -182,6 +182,10 @@ class NearbyTransferManager(private val context: Context) {
 
         override fun onDisconnected(endpointId: String) {
             if (connectedId != endpointId) return
+            // Keep fully received files available for saving, but discard incomplete ones.
+            incomingPayloads.keys.toList().filterNot { completed.contains(it) }.forEach {
+                discardPartialIncoming(it)
+            }
             connectedId = null
             activeOutboundId = null
             outboundUris = emptyList()
@@ -258,16 +262,7 @@ class NearbyTransferManager(private val context: Context) {
                 }
                 PayloadTransferUpdate.Status.FAILURE, PayloadTransferUpdate.Status.CANCELED -> {
                     if (sent) activeOutboundId = null
-                    else {
-                        val temporary = incomingPayloads.remove(id)?.asFile()?.asUri()
-                        incomingMetadata.remove(id)
-                        incomingTransportLengths.remove(id)
-                        incomingPeers.remove(id)
-                        completed.remove(id)
-                        if (temporary != null) io.execute {
-                            runCatching { context.contentResolver.delete(temporary,null,null) }
-                        }
-                    }
+                    else discardPartialIncoming(id)
                     info(if (update.status == PayloadTransferUpdate.Status.CANCELED) R.string.cancelled else R.string.failed, error = true)
                 }
             }
@@ -429,7 +424,6 @@ class NearbyTransferManager(private val context: Context) {
                 val written = saveIntoDownloads(uri, meta.name,meta.size,transportLength) {
                     !closed && sessionGeneration.get() == generation
                 }
-                try { context.contentResolver.delete(uri, null, null) } catch (_: Exception) {}
                 if (closed || sessionGeneration.get() != generation) return@execute
                 state.update { s ->
                     val current = s.progress?.payloadId == id
@@ -443,7 +437,8 @@ class NearbyTransferManager(private val context: Context) {
                 if (!closed && sessionGeneration.get() == generation &&
                     state.value.progress?.payloadId == id) failTransfer(R.string.save_failed, e)
             } finally {
-                incomingPayloads.remove(id)
+                val temporary = incomingPayloads.remove(id)?.asFile()?.asUri()
+                if (temporary != null) runCatching { context.contentResolver.delete(temporary,null,null) }
                 incomingMetadata.remove(id)
                 incomingTransportLengths.remove(id)
                 completed.remove(id)
@@ -514,6 +509,19 @@ class NearbyTransferManager(private val context: Context) {
         return SavedFile("App downloads/SwiftDrop", writtenBytes)
     }
 
+    private fun discardPartialIncoming(id: Long) {
+        val temporary = incomingPayloads.remove(id)?.asFile()?.asUri()
+        incomingMetadata.remove(id)
+        incomingTransportLengths.remove(id)
+        incomingPeers.remove(id)
+        completed.remove(id)
+        if (temporary != null && !closed) {
+            runCatching {
+                io.execute { runCatching { context.contentResolver.delete(temporary,null,null) } }
+            }
+        }
+    }
+
     fun disconnect() {
         resetSearching()
         qrTarget = null
@@ -521,6 +529,13 @@ class NearbyTransferManager(private val context: Context) {
         connectedId = null
         activeOutboundId = null
         outboundUris = emptyList()
+        // The IO executor serializes deletes after any in-flight save has aborted.
+        val tempUris = incomingPayloads.values.mapNotNull { it.asFile()?.asUri() }
+        if (tempUris.isNotEmpty()) runCatching {
+            io.execute { tempUris.forEach { uri ->
+                runCatching { context.contentResolver.delete(uri,null,null) }
+            } }
+        }
         incomingPayloads.clear()
         incomingMetadata.clear()
         incomingTransportLengths.clear()
