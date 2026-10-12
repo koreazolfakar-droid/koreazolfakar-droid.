@@ -5,6 +5,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,12 +27,18 @@ fun AppIcon(@DrawableRes icon: Int, modifier: Modifier = Modifier, description: 
     Icon(painterResource(icon), description, modifier.size(24.dp), tint = tint)
 }
 
+val LocalPageBack=staticCompositionLocalOf<(() -> Unit)?> {null}
+
 @Composable
-fun PageHeading(title: String, subtitle: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineMedium)
-        Text(subtitle, style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+fun PageHeading(title: String,subtitle: String) {
+    Row(verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        LocalPageBack.current?.let {back ->
+            IconButton(back,Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp)) {AppIcon(R.drawable.ic_back,description=stringResource(R.string.back))}
+        }
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            Text(title,style=MaterialTheme.typography.headlineMedium)
+            Text(subtitle,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -70,7 +77,7 @@ fun TransferHistoryItem(entry: HistoryEntry) {
     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            IconBadge(fileIcon(entry.name))
+            CategoryBadge(fileIcon(entry.name))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(entry.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {

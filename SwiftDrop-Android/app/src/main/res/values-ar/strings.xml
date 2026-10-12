@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="brand_tagline">قرّب الأجهزة. وشارك بسهولة.</string>
+    <string name="brand_tagline">شارك كل شي، فورًا.</string>
     <string name="home">الرئيسية</string>
     <string name="history">السجل</string>
     <string name="settings">الإعدادات</string>
@@ -8,18 +8,15 @@
     <string name="receive_files">استقبال ملفات</string>
     <string name="choose_files">اختار الملفات</string>
     <string name="make_visible">خلّي الأجهزة تلاقيك</string>
-    <string name="connection_status">حالة الاتصال</string>
     <string name="ready">جاهز للمشاركة</string>
     <string name="private_sharing">خصوصيتك أولاً</string>
     <string name="private_caption">مشاركة مباشرة بين الأجهزة القريبة، بدون سيرفر لرفع الملفات.</string>
-    <string name="categories">شو بدّك تبعت؟</string>
     <string name="photos">صور</string>
     <string name="videos">فيديو</string>
     <string name="applications">التطبيقات</string>
     <string name="documents">مستندات</string>
     <string name="music">موسيقى</string>
     <string name="all_files">كل الملفات</string>
-    <string name="apk_hint">اختار التطبيقات المثبّتة أو ملفات APK. التطبيقات المقسّمة تُرسَل مع أجزائها المطلوبة.</string>
     <string name="recent">آخر عمليات النقل</string>
     <string name="see_all">عرض الكل</string>
     <string name="no_transfers">بلّش أول عملية نقل</string>
@@ -57,15 +54,12 @@
     <string name="failed">فشل النقل</string>
     <string name="cancelled">تم إلغاء النقل</string>
     <string name="saving">عم نحفظ الملف…</string>
-    <string name="running">جاري النقل</string>
     <string name="waiting">بانتظار الملفات</string>
-    <string name="transferred">تم نقل</string>
     <string name="speed">السرعة المُقاسة</string>
     <string name="remaining">الوقت المتبقّي التقريبي</string>
     <string name="measuring">جاري القياس…</string>
     <string name="unknown">غير معروف</string>
     <string name="speed_value">%1$s/ث</string>
-    <string name="connection">الاتصال</string>
     <string name="engine_value">Nearby Connections · اتصال مباشر</string>
     <string name="disconnect">قطع الاتصال</string>
     <string name="cancel_transfer">إلغاء النقل</string>
@@ -142,4 +136,27 @@
         <item quantity="many">%1$d ثانية</item>
         <item quantity="other">%1$d ثانية</item>
     </plurals>
+    <string name="skip">تخطي</string>
+    <string name="get_started">ابدأ المشاركة</string>
+    <string name="welcome_title">سريع. خاص. بلا إعلانات.</string>
+    <string name="welcome_caption">صور وموسيقى وتطبيقات ومستندات. شارك مباشرة مع جهاز أندرويد قريب.</string>
+    <string name="direct_sharing">مشاركة مباشرة</string>
+    <string name="direct_caption">اختار ملفاتك واتصل بالجهاز التاني.</string>
+    <string name="no_ads">بلا إعلانات</string>
+    <string name="no_ads_caption">تجربة بسيطة بلا إعلانات أو تتبّع.</string>
+    <string name="files">الملفات</string>
+    <string name="open_picker">اختيار عبر أندرويد</string>
+    <string name="select_installed">اختار تطبيقات مثبّتة</string>
+    <string name="device_storage">مساحة الجهاز</string>
+    <string name="storage_available">%1$s متاحة · %2$s إجمالي</string>
+    <string name="search_apps">ابحث عن تطبيق مثبّت</string>
+    <string name="search_history">ابحث عن ملفات أو أجهزة</string>
+    <string name="no_matches">ما في نتائج مطابقة</string>
+    <string name="all">الكل</string>
+    <string name="receive_unavailable">تعذّر بدء الاستقبال</string>
+    <string name="discovery_unavailable">تعذّر بدء البحث</string>
+    <string name="device_visible">جهازك: %1$s</string>
+    <string name="per_file">تقدّم الملف الحالي</string>
+    <string name="send_more">إرسال ملفات أخرى</string>
+    <string name="view_history">عرض السجل</string>
 </resources>

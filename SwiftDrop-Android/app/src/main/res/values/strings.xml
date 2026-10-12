@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="brand_tagline">A little closer. A lot faster.</string>
+    <string name="brand_tagline">Share everything. Instantly.</string>
     <string name="home">Home</string>
     <string name="history">History</string>
     <string name="settings">Settings</string>
@@ -8,18 +8,15 @@
     <string name="receive_files">Receive files</string>
     <string name="choose_files">Choose what to share</string>
     <string name="make_visible">Let nearby devices find you</string>
-    <string name="connection_status">Connection status</string>
     <string name="ready">Ready to share</string>
     <string name="private_sharing">Private by design</string>
     <string name="private_caption">Direct sharing between nearby devices. No upload server.</string>
-    <string name="categories">What would you like to send?</string>
     <string name="photos">Photos</string>
     <string name="videos">Videos</string>
     <string name="applications">Applications</string>
     <string name="documents">Documents</string>
     <string name="music">Music</string>
     <string name="all_files">All files</string>
-    <string name="apk_hint">Choose installed apps or APK files. Split apps are shared with their required files.</string>
     <string name="recent">Recent transfers</string>
     <string name="see_all">See all</string>
     <string name="no_transfers">Your next transfer starts here</string>
@@ -57,15 +54,12 @@
     <string name="failed">Transfer failed</string>
     <string name="cancelled">Transfer cancelled</string>
     <string name="saving">Saving your file…</string>
-    <string name="running">Transfer in progress</string>
     <string name="waiting">Waiting for files</string>
-    <string name="transferred">Transferred</string>
     <string name="speed">Measured speed</string>
     <string name="remaining">Estimated remaining</string>
     <string name="measuring">Measuring…</string>
     <string name="unknown">Unknown</string>
     <string name="speed_value">%1$s/s</string>
-    <string name="connection">Connection</string>
     <string name="engine_value">Nearby Connections · Point-to-point</string>
     <string name="disconnect">Disconnect</string>
     <string name="cancel_transfer">Cancel transfer</string>
@@ -134,4 +128,27 @@
         <item quantity="one">%1$d second</item>
         <item quantity="other">%1$d seconds</item>
     </plurals>
+    <string name="skip">Skip</string>
+    <string name="get_started">Get started</string>
+    <string name="welcome_title">Fast. Private. Ad-free.</string>
+    <string name="welcome_caption">Photos, music, apps and documents. Share directly with a nearby Android device.</string>
+    <string name="direct_sharing">Direct sharing</string>
+    <string name="direct_caption">Choose your files and connect to the other device.</string>
+    <string name="no_ads">No ads</string>
+    <string name="no_ads_caption">A clean experience with no ads or analytics.</string>
+    <string name="files">Files</string>
+    <string name="open_picker">Choose with Android</string>
+    <string name="select_installed">Choose installed apps</string>
+    <string name="device_storage">Device storage</string>
+    <string name="storage_available">%1$s available · %2$s total</string>
+    <string name="search_apps">Search installed apps</string>
+    <string name="search_history">Search files or devices</string>
+    <string name="no_matches">No matching results</string>
+    <string name="all">All</string>
+    <string name="receive_unavailable">Could not start receiving</string>
+    <string name="discovery_unavailable">Could not start discovery</string>
+    <string name="device_visible">Your device: %1$s</string>
+    <string name="per_file">Progress for the current file</string>
+    <string name="send_more">Send more files</string>
+    <string name="view_history">View history</string>
 </resources>

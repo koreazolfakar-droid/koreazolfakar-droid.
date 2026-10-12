@@ -1,8 +1,11 @@
-# SwiftDrop Android — 0.2.0-alpha
+# SwiftDrop Android — 0.2.1-alpha
 
 Native Kotlin / Jetpack Compose file sharing using Google's Nearby Connections API. The existing `app.swiftdrop` identity, `app.swiftdrop.nearby` service, metadata protocol and `P2P_POINT_TO_POINT` transport are preserved.
 
 ## Features
+
+- v0.2.1 fixes Nearby error 8032 / MISSING_PERMISSION_ACCESS_WIFI_STATE on modern Android by keeping ACCESS_WIFI_STATE and CHANGE_WIFI_STATE available beyond API 31. These are normal install-time permissions; no additional runtime dialog or broad access was introduced.
+- Reference-inspired blue/cyan action cards, a colorful responsive file-category grid, a one-time skippable welcome screen, installed-app search, history search/direction filters, expandable settings, and a geometric paper-plane brand mark. Theme preferences and RTL remain supported. Large fonts stack action cards and expand category cells; incoming verification text can scroll.
 
 - Material 3 dashboard, rounded vector icons, original adaptive blue/cyan launcher icon and Android 13 monochrome layer.
 - Dedicated file library: photos, videos, documents, music and all files use Android's Storage Access Framework. Multiple selections show actual names, sizes and a review step before discovery.
@@ -22,13 +25,13 @@ Use JDK 17, Android SDK API 36, build tools 35.0.0 and Gradle 8.13. Open this di
 gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 ```
 
-The wrapper properties are included but the wrapper executable/JAR are not packaged; use a local Gradle distribution. The existing GitHub workflow `.github/workflows/swiftdrop-android-ci.yml` runs the same checks on pushes to `swiftdrop-android-v0.1-alpha` and uploads `swiftdrop-v0.2.0-alpha-debug-apk` and validation reports for 14 days. The Debug APK is installable but is not a signed production release.
+The wrapper properties are included but the wrapper executable/JAR are not packaged; use a local Gradle distribution. The existing GitHub workflow `.github/workflows/swiftdrop-android-ci.yml` runs the same checks on pushes to `swiftdrop-android-v0.1-alpha` and uploads `swiftdrop-v0.2.1-alpha-debug-apk` and validation reports for 14 days. The Debug APK is installable but is not a signed production release. CI caches its development keystore for subsequent Debug updates; older builds may use a different signing key.
 
 ## Automated validation
 
-All five implementation stages passed debug compilation, unit tests and lint locally. Final validation: **21 unit tests passed, 0 failures; lint 0 errors / 12 warnings; assembleDebug passed**. APK signature verification passed (v2), and packaged metadata confirmed `app.swiftdrop`, version code 2 and `0.2.0-alpha`. Tests cover safe filenames, API-specific permissions, real-measurement timing/reset conditions, and progress arithmetic including large files and unknown sizes.
+All five implementation stages passed debug compilation, unit tests and lint locally. Final validation: **25 unit tests passed, 0 failures; lint 0 errors / 11 warnings; assembleDebug passed**. APK signature verification passed (v2), and packaged metadata confirmed `app.swiftdrop`, version code 3 and `0.2.1-alpha`. Tests include the actual merged manifest and cover safe filenames, API-specific permissions, real-measurement timing/reset conditions, and progress arithmetic including large files and unknown sizes.
 
-No connected Android device, emulator or KVM was available. Compilation and unit tests do not prove radio discovery, Android provider behavior or successful transfers on hardware. See [implementation report](docs/WORKDIR/reports/PHASE05_PREMIUM_UI.md).
+An Android 15 ATD emulator verified installation, the onboarding UI tree, and automatic grants of both normal Wi-Fi permissions. No physical device or KVM acceleration was available. Two-device radio discovery and successful hardware transfers are not proven by these checks. See [v0.2.1 implementation report](docs/WORKDIR/reports/PHASE06_WIFI_REFERENCE_UI.md).
 
 ## Required device validation
 

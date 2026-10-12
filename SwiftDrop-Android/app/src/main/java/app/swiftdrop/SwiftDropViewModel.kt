@@ -10,6 +10,7 @@ class SwiftDropViewModel(application: Application) : AndroidViewModel(applicatio
     val manager = NearbyTransferManager(application)
     val settings = AppSettings(application)
     val apps = InstalledAppsController(application,manager)
+    init { if(!settings.state.value.onboardingComplete) manager.setPage("welcome") }
     var pendingAction: PendingNearbyAction? = null
     override fun onCleared() { apps.close();manager.close() }
 }

@@ -6,11 +6,14 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import app.swiftdrop.ui.screens.settings.SettingsScreen
+import app.swiftdrop.ui.screens.onboarding.WelcomeScreen
 import java.util.Locale
 import app.swiftdrop.ui.screens.files.*
 import androidx.compose.foundation.layout.*
@@ -59,13 +62,14 @@ fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: I
     }
     CompositionLocalProvider(LocalContext provides localized,LocalConfiguration provides configuration,
         LocalLayoutDirection provides if(configuration.layoutDirection == android.view.View.LAYOUT_DIRECTION_RTL) LayoutDirection.Rtl else LayoutDirection.Ltr) {
-        SwiftDropContent(manager,apps,settings,dark,preferences::setAppearance,preferences::setLanguage,send,receive,discover,openSettings)
+        SwiftDropContent(manager,apps,settings,dark,preferences::setAppearance,preferences::setLanguage,
+            {preferences.completeOnboarding();manager.setPage("home")},send,receive,discover,openSettings)
     }
 }
 
 @Composable
 private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsController,settings: SettingsState,dark: Boolean,
-    appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit,send: (Array<String>) -> Unit,
+    appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit,welcomeDone: () -> Unit,send: (Array<String>) -> Unit,
     receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit) {
     val state by manager.state.collectAsState()
     val appsState by apps.state.collectAsState()
@@ -77,10 +81,13 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
     val guardedReceive: () -> Unit = {
         if(sessionActive) leaveAction = { manager.disconnect();receive() } else receive()
     }
-    BackHandler(state.page != "home" && state.pending == null && leaveAction == null) { manager.setPage("home") }
+    BackHandler(state.page != "home" && state.pending == null && leaveAction == null) {
+        if(state.page=="welcome") welcomeDone() else manager.setPage("home")
+    }
     SwiftDropTheme(dark) {
-        Scaffold(bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+        CompositionLocalProvider(LocalPageBack provides {manager.setPage("home")}) {
+        Scaffold(modifier=Modifier.imePadding(),bottomBar = {
+            if(state.page!="welcome") NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                 listOf(Triple("home",R.string.home,R.drawable.ic_home),
                     Triple("history",R.string.history,R.drawable.ic_history),
                     Triple("settings",R.string.settings,R.drawable.ic_settings)).forEach { (page,label,icon) ->
@@ -93,20 +100,23 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
             Box(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.TopCenter) {
                 Box(Modifier.widthIn(max=SwiftDropDesign.ContentMaxWidth).fillMaxSize()) {
                     when(state.page) {
+                        "welcome" -> WelcomeScreen(welcomeDone)
                         "home" -> HomeScreen(state,guardedSend,guardedReceive,{manager.setPage("history")},{
                             manager.setPage(if(state.connectedName!=null || state.progress!=null) "transfer"
                                 else if(state.isAdvertising) "receive" else if(state.selectedFiles.isNotEmpty() && !state.isDiscovering) "selection" else "discover")
-                        },messageText(state.status),openFiles={manager.setPage("files")},openApps={apps.load();manager.setPage("apps")})
+                        },messageText(state.status),openFiles={manager.setPage("files")},openApps={apps.load();manager.setPage("apps")},onSettings={manager.setPage("settings")})
                         "files" -> FileLibraryScreen(guardedSend,{apps.load();manager.setPage("apps")})
                         "apps" -> InstalledAppsScreen(appsState,{apps.load(true)},{ selection ->
                             if(sessionActive) leaveAction={manager.disconnect();apps.export(selection)} else apps.export(selection)
-                        },{guardedSend(arrayOf("application/vnd.android.package-archive"))})
+                        },{guardedSend(arrayOf("application/vnd.android.package-archive"))},{manager.setPage("files")})
                         "selection" -> SelectionScreen(state,discover,{guardedSend(arrayOf("*/*"))})
                         "discover" -> DiscoveryScreen(state,manager::connect,discover,manager::disconnect)
                         "receive" -> ReceiveScreen(state,receive,manager::disconnect)
                         "transfer" -> TransferScreen(state,{
                             if(state.progress?.outcome==TransferOutcome.Running) manager.cancelTransfer() else manager.disconnect()
-                        })
+                        },sendMore={
+                            if(sessionActive) leaveAction={manager.disconnect();manager.setPage("files")} else manager.setPage("files")
+                        },history={manager.setPage("history")})
                         "history" -> HistoryScreen(state.history)
                         "settings" -> SettingsScreen(settings,appearance,language)
                         "permissions" -> PermissionsScreen({if(state.selected.isNotEmpty()) discover() else guardedSend(arrayOf("*/*"))},guardedReceive,openSettings)
@@ -117,7 +127,7 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
         state.pending?.let { request ->
             AlertDialog(onDismissRequest={manager.answerConnection(false)},icon={AppIcon(R.drawable.ic_security)},
                 title={Text(stringResource(R.string.secure_connection))},text={
-                    Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                    Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                         Text(stringResource(R.string.connect_to,request.peerName))
                         Text(stringResource(R.string.security_hint))
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -132,6 +142,7 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                 text={Text(stringResource(R.string.leave_caption))},
                 confirmButton={Button({leaveAction=null;action()}) {Text(stringResource(R.string.disconnect))}},
                 dismissButton={TextButton({leaveAction=null}) {Text(stringResource(R.string.keep_session))}})
+        }
         }
     }
 }

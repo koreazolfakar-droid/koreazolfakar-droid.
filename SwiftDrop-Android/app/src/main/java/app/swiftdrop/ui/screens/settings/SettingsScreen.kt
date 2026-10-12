@@ -1,15 +1,20 @@
 package app.swiftdrop.ui.screens.settings
 
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -18,40 +23,66 @@ import app.swiftdrop.R
 import app.swiftdrop.ui.components.*
 
 @Composable
-fun SettingsScreen(state: SettingsState, appearance: (Appearance) -> Unit, language: (AppLanguage) -> Unit) {
+fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         PageHeading(stringResource(R.string.settings),stringResource(R.string.settings_caption))
-        SettingsGroup(R.drawable.ic_appearance,stringResource(R.string.appearance)) {
+        ExpandableSetting(R.drawable.ic_appearance,stringResource(R.string.appearance),appearanceLabel(state.appearance)) {
             Column(Modifier.selectableGroup()) {
-                Appearance.entries.forEach { value ->
-                    Choice(stringResource(when(value) { Appearance.System -> R.string.system; Appearance.Light -> R.string.light; Appearance.Dark -> R.string.dark }),
-                        state.appearance==value) { appearance(value) }
+                Appearance.entries.forEach {value -> Choice(appearanceLabel(value),state.appearance==value) {appearance(value)}}
+            }
+        }
+        ExpandableSetting(R.drawable.ic_language,stringResource(R.string.language),languageLabel(state.language)) {
+            Column(Modifier.selectableGroup()) {
+                AppLanguage.entries.forEach {value -> Choice(languageLabel(value),state.language==value) {language(value)}}
+            }
+        }
+        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                Information(R.drawable.ic_security,R.string.privacy,stringResource(R.string.privacy_value))
+                HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+                Information(R.drawable.ic_folder,R.string.download_folder,stringResource(if(Build.VERSION.SDK_INT>=29) R.string.storage_modern else R.string.storage_legacy))
+                HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+                Information(R.drawable.ic_nearby,R.string.engine,stringResource(R.string.engine_value))
+            }
+        }
+        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+            Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                IconBadge(R.drawable.ic_info)
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.about),style=MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.version,BuildConfig.VERSION_NAME),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
-        SettingsGroup(R.drawable.ic_language,stringResource(R.string.language)) {
-            Column(Modifier.selectableGroup()) {
-                AppLanguage.entries.forEach { value ->
-                    Choice(stringResource(when(value) { AppLanguage.System -> R.string.system; AppLanguage.English -> R.string.english; AppLanguage.Arabic -> R.string.arabic }),
-                        state.language==value) { language(value) }
-                }
-            }
-        }
-        Information(R.drawable.ic_folder,R.string.download_folder,stringResource(if(Build.VERSION.SDK_INT>=29) R.string.storage_modern else R.string.storage_legacy))
-        Information(R.drawable.ic_security,R.string.privacy,stringResource(R.string.privacy_value))
-        Information(R.drawable.ic_nearby,R.string.engine,stringResource(R.string.engine_value))
-        Information(R.drawable.ic_info,R.string.about,stringResource(R.string.version,BuildConfig.VERSION_NAME))
     }
 }
 
 @Composable
-private fun SettingsGroup(icon: Int,title: String,content: @Composable () -> Unit) {
+private fun appearanceLabel(value: Appearance): String = stringResource(when(value) {
+    Appearance.System -> R.string.system;Appearance.Light -> R.string.light;Appearance.Dark -> R.string.dark
+})
+
+@Composable
+private fun languageLabel(value: AppLanguage): String = stringResource(when(value) {
+    AppLanguage.System -> R.string.system;AppLanguage.English -> R.string.english;AppLanguage.Arabic -> R.string.arabic
+})
+
+@Composable
+private fun ExpandableSetting(icon: Int,title: String,summary: String,content: @Composable () -> Unit) {
+    var expanded by rememberSaveable {mutableStateOf(false)}
+    val rotation by animateFloatAsState(if(expanded) 180f else 0f,label="setting disclosure")
     Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
-        Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                AppIcon(icon);Text(title,style=MaterialTheme.typography.titleMedium)
+        Column {
+            Row(Modifier.fillMaxWidth().heightIn(min=64.dp).clickable(role=Role.Button) {expanded=!expanded}.padding(16.dp),
+                verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                IconBadge(icon)
+                Column(Modifier.weight(1f)) {
+                    Text(title,style=MaterialTheme.typography.titleMedium)
+                    Text(summary,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                AppIcon(R.drawable.ic_expand,Modifier.graphicsLayer {rotationZ=rotation})
             }
-            content()
+            AnimatedVisibility(expanded) {Box(Modifier.padding(horizontal=16.dp).padding(bottom=12.dp)) {content()}}
         }
     }
 }
@@ -59,15 +90,19 @@ private fun SettingsGroup(icon: Int,title: String,content: @Composable () -> Uni
 @Composable
 private fun Choice(label: String,selected: Boolean,onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min=48.dp).selectable(selected=selected,role=Role.RadioButton,onClick=onClick)
-        .padding(horizontal=4.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+        .padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
         RadioButton(selected,onClick=null)
-        Text(label,style=MaterialTheme.typography.bodyLarge,modifier=Modifier.weight(1f))
+        Text(label,Modifier.weight(1f),style=MaterialTheme.typography.bodyLarge)
     }
 }
 
 @Composable
 private fun Information(icon: Int,title: Int,value: String) {
-    SettingsGroup(icon,stringResource(title)) {
-        Text(value,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+        AppIcon(icon)
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(title),style=MaterialTheme.typography.titleMedium)
+            Text(value,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

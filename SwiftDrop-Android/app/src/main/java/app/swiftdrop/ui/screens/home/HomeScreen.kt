@@ -7,7 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.swiftdrop.R
@@ -15,99 +15,57 @@ import app.swiftdrop.TransferUiState
 import app.swiftdrop.ui.components.*
 
 @Composable
-fun HomeScreen(state: TransferUiState, send: (Array<String>) -> Unit, receive: () -> Unit,
-               seeAll: () -> Unit, resume: () -> Unit, status: String, openFiles: () -> Unit = { send(arrayOf("*/*")) }, openApps: () -> Unit = { send(arrayOf("application/vnd.android.package-archive")) }) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.small) {
-                Icon(painterResource(R.drawable.ic_launcher_foreground), null,
-                    Modifier.size(52.dp), tint = MaterialTheme.colorScheme.onPrimary)
-            }
-            Column(Modifier.weight(1f)) {
-                Text("SwiftDrop", style = MaterialTheme.typography.headlineMedium)
-                Text(stringResource(R.string.brand_tagline), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+fun HomeScreen(state: TransferUiState,send: (Array<String>) -> Unit,receive: () -> Unit,seeAll: () -> Unit,
+    resume: () -> Unit,status: String,openFiles: () -> Unit = {send(arrayOf("*/*"))},
+    openApps: () -> Unit = {send(arrayOf("application/vnd.android.package-archive"))},onSettings: (() -> Unit)? = null) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+        BrandHeader(onSettings)
+        Surface(shape=MaterialTheme.shapes.small,color=MaterialTheme.colorScheme.primaryContainer.copy(alpha=.55f)) {
+            Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                AppIcon(if(state.connectedName!=null) R.drawable.ic_security else R.drawable.ic_nearby,Modifier.size(18.dp))
+                Text(status,Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
-        Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                IconBadge(if (state.connectedName != null) R.drawable.ic_security else R.drawable.ic_nearby)
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.connection_status), style = MaterialTheme.typography.labelLarge)
-                    Text(status, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp),maxItemsInEachRow=if(LocalDensity.current.fontScale>=1.3f) 1 else 2) {
+            GradientAction(R.drawable.ic_send,stringResource(R.string.send_files),stringResource(R.string.choose_files),openFiles,Modifier.weight(1f).widthIn(min=144.dp))
+            GradientAction(R.drawable.ic_receive,stringResource(R.string.receive_files),stringResource(R.string.make_visible),receive,Modifier.weight(1f).widthIn(min=144.dp),cyan=true)
+        }
+        if(state.isDiscovering || state.isAdvertising || state.connectedName!=null || state.progress!=null || state.selected.isNotEmpty()) {
+            OutlinedButton(resume,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                AppIcon(R.drawable.ic_progress);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.active_session))
             }
         }
-        // FlowRow stacks actions on narrow windows and at large font scales.
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
-            maxItemsInEachRow = 2) {
-            ActionCard(R.drawable.ic_send, stringResource(R.string.send_files), stringResource(R.string.choose_files),
-                Modifier.weight(1f).widthIn(min = 145.dp), onClick = openFiles)
-            ActionCard(R.drawable.ic_receive, stringResource(R.string.receive_files), stringResource(R.string.make_visible),
-                Modifier.weight(1f).widthIn(min = 145.dp), secondary = true, onClick = receive)
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp),maxItemsInEachRow=if(LocalDensity.current.fontScale>=1.3f) 1 else 2) {
+            Shortcut(R.drawable.ic_folder,R.string.file_library,openFiles,Modifier.weight(1f).widthIn(min=144.dp))
+            Shortcut(R.drawable.ic_history,R.string.history,seeAll,Modifier.weight(1f).widthIn(min=144.dp))
         }
-        if (state.isDiscovering || state.isAdvertising || state.connectedName != null || state.progress != null || state.selected.isNotEmpty()) {
-            OutlinedButton(resume, Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                AppIcon(R.drawable.ic_progress)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.active_session))
-            }
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            AssistChip({send(arrayOf("audio/*"))},{Text(stringResource(R.string.music))},leadingIcon={AppIcon(R.drawable.ic_music,tint=categoryColor(R.drawable.ic_music))})
+            AssistChip(openApps,{Text(stringResource(R.string.applications))},leadingIcon={AppIcon(R.drawable.ic_applications,tint=categoryColor(R.drawable.ic_applications))})
+            AssistChip({send(arrayOf("image/*"))},{Text(stringResource(R.string.photos))},leadingIcon={AppIcon(R.drawable.ic_photos,tint=categoryColor(R.drawable.ic_photos))})
         }
-        Text(stringResource(R.string.categories), style = MaterialTheme.typography.titleMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(Triple(R.drawable.ic_photos,R.string.photos,arrayOf("image/*")),
-                Triple(R.drawable.ic_videos,R.string.videos,arrayOf("video/*")),
-                Triple(R.drawable.ic_applications,R.string.applications,arrayOf("application/vnd.android.package-archive")),
-                Triple(R.drawable.ic_documents,R.string.documents,arrayOf("application/pdf","text/*","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document")),
-                Triple(R.drawable.ic_music,R.string.music,arrayOf("audio/*")),
-                Triple(R.drawable.ic_folder,R.string.all_files,arrayOf("*/*"))).forEach { (icon,label,mime) ->
-                OutlinedButton({ if(label==R.string.applications) openApps() else send(mime) }, Modifier.heightIn(min = 48.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)) {
-                    AppIcon(icon)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(label))
-                }
-            }
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+            Text(stringResource(R.string.recent),Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
+            TextButton(seeAll,Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.see_all))}
         }
-        Text(stringResource(R.string.apk_hint), style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    AppIcon(R.drawable.ic_security, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                    Text(stringResource(R.string.private_sharing), style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-                Text(stringResource(R.string.private_caption), style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
+        if(state.history.isEmpty()) EmptyTransfers() else state.history.take(3).forEach {TransferHistoryItem(it)}
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+            AppIcon(R.drawable.ic_security,Modifier.size(18.dp))
+            Text(stringResource(R.string.private_caption),Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.recent), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-            TextButton(seeAll, Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.see_all)) }
-        }
-        if (state.history.isEmpty()) EmptyTransfers() else state.history.take(3).forEach { TransferHistoryItem(it) }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            AppIcon(R.drawable.ic_qr, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(stringResource(R.string.qr_upcoming), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+            AppIcon(R.drawable.ic_qr,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.qr_upcoming),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun ActionCard(icon: Int, title: String, caption: String, modifier: Modifier,
-                       secondary: Boolean = false, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = modifier, shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = if (secondary) MaterialTheme.colorScheme.secondaryContainer
-            else MaterialTheme.colorScheme.primary, contentColor = if (secondary) MaterialTheme.colorScheme.onSecondaryContainer
-            else MaterialTheme.colorScheme.onPrimary)) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            AppIcon(icon, tint = LocalContentColor.current)
-            Text(title, style = MaterialTheme.typography.titleLarge)
-            Text(caption, style = MaterialTheme.typography.bodyMedium)
+private fun Shortcut(icon: Int,label: Int,action: () -> Unit,modifier: Modifier) {
+    Card(action,modifier,colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer.copy(alpha=.55f))) {
+        Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            AppIcon(icon)
+            Text(stringResource(label),Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onPrimaryContainer)
         }
     }
 }

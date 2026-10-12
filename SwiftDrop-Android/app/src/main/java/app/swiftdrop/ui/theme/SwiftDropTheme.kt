@@ -31,6 +31,8 @@ private val LightColors = lightColorScheme(
     primaryContainer = Color(0xFFE8F0FF), onPrimaryContainer = Color(0xFF0742A9),
     secondary = Color(0xFF087B90), onSecondary = Color.White,
     secondaryContainer = Color(0xFFE0F6FA), onSecondaryContainer = Color(0xFF075465),
+    tertiary = Color(0xFF167A46), onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFDDF5E8), onTertiaryContainer = Color(0xFF0B4B2A),
     background = SwiftDropDesign.Background, onBackground = SwiftDropDesign.Navy,
     surface = Color.White, onSurface = SwiftDropDesign.Navy,
     surfaceVariant = Color(0xFFEAF0F7), onSurfaceVariant = Color(0xFF526078),
@@ -41,6 +43,8 @@ private val DarkColors = darkColorScheme(
     primaryContainer = Color(0xFF163560), onPrimaryContainer = Color(0xFFD9E7FF),
     secondary = Color(0xFF6DD9EC), onSecondary = Color(0xFF003640),
     secondaryContainer = Color(0xFF13434C), onSecondaryContainer = Color(0xFFB8F0F8),
+    tertiary = Color(0xFF79D8A1), onTertiary = Color(0xFF00391E),
+    tertiaryContainer = Color(0xFF174631), onTertiaryContainer = Color(0xFFB9F5D1),
     background = SwiftDropDesign.Navy, onBackground = Color(0xFFF0F5FC),
     surface = Color(0xFF182338), onSurface = Color(0xFFF0F5FC),
     surfaceVariant = Color(0xFF25334B), onSurfaceVariant = Color(0xFFB7C5DA),
@@ -48,8 +52,8 @@ private val DarkColors = darkColorScheme(
 )
 private val AppTypography = Typography(
     headlineLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 30.sp, lineHeight = 38.sp),
-    headlineMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 26.sp, lineHeight = 34.sp),
-    titleLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold, fontSize = 21.sp, lineHeight = 28.sp),
+    headlineMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 32.sp),
+    titleLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, lineHeight = 26.sp),
     titleMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 24.sp),
     bodyLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
     bodyMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 21.sp),

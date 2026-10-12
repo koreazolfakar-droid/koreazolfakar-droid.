@@ -21,6 +21,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Retain the development APK signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: swiftdrop-android-debug-keystore-v1
       - name: Install Android SDK packages using runner tools
         run: |
           SDKMGR="$(command -v sdkmanager || find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f -print -quit)"
@@ -33,7 +38,7 @@ jobs:
         run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: swiftdrop-v0.2.0-alpha-debug-apk
+          name: swiftdrop-v0.2.1-alpha-debug-apk
           path: SwiftDrop-Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -41,7 +46,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: swiftdrop-v0.2.0-alpha-validation
+          name: swiftdrop-v0.2.1-alpha-validation
           path: SwiftDrop-Android/app/build/reports/
           if-no-files-found: warn
           retention-days: 14
