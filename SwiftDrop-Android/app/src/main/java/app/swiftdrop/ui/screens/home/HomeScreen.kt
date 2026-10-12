@@ -24,6 +24,14 @@ import app.swiftdrop.R
 import app.swiftdrop.TransferUiState
 import app.swiftdrop.ui.components.*
 import app.swiftdrop.ui.theme.SwiftDropDesign
+import androidx.compose.runtime.*
+import app.swiftdrop.music.HomeMusicMiniPlayer
+import app.swiftdrop.music.MusicPlayerDialog
+import app.swiftdrop.music.rememberMusicSessionController
+import app.swiftdrop.LocalMedia
+import android.net.Uri
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /**
  * v0.3.1 — a compact, accessible home screen.
@@ -41,6 +49,21 @@ fun HomeScreen(
     openApps: () -> Unit = { send(arrayOf("application/vnd.android.package-archive")) },
     onSettings: (() -> Unit)? = null
 ) {
+    var showMusic by remember { mutableStateOf(false) }
+    val musicController=rememberMusicSessionController()
+    var activeMedia by remember { mutableStateOf<LocalMedia?>(null) }
+    LaunchedEffect(musicController) {
+        while(isActive) {
+            val current=musicController?.currentMediaItem
+            val uri=current?.localConfiguration?.uri
+            activeMedia=if(uri!=null) LocalMedia(uri,current.mediaMetadata.title?.toString()
+                ?: uri.lastPathSegment ?: "Audio",0,0) else null
+            delay(750L)
+        }
+    }
+    if(showMusic && activeMedia!=null) {
+        MusicPlayerDialog(requireNotNull(activeMedia),close={showMusic=false})
+    }
     val hasActiveSession = state.isDiscovering || state.isAdvertising ||
         state.connectedName != null || state.progress != null || state.selected.isNotEmpty()
 
@@ -63,6 +86,7 @@ fun HomeScreen(
         BrandHeader(onSettings)
 
         CompactConnectionStatus(state, status)
+        HomeMusicMiniPlayer(onOpen={showMusic=true})
 
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val stacked = maxWidth < 335.dp || LocalDensity.current.fontScale >= 1.3f

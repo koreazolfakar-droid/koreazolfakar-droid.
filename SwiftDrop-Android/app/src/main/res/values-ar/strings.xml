@@ -235,4 +235,7 @@
     <string name="media_previous">السابق</string>
     <string name="media_next">التالي</string>
     <string name="music_background_hint">الموسيقى بتكمل حتى لو طلعت من SwiftDrop أو قفلت الشاشة. فيك تتحكّم فيها من إشعارات الهاتف.</string>
+    <string name="music_now_playing">قيد التشغيل</string>
+    <string name="music_local_audio">موسيقى محلية</string>
+    <string name="music_album_art">صورة الألبوم</string>
 </resources>

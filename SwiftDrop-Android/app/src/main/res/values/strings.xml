@@ -223,4 +223,7 @@
     <string name="media_previous">Previous</string>
     <string name="media_next">Next</string>
     <string name="music_background_hint">Music keeps playing when you leave SwiftDrop or lock your phone. Use system media controls to pause.</string>
+    <string name="music_now_playing">NOW PLAYING</string>
+    <string name="music_local_audio">Local audio</string>
+    <string name="music_album_art">Album artwork</string>
 </resources>

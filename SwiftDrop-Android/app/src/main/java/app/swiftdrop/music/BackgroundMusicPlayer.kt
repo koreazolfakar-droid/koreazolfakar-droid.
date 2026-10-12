@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,6 +89,29 @@ internal fun startLocalMusic(controller:MediaController,item:LocalMedia) {
     controller.play()
 }
 
+/** Replace queue only on explicit user selection; avoid destroying an existing seek position. */
+internal fun startLocalPlaylist(controller:MediaController,items:List<LocalMedia>,chosen:LocalMedia) {
+    val playable = items.take(600)
+    val index = playable.indexOfFirst { it.uri==chosen.uri }
+    if(index<0) { startLocalMusic(controller,chosen);return }
+    if(controller.currentMediaItem?.mediaId==chosen.uri.toString()) {
+        controller.play()
+        return
+    }
+    val mediaItems = playable.map { file ->
+        MediaItem.Builder()
+            .setUri(file.uri)
+            .setMediaId(file.uri.toString())
+            .setMediaMetadata(MediaMetadata.Builder()
+                .setTitle(cleanMusicTitle(file.name))
+                .setIsPlayable(true).build())
+            .build()
+    }
+    controller.setMediaItems(mediaItems,index,0L)
+    controller.prepare()
+    controller.play()
+}
+
 /** Real local file metadata only. Embedded art is decoded to a bounded size on IO. */
 internal data class SongArtwork(val artist:String?,val album:String?,val picture:Bitmap?)
 internal fun readSongArtwork(context:android.content.Context,uri:Uri):SongArtwork {
@@ -153,15 +177,24 @@ internal fun BackgroundMusicControls(
     var position by remember(player) { mutableLongStateOf(0L) }
     var duration by remember(player) { mutableLongStateOf(0L) }
     var seeking by remember { mutableFloatStateOf(-1f) }
+    var currentUri by remember(item.uri) { mutableStateOf(item.uri) }
+    var currentTitle by remember(item.uri) { mutableStateOf(cleanMusicTitle(item.name)) }
+    var hasPrevious by remember { mutableStateOf(false) }
+    var hasNext by remember { mutableStateOf(false) }
     val context=LocalContext.current
-    val artwork by produceState<SongArtwork?>(null,item.uri) {
-        value=withContext(Dispatchers.IO) { readSongArtwork(context,item.uri) }
+    val artwork by produceState<SongArtwork?>(null,currentUri) {
+        value=withContext(Dispatchers.IO) { readSongArtwork(context,currentUri) }
     }
 
     LaunchedEffect(player,item.uri) { player?.let { startLocalMusic(it,item) } }
     LaunchedEffect(player) {
         while(isActive) {
             playing=player?.isPlaying == true
+            val mediaItem=player?.currentMediaItem
+            currentUri=mediaItem?.localConfiguration?.uri ?: item.uri
+            currentTitle=mediaItem?.mediaMetadata?.title?.toString() ?: cleanMusicTitle(item.name)
+            hasPrevious=player?.hasPreviousMediaItem()==true
+            hasNext=player?.hasNextMediaItem()==true
             position=player?.currentPosition?.coerceAtLeast(0L) ?: 0L
             duration=player?.duration?.takeIf { it>0L } ?: 0L
             delay(if(compact) 500L else 250L)
@@ -176,9 +209,9 @@ internal fun BackgroundMusicControls(
             Column(modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
                     verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    AlbumCover(item.uri,Modifier.size(46.dp))
+                    AlbumCover(currentUri,Modifier.size(46.dp))
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                        Text(cleanMusicTitle(item.name),maxLines=1,overflow=TextOverflow.Ellipsis,
+                        Text(currentTitle,maxLines=1,overflow=TextOverflow.Ellipsis,
                             style=MaterialTheme.typography.titleSmall)
                         Text(artwork?.artist ?: stringResource(R.string.music_local_audio),
                             maxLines=1,overflow=TextOverflow.Ellipsis,
@@ -202,9 +235,9 @@ internal fun BackgroundMusicControls(
     } else {
         Column(modifier.fillMaxWidth().padding(horizontal=22.dp),
             verticalArrangement=Arrangement.SpaceEvenly,horizontalAlignment=Alignment.CenterHorizontally) {
-            AlbumCover(item.uri,Modifier.fillMaxWidth().widthIn(max=330.dp).aspectRatio(1f))
+            AlbumCover(currentUri,Modifier.fillMaxWidth().widthIn(max=310.dp).aspectRatio(1f))
             Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                Text(cleanMusicTitle(item.name),color=Color.White,
+                Text(currentTitle,color=Color.White,
                     style=MaterialTheme.typography.headlineMedium,maxLines=2,
                     overflow=TextOverflow.Ellipsis)
                 Text(artwork?.artist ?: stringResource(R.string.music_local_audio),
@@ -228,7 +261,7 @@ internal fun BackgroundMusicControls(
             }
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
                 horizontalArrangement=Arrangement.Center, ) {
-                IconButton(onClick={player?.seekToPreviousMediaItem()},enabled=player?.hasPreviousMediaItem()==true,
+                IconButton(onClick={player?.seekToPreviousMediaItem();Unit},enabled=hasPrevious,
                     modifier=Modifier.size(60.dp)) {
                     AppIcon(R.drawable.ic_player_previous,Modifier.size(30.dp),tint=Color.White)
                 }
@@ -241,7 +274,7 @@ internal fun BackgroundMusicControls(
                         Modifier.size(34.dp),tint=Color.White)
                 }
                 Spacer(Modifier.width(18.dp))
-                IconButton(onClick={player?.seekToNextMediaItem()},enabled=player?.hasNextMediaItem()==true,
+                IconButton(onClick={player?.seekToNextMediaItem();Unit},enabled=hasNext,
                     modifier=Modifier.size(60.dp)) {
                     AppIcon(R.drawable.ic_player_next,Modifier.size(30.dp),tint=Color.White)
                 }
@@ -278,12 +311,36 @@ fun HomeMusicMiniPlayer(onOpen:()->Unit) {
                     Text(title!!,style=MaterialTheme.typography.titleMedium,
                         maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
-                IconButton(onClick={player?.let{if(it.isPlaying)it.pause() else it.play()}},
+                IconButton(onClick={player?.let{if(it.isPlaying)it.pause() else it.play()};Unit},
                     enabled=player!=null) {
                     AppIcon(if(playing)R.drawable.ic_player_pause else R.drawable.ic_player_play,
                         Modifier.size(24.dp))
                 }
             }
+        }
+    }
+}
+
+/** Standalone modal with modern top bar; closes the UI without stopping background playback. */
+@Composable
+fun MusicPlayerDialog(item:LocalMedia,close:()->Unit,select:(()->Unit)?=null) {
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        Column(Modifier.fillMaxSize().background(Brush.verticalGradient(
+            listOf(MusicInk,Color(0xFF142441),Color(0xFF172F4D))))) {
+            Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp),
+                verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick=close) {
+                    Text(stringResource(R.string.media_close),color=Color.White)
+                }
+                Text(stringResource(R.string.music_now_playing),
+                    modifier=Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,
+                    color=Color.White,textAlign=TextAlign.Center)
+                if(select!=null) TextButton(onClick=select) {
+                    Text(stringResource(R.string.media_select),color=Color.White)
+                } else Spacer(Modifier.width(60.dp))
+            }
+            BackgroundMusicControls(item,Modifier.weight(1f))
         }
     }
 }

@@ -32,6 +32,7 @@ import app.swiftdrop.LocalMedia
 import app.swiftdrop.MediaKind
 import app.swiftdrop.R
 import app.swiftdrop.music.BackgroundMusicControls
+import app.swiftdrop.music.MusicPlayerDialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -39,6 +40,10 @@ import kotlinx.coroutines.isActive
 @Composable
 fun MediaPreview(item: LocalMedia, kind: MediaKind, close: () -> Unit, select: () -> Unit,
     previous: (() -> Unit)? = null, next: (() -> Unit)? = null) {
+    if(kind==MediaKind.Music) {
+        MusicPlayerDialog(item,close,select)
+        return
+    }
     Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(Color(0xFF101A2A))) {
             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically,

@@ -34,6 +34,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.swiftdrop.*
 import app.swiftdrop.R
+import app.swiftdrop.music.rememberMusicSessionController
+import app.swiftdrop.music.startLocalPlaylist
 import app.swiftdrop.ui.components.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -192,6 +194,7 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
         }
     }
     val library=remember(context) { MediaLibrary(context.contentResolver) }
+    val musicController=rememberMusicSessionController()
     var revision by remember { mutableIntStateOf(0) }
     var search by rememberSaveable(kind) { mutableStateOf("") }
     var query by remember(kind) { mutableStateOf("") }
@@ -214,7 +217,10 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
     fun open(item:LocalMedia) {
         if(selected.isNotEmpty()) toggle(item)
         else {
-            if(kind==MediaKind.Music) miniPlayer=item
+            if(kind==MediaKind.Music) {
+                musicController?.let { startLocalPlaylist(it,rows,item) }
+                miniPlayer=item
+            }
             preview=item
         }
     }
@@ -301,7 +307,10 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
                     }
                     items(rows,key={it.uri.toString()}) { item ->
                         MusicRow(item,item.uri in selected,
-                            onOpen={open(item)},onToggle={toggle(item)},onPlay={miniPlayer=item})
+                            onOpen={open(item)},onToggle={toggle(item)},onPlay={
+                                musicController?.let { startLocalPlaylist(it,rows,item) }
+                                miniPlayer=item
+                            })
                     }
                     if(loading) item {LinearProgressIndicator(Modifier.fillMaxWidth())}
                 }
