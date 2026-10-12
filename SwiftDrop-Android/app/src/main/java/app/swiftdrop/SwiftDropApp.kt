@@ -5,6 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.activity.result.ActivityResultRegistryOwner
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -79,17 +82,49 @@ fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: I
             setLayoutDirection(locale)
         }
     }
-    val localized = remember(context,configuration) { context.createConfigurationContext(configuration) }
     SideEffect {
         (context as? ComponentActivity)?.enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT) { dark },
             navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT) { dark })
     }
-    CompositionLocalProvider(LocalContext provides localized,LocalConfiguration provides configuration,
-        LocalLayoutDirection provides if(configuration.layoutDirection == android.view.View.LAYOUT_DIRECTION_RTL) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+    SwiftDropLocalizedProviders(configuration) {
         SwiftDropContent(manager,apps,settings,dark,preferences::setAppearance,preferences::setLanguage,
             {preferences.completeOnboarding();manager.setPage("home")},send,receive,discover,openSettings,openLocationSettings,scanQr,
             mediaPermissionRevision,requestMedia)
+    }
+}
+
+/**
+ * A localized Context is only a display/resources wrapper, not a ComponentActivity.
+ * ActivityResult and BackHandler owners MUST be captured from the original composition
+ * before LocalContext is replaced, otherwise opening Documents immediately crashes
+ * with "No ActivityResultRegistryOwner was provided".
+ *
+ * Reuse this for all localized screens so music, gallery, files, and send pickers
+ * retain their Activity integration without changing language or transfer behavior.
+ */
+@Composable
+internal fun SwiftDropLocalizedProviders(
+    configuration: Configuration,
+    content: @Composable () -> Unit
+) {
+    val activityContext = LocalContext.current
+    val activityResultOwner = LocalActivityResultRegistryOwner.current
+        ?: (activityContext as? ActivityResultRegistryOwner)
+    val backPressedOwner = LocalOnBackPressedDispatcherOwner.current
+    val localized = remember(activityContext, configuration) {
+        activityContext.createConfigurationContext(configuration)
+    }
+    CompositionLocalProvider(
+        LocalActivityResultRegistryOwner provides activityResultOwner,
+        LocalOnBackPressedDispatcherOwner provides backPressedOwner,
+        LocalContext provides localized,
+        LocalConfiguration provides configuration,
+        LocalLayoutDirection provides
+            if(configuration.layoutDirection == android.view.View.LAYOUT_DIRECTION_RTL)
+                LayoutDirection.Rtl else LayoutDirection.Ltr
+    ) {
+        content()
     }
 }
 
