@@ -125,7 +125,7 @@ internal fun MusicRow(item:LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:(
 
 /** Music playback now lives in a single MediaSessionService, not in a tab-owned ExoPlayer. */
 @Composable
-internal fun MusicMiniPlayer(item:LocalMedia,onClose:()->Unit) {
+internal fun MusicMiniPlayer(item:LocalMedia,onClose:()->Unit,onOpen:()->Unit) {
     app.swiftdrop.music.BackgroundMusicControls(item,compact=true,onClose=onClose,
-        autoStart=false)
+        autoStart=false,onOpen=onOpen)
 }

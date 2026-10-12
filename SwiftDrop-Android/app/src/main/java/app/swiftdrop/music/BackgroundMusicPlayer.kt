@@ -173,7 +173,7 @@ private fun formatPosition(ms:Long):String {
 @Composable
 internal fun BackgroundMusicControls(
     item:LocalMedia,modifier:Modifier=Modifier,compact:Boolean=false,
-    onClose:(()->Unit)?=null,autoStart:Boolean=true
+    onClose:(()->Unit)?=null,autoStart:Boolean=true,onOpen:(()->Unit)?=null
 ) {
     val player=rememberMusicSessionController()
     var playing by remember(player) { mutableStateOf(false) }
@@ -217,7 +217,8 @@ internal fun BackgroundMusicControls(
         player?.let { if(it.isPlaying)it.pause() else it.play() }
     }
     if(compact) {
-        Surface(color=MaterialTheme.colorScheme.secondaryContainer,
+        Surface(onClick={onOpen?.invoke()},enabled=onOpen!=null,
+            color=MaterialTheme.colorScheme.secondaryContainer,
             shape=RoundedCornerShape(18.dp),tonalElevation=2.dp) {
             Column(modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
@@ -385,7 +386,7 @@ fun MusicPlayerDialog(item:LocalMedia,close:()->Unit,select:(()->Unit)?=null) {
                     Text(stringResource(R.string.media_select),color=Color.White)
                 } else Spacer(Modifier.width(60.dp))
             }
-            BackgroundMusicControls(item,Modifier.weight(1f))
+            BackgroundMusicControls(item,Modifier.weight(1f),autoStart=false)
         }
     }
 }

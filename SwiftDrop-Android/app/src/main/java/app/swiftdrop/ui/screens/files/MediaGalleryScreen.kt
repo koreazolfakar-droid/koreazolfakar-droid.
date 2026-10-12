@@ -207,6 +207,15 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
     var failed by remember(kind) { mutableStateOf(false) }
     var preview by remember(kind) { mutableStateOf<LocalMedia?>(null) }
     var miniPlayer by remember(kind) { mutableStateOf<LocalMedia?>(null) }
+    // A tap must work even when the asynchronous MediaController is not ready yet.
+    var pendingMusic by remember(kind) { mutableStateOf<LocalMedia?>(null) }
+    LaunchedEffect(musicController,pendingMusic) {
+        val chosen=pendingMusic
+        if(musicController!=null && chosen!=null) {
+            startLocalPlaylist(musicController,rows,chosen)
+            pendingMusic=null
+        }
+    }
     val grid=rememberLazyGridState()
     val list=rememberLazyListState()
     var lastFilter by rememberSaveable(kind) { mutableStateOf("") }
@@ -220,7 +229,7 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
         if(selected.isNotEmpty()) toggle(item)
         else {
             if(kind==MediaKind.Music) {
-                musicController?.let { startLocalPlaylist(it,rows,item) }
+                pendingMusic=item
                 miniPlayer=item
             }
             preview=item
@@ -230,7 +239,10 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
     LaunchedEffect(search) { delay(220); query=search.trim() }
     LaunchedEffect(kind,query,sort,permissionRevision,revision,access.allowed) {
         rows=emptyList();failed=false
-        if(!access.allowed) { preview=null;miniPlayer=null;return@LaunchedEffect }
+        if(!access.allowed) {
+            preview=null;miniPlayer=null;pendingMusic=null
+            return@LaunchedEffect
+        }
         val filterId=kind.name+"|"+query+"|"+sort.name
         if(lastFilter != filterId) {
             if(kind==MediaKind.Music) list.scrollToItem(0) else grid.scrollToItem(0)
@@ -310,14 +322,15 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
                     items(rows,key={it.uri.toString()}) { item ->
                         MusicRow(item,item.uri in selected,
                             onOpen={open(item)},onToggle={toggle(item)},onPlay={
-                                musicController?.let { startLocalPlaylist(it,rows,item) }
+                                pendingMusic=item
                                 miniPlayer=item
                             })
                     }
                     if(loading) item {LinearProgressIndicator(Modifier.fillMaxWidth())}
                 }
                 miniPlayer?.let { item ->
-                    MusicMiniPlayer(item,onClose={miniPlayer=null})
+                    MusicMiniPlayer(item,onClose={miniPlayer=null},
+                        onOpen={preview=item})
                 }
             } else {
                 LazyVerticalGrid(columns=GridCells.Adaptive(if(kind==MediaKind.Photos) 100.dp else 166.dp),

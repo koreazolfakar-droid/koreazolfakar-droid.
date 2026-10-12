@@ -34,6 +34,24 @@ class MediaGalleryUiTest {
         compose.runOnIdle { assertEquals(MediaKind.Videos, requested) }
     }
 
+    @Test fun tabsSwitchAndKeepPermissionActionsResponsive() {
+        var requested: MediaKind? = null
+        compose.setContent {
+            SwiftDropTheme(false) {
+                MediaGalleryScreen({}, {}, AppsState(), {}, {}, {}, 0,
+                    {requested=it},initialTab=2)
+            }
+        }
+        compose.onNodeWithText("Allow access").performClick()
+        compose.runOnIdle { assertEquals(MediaKind.Music,requested) }
+        compose.onNodeWithText("Photos").performClick()
+        compose.onNodeWithText("Allow access").performClick()
+        compose.runOnIdle { assertEquals(MediaKind.Photos,requested) }
+        compose.onNodeWithText("Videos").performClick()
+        compose.onNodeWithText("Allow access").performClick()
+        compose.runOnIdle { assertEquals(MediaKind.Videos,requested) }
+    }
+
     @Test fun appSectionRemainsAvailableWithoutMediaPermissionInRtl() {
         compose.setContent {
             SwiftDropTheme(false) {

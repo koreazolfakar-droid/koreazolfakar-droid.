@@ -98,12 +98,18 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
         if(sessionActive) leaveAction = { manager.disconnect();receive() } else receive()
     }
     BackHandler(state.page != "home" && state.pending == null && leaveAction == null) {
-        if(state.page=="welcome") welcomeDone() else manager.setPage("home")
+        when(state.page) {
+            "welcome" -> welcomeDone()
+            "apps" -> manager.setPage("files")
+            else -> manager.setPage("home")
+        }
     }
     SwiftDropTheme(dark) {
-        CompositionLocalProvider(LocalPageBack provides {manager.setPage("home")}) {
+        CompositionLocalProvider(LocalPageBack provides {
+            manager.setPage(if(state.page=="apps") "files" else "home")
+        }) {
         Scaffold(modifier=Modifier.imePadding(),bottomBar = {
-            if(state.page!="welcome" && state.page!="files") NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+            if(state.page in setOf("home","history","settings")) NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                 listOf(Triple("home",R.string.home,R.drawable.ic_home),
                     Triple("history",R.string.history,R.drawable.ic_history),
                     Triple("settings",R.string.settings,R.drawable.ic_settings)).forEach { (page,label,icon) ->
@@ -120,7 +126,7 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                         "home" -> HomeScreen(state,guardedSend,guardedReceive,{manager.setPage("history")},{
                             manager.setPage(if(state.connectedName!=null || state.progress!=null) "transfer"
                                 else if(state.isAdvertising) "receive" else if(state.selectedFiles.isNotEmpty() && !state.isDiscovering) "selection" else "discover")
-                        },messageText(state.status),openFiles={manager.setPage("files")},openApps={apps.load();manager.setPage("apps")},onSettings={manager.setPage("settings")},
+                        },messageText(state.status),openFiles={chosenFileTab=0;manager.setPage("files")},openApps={apps.load();manager.setPage("apps")},onSettings={manager.setPage("settings")},
                             openMedia={ kind ->
                                 chosenFileTab=kind.ordinal
                                 manager.setPage("files")
