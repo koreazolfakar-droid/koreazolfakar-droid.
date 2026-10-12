@@ -286,7 +286,7 @@ class NearbyTransferManager(private val context: Context) {
         connectedId = null
         outboundUris = uris
         outboundIndex = 0
-        state.update { it.copy(page = "discover", status = UiMessage(R.string.searching), hasError = false, diagnostics = null, progress = null, connectingId = null,
+        state.update { it.copy(page = "discover", hasError = false, diagnostics = null, progress = null, connectingId = null,
             peers = emptyList(), selected = uris, receiverQrPayload = null,
             status = UiMessage(if(qrTarget != null) R.string.qr_searching else R.string.searching)) }
         client.startDiscovery(serviceId, discoveryCallback,
