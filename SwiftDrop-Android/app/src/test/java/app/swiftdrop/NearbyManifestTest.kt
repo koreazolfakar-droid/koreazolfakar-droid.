@@ -58,9 +58,15 @@ class NearbyManifestTest {
             ?.getAttributeNS(namespace,"maxSdkVersion"))
     }
 
-    @Test fun manifestPreservesPackageAndAvoidsBroadAccess() {
+    @Test fun manifestPreservesPackageAndRestrictsUnrelatedSensitiveAccess() {
         assertEquals("app.swiftdrop", manifest.documentElement.getAttribute("package"))
-        listOf("INTERNET", "QUERY_ALL_PACKAGES", "MANAGE_EXTERNAL_STORAGE", "REQUEST_INSTALL_PACKAGES")
-            .forEach { assertFalse("Unexpected broad permission $it", permissions.containsKey("android.permission.$it")) }
+        // Internal storage browsing is explicitly opt-in via Android Settings. Other sensitive
+        // permissions still stay absent; document-tree browsing remains available without it.
+        assertTrue("Storage browser needs optional all-files permission",
+            permissions.containsKey("android.permission.MANAGE_EXTERNAL_STORAGE"))
+        listOf("INTERNET", "QUERY_ALL_PACKAGES", "REQUEST_INSTALL_PACKAGES",
+            "WRITE_EXTERNAL_STORAGE")
+            .forEach { assertFalse("Unexpected permission $it",
+                permissions.containsKey("android.permission.$it")) }
     }
 }
