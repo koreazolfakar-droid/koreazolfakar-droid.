@@ -23,7 +23,9 @@ import kotlinx.coroutines.withContext
 
 // SwiftDrop @performance Codex 12/10/2026 Decode only visible media and cache bounded thumbnails.
 private object ArtCache {
-    val thumbnails = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
+    private val maxCacheBytes = (Runtime.getRuntime().maxMemory() / 16L)
+        .coerceIn(4L * 1024 * 1024, 16L * 1024 * 1024).toInt()
+    val thumbnails = object : LruCache<String, Bitmap>(maxCacheBytes) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
     fun clear() = thumbnails.evictAll()
@@ -43,12 +45,15 @@ private fun decodeScaled(context: Context, uri: Uri, maxPixels: Int): Bitmap? {
 
 private fun loadArt(context: Context, uri: Uri, kind: MediaKind, fullSize: Boolean): Bitmap? = runCatching {
     if (fullSize) return@runCatching decodeScaled(context, uri, 2048)
-    if (Build.VERSION.SDK_INT >= 29) return@runCatching context.contentResolver.loadThumbnail(uri, Size(320, 320), null)
+    if (Build.VERSION.SDK_INT >= 29) return@runCatching context.contentResolver.loadThumbnail(uri, Size(240, 240), null)
     if (kind == MediaKind.Videos) {
         val retriever = MediaMetadataRetriever()
         try { retriever.setDataSource(context, uri); retriever.frameAtTime } finally { retriever.release() }
     } else decodeScaled(context, uri, 320)
 }.getOrNull()
+
+/** No full-sized images in the thumbnail cache; only the visible grid items request decoding. */
+fun thumbnailCacheBytes(): Int = ArtCache.thumbnails.size()
 
 @Composable
 fun MediaArt(uri: Uri, kind: MediaKind, modifier: Modifier = Modifier, fullSize: Boolean = false) {

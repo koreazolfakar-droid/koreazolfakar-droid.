@@ -47,13 +47,23 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val selected = remember { mutableStateMapOf<Uri,PickedMedia>() }
     val context = LocalContext.current
+    // Returning from the player or another Activity must not discard every thumbnail.
+    // When permission changes (or is partial/reselected), clear cached pixels for privacy.
+    var previousGrants by remember { mutableStateOf<List<MediaAccess>?>(null) }
     LaunchedEffect(permissionRevision) {
-        selected.entries.toList().forEach { (uri,picked) ->
-            if (!mediaAccess(picked.kind,Build.VERSION.SDK_INT) {
-                context.checkSelfPermission(it)==PackageManager.PERMISSION_GRANTED
-            }.allowed) selected.remove(uri)
+        val current = MediaKind.entries.map { kind ->
+            mediaAccess(kind,Build.VERSION.SDK_INT) {
+                context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
+            }
         }
-        clearMediaThumbnails()
+        selected.entries.toList().forEach { (uri,picked) ->
+            if (!current[picked.kind.ordinal].allowed) selected.remove(uri)
+        }
+        if (previousGrants != null &&
+            (previousGrants != current || current.any { it.partial })) {
+            clearMediaThumbnails()
+        }
+        previousGrants = current
     }
     val storage=remember { runCatching {
         StatFs(Environment.getDataDirectory().path).let { it.totalBytes to it.availableBytes }
