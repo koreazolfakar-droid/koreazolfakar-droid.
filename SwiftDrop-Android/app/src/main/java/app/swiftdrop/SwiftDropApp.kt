@@ -76,6 +76,7 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
     mediaPermissionRevision: Int,requestMedia: (MediaKind) -> Unit) {
     val state by manager.state.collectAsState()
     val appsState by apps.state.collectAsState()
+    var chosenFileTab by rememberSaveable { mutableIntStateOf(0) }
     var leaveAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering || state.connectingId != null
     val guardedSend: (Array<String>) -> Unit = { mime ->
@@ -118,9 +119,14 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                         "home" -> HomeScreen(state,guardedSend,guardedReceive,{manager.setPage("history")},{
                             manager.setPage(if(state.connectedName!=null || state.progress!=null) "transfer"
                                 else if(state.isAdvertising) "receive" else if(state.selectedFiles.isNotEmpty() && !state.isDiscovering) "selection" else "discover")
-                        },messageText(state.status),openFiles={manager.setPage("files")},openApps={apps.load();manager.setPage("apps")},onSettings={manager.setPage("settings")})
+                        },messageText(state.status),openFiles={manager.setPage("files")},openApps={apps.load();manager.setPage("apps")},onSettings={manager.setPage("settings")},
+                            openMedia={ kind ->
+                                chosenFileTab=kind.ordinal
+                                manager.setPage("files")
+                            })
                         "files" -> FileLibraryScreen(guardedSend,{apps.load();manager.setPage("apps")},
-                            appsState,{apps.load(true)},guardedAppExport,guardedMediaSelect,mediaPermissionRevision,requestMedia)
+                            appsState,{apps.load(true)},guardedAppExport,guardedMediaSelect,
+                            mediaPermissionRevision,requestMedia,chosenFileTab)
                         "apps" -> InstalledAppsScreen(appsState,{apps.load(true)},guardedAppExport,
                             {guardedSend(arrayOf("application/vnd.android.package-archive"))},{manager.setPage("files")})
                         "selection" -> SelectionScreen(state,{manager.armQrTarget(null);discover()},{guardedSend(arrayOf("*/*"))},scanQr)

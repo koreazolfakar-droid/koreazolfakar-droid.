@@ -47,7 +47,8 @@ fun HomeScreen(
     status: String,
     openFiles: () -> Unit = { send(arrayOf("*/*")) },
     openApps: () -> Unit = { send(arrayOf("application/vnd.android.package-archive")) },
-    onSettings: (() -> Unit)? = null
+    onSettings: (() -> Unit)? = null,
+    openMedia: ((app.swiftdrop.MediaKind) -> Unit)? = null
 ) {
     var showMusic by remember { mutableStateOf(false) }
     val musicController=rememberMusicSessionController()
@@ -68,9 +69,15 @@ fun HomeScreen(
         state.connectedName != null || state.progress != null || state.selected.isNotEmpty()
 
     val categories = listOf(
-        HomeCategory(R.drawable.ic_photos, R.string.photos, { send(arrayOf("image/*")) }),
-        HomeCategory(R.drawable.ic_videos, R.string.videos, { send(arrayOf("video/*")) }),
-        HomeCategory(R.drawable.ic_music, R.string.music, { send(arrayOf("audio/*")) }),
+        HomeCategory(R.drawable.ic_photos, R.string.photos, {
+            openMedia?.invoke(app.swiftdrop.MediaKind.Photos) ?: send(arrayOf("image/*"))
+        }),
+        HomeCategory(R.drawable.ic_videos, R.string.videos, {
+            openMedia?.invoke(app.swiftdrop.MediaKind.Videos) ?: send(arrayOf("video/*"))
+        }),
+        HomeCategory(R.drawable.ic_music, R.string.music, {
+            openMedia?.invoke(app.swiftdrop.MediaKind.Music) ?: send(arrayOf("audio/*"))
+        }),
         HomeCategory(R.drawable.ic_applications, R.string.home_apps_short, openApps),
         HomeCategory(R.drawable.ic_documents, R.string.home_docs_short, {
             send(arrayOf("application/pdf", "text/*", "application/msword",

@@ -69,8 +69,10 @@ private fun galleryDisplay(rows: List<LocalMedia>,sort: MediaSort): List<Gallery
 @Composable
 fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
     appsState: AppsState, refreshApps: () -> Unit, exportApps: (List<ShareableApp>) -> Unit,
-    sendSelected: (List<Uri>) -> Unit, permissionRevision: Int, requestMedia: (MediaKind) -> Unit) {
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    sendSelected: (List<Uri>) -> Unit, permissionRevision: Int, requestMedia: (MediaKind) -> Unit,
+    initialTab:Int=0) {
+    var tab by rememberSaveable { mutableIntStateOf(initialTab.coerceIn(0,3)) }
+    LaunchedEffect(initialTab) { tab=initialTab.coerceIn(0,3) }
     val galleryStates = rememberSaveableStateHolder()
     val selected = remember { mutableStateMapOf<Uri,PickedMedia>() }
     val context = LocalContext.current
