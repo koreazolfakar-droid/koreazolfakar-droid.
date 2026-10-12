@@ -36,6 +36,15 @@ android {
     }
     buildFeatures { compose = true; buildConfig = true }
     bundle { language { enableSplit = false } }
+    // SwiftDrop @build Codex 12/10/2026 CI supplies a retained development-only key.
+    System.getenv("SWIFTDROP_DEBUG_KEYSTORE")?.let { retainedKey ->
+        signingConfigs.getByName("debug") {
+            storeFile = file(retainedKey)
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
 

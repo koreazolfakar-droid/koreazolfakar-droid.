@@ -28,7 +28,7 @@ Local JDK 17 / Gradle 8.13 / API 36: testDebugUnitTest, lintDebug and assembleDe
 
 Runtime evidence currently includes a successful Android 15 ATD install, a populated onboarding UI tree and both normal Wi-Fi grants. ATD disables hardware rendering; its black screenshot is not presented as a UI preview. A regular graphics emulator timed out during boot without KVM acceleration, so visual screenshot verification was unavailable. No physical two-device transfer, radio performance, split-APK installation or TalkBack session has been claimed. Test receipt and discovery on the user's Android device after installing the updated APK, compare codes on both phones, and verify saved-file hashes. QR, pause/resume, background service and persistent history remain outside this update.
 
-The workflow now caches its development keystore for consistent signatures across subsequent successful Debug builds. Earlier Debug APKs can have a different signing key; this does not establish production signing.
+CI explicitly supplies its development keystore through SWIFTDROP_DEBUG_KEYSTORE and caches that file for reuse while the cache is retained. The earlier guessed default path did not exist on the runner; explicit generation/configuration fixes that. Local validation verified the APK certificate matches the supplied keystore. Cache eviction can regenerate a Debug key; durable production signing is not configured. Earlier Debug APKs can have a different signing key; this does not establish production signing.
 
 The existing branch workflow builds tests/lint/APK and uploads swiftdrop-v0.2.1-alpha-debug-apk and validation reports. Actual workflow/artifact status is supplied in the delivery message after GitHub verification.
 

@@ -25,7 +25,7 @@ Use JDK 17, Android SDK API 36, build tools 35.0.0 and Gradle 8.13. Open this di
 gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 ```
 
-The wrapper properties are included but the wrapper executable/JAR are not packaged; use a local Gradle distribution. The existing GitHub workflow `.github/workflows/swiftdrop-android-ci.yml` runs the same checks on pushes to `swiftdrop-android-v0.1-alpha` and uploads `swiftdrop-v0.2.1-alpha-debug-apk` and validation reports for 14 days. The Debug APK is installable but is not a signed production release. CI caches its development keystore for subsequent Debug updates; older builds may use a different signing key.
+The wrapper properties are included but the wrapper executable/JAR are not packaged; use a local Gradle distribution. The existing GitHub workflow `.github/workflows/swiftdrop-android-ci.yml` runs the same checks on pushes to `swiftdrop-android-v0.1-alpha` and uploads `swiftdrop-v0.2.1-alpha-debug-apk` and validation reports for 14 days. The Debug APK is installable but is not a signed production release. CI explicitly supplies and caches its development keystore for subsequent Debug updates while the cache is retained; older builds may use a different signing key.
 
 ## Automated validation
 

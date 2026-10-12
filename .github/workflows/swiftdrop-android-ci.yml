@@ -24,8 +24,18 @@ jobs:
       - name: Retain the development APK signing key
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
+          path: ${{ runner.temp }}/swiftdrop-debug.keystore
           key: swiftdrop-android-debug-keystore-v1
+      - name: Prepare the development signing key
+        env:
+          SWIFTDROP_DEBUG_KEYSTORE: ${{ runner.temp }}/swiftdrop-debug.keystore
+        run: |
+          if [ ! -f "$SWIFTDROP_DEBUG_KEYSTORE" ]; then
+            keytool -genkeypair -keystore "$SWIFTDROP_DEBUG_KEYSTORE" \
+              -storepass android -keypass android -alias androiddebugkey \
+              -dname 'CN=Android Debug,O=Android,C=US' \
+              -keyalg RSA -keysize 2048 -validity 10000
+          fi
       - name: Install Android SDK packages using runner tools
         run: |
           SDKMGR="$(command -v sdkmanager || find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f -print -quit)"
@@ -35,6 +45,8 @@ jobs:
         with:
           gradle-version: '8.13'
       - name: Validate unit tests, lint, and debug APK
+        env:
+          SWIFTDROP_DEBUG_KEYSTORE: ${{ runner.temp }}/swiftdrop-debug.keystore
         run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
