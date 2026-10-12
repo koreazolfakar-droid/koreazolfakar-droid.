@@ -71,7 +71,7 @@ internal fun rememberMusicSessionController(): MediaController? {
 }
 
 internal fun cleanMusicTitle(filename:String):String =
-    filename.replace(Regex("(?i)\\.(mp3|m4a|aac|flac|wav|ogg|opus|wma)$"),"")
+    filename.trim().replace(Regex("(?i)\\.(mp3|m4a|aac|flac|wav|ogg|opus|wma)$"),"")
         .trim().ifBlank { filename }
 
 /** Reopening an existing controller must never restart a paused or progressing song. */
@@ -291,7 +291,7 @@ internal fun BackgroundMusicControls(
             }
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
                 horizontalArrangement=Arrangement.SpaceEvenly) {
-                TextButton(onClick={player?.shuffleModeEnabled=!shuffleEnabled; Unit},
+                TextButton(onClick={player?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }; Unit},
                     enabled=player!=null) {
                     AppIcon(R.drawable.ic_player_shuffle,Modifier.size(20.dp),
                         tint=if(shuffleEnabled) Color(0xFF7AB7FF) else SecondaryInk)
@@ -300,11 +300,11 @@ internal fun BackgroundMusicControls(
                         Color(0xFF7AB7FF) else SecondaryInk)
                 }
                 TextButton(onClick={
-                    player?.repeatMode=when(repeatMode) {
+                    player?.let { it.repeatMode=when(it.repeatMode) {
                         Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
                         Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
                         else -> Player.REPEAT_MODE_OFF
-                    }
+                    } }
                 },enabled=player!=null) {
                     AppIcon(R.drawable.ic_player_repeat,Modifier.size(20.dp),
                         tint=if(repeatMode!=Player.REPEAT_MODE_OFF) Color(0xFF7AB7FF) else SecondaryInk)
