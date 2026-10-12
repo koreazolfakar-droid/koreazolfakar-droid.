@@ -39,6 +39,14 @@ class NativeProMainActivityUiTest {
             model.manager.setPage("home")
         }
         compose.waitForIdle()
+        val sendLabel=if(language==AppLanguage.Arabic) "إرسال ملفات" else "Send files"
+        compose.waitUntil(10_000) { compose.onAllNodesWithText(sendLabel).fetchSemanticsNodes().isNotEmpty() }
+    }
+    private fun openBrowserFolder(name:String) {
+        // Storage is loaded on Dispatchers.IO; a lazy row may be outside composition.
+        compose.waitUntil(15_000) { compose.onAllNodes(hasScrollToIndexAction()).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(name))
+        compose.onNodeWithText(name).performClick()
     }
     private fun <T> musicState(block:()->T):T {
         val result=java.util.concurrent.atomic.AtomicReference<T>()
@@ -47,6 +55,9 @@ class NativeProMainActivityUiTest {
     }
     private fun screenshot(name:String) {
         if(android.os.Build.VERSION.SDK_INT<29) return
+        compose.waitForIdle()
+        // Let the platform window finish its short dialog transition before capture.
+        Thread.sleep(250)
         val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
             ?: compose.onAllNodes(isRoot()).onLast().captureToImage().asAndroidBitmap()
         // AGP uninstalls the app after connected tests; app-owned directories are removed.
@@ -138,8 +149,9 @@ class NativeProMainActivityUiTest {
         try {
             home()
             compose.onNodeWithText("Storage").performScrollTo().performClick()
-            compose.onNodeWithText("Documents").performScrollTo().performClick()
-            compose.onNodeWithText(folderName).performScrollTo().performClick()
+            openBrowserFolder("Documents")
+            openBrowserFolder(folderName)
+            compose.waitUntil(15_000) { compose.onAllNodesWithText(text.name).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(text.name).assertIsDisplayed()
             compose.onNode(isToggleable()).performClick()
             compose.onNodeWithText("Send selected").performClick()

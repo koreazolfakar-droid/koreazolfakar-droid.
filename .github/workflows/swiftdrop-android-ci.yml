@@ -4,6 +4,7 @@ on:
     branches: [swiftdrop-android-v0.1-alpha]
     paths:
       - 'SwiftDrop-Android/**'
+      - '!SwiftDrop-Android/docs/**'
       - '.github/workflows/swiftdrop-android-ci.yml'
   workflow_dispatch:
 permissions:

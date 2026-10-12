@@ -59,11 +59,11 @@ fun HomeScreen(state: TransferUiState, send: (Array<String>) -> Unit, receive: (
                 TransferAction(R.drawable.ic_receive,R.string.receive_files,R.string.make_visible,
                     receive,Modifier.fillMaxWidth(),receiving=true,compact=true,
                     busy=state.isAdvertising || state.connectingId!=null)
-            } else Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            } else Row(Modifier.height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 TransferAction(R.drawable.ic_send,R.string.send_files,R.string.choose_files,
-                    openFiles,Modifier.weight(1f))
+                    openFiles,Modifier.weight(1f).fillMaxHeight())
                 TransferAction(R.drawable.ic_receive,R.string.receive_files,R.string.make_visible,
-                    receive,Modifier.weight(1f),receiving=true,
+                    receive,Modifier.weight(1f).fillMaxHeight(),receiving=true,
                     busy=state.isAdvertising || state.connectingId!=null)
             }
         }
