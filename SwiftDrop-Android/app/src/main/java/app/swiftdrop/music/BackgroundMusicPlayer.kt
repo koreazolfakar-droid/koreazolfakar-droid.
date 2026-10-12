@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +42,7 @@ import app.swiftdrop.LocalMedia
 import app.swiftdrop.R
 import app.swiftdrop.ui.components.AppIcon
 import app.swiftdrop.ui.components.categoryColor
+import app.swiftdrop.ui.components.musicControlInk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -195,7 +197,8 @@ internal fun BackgroundMusicControls(
     onClose:(()->Unit)?=null,autoStart:Boolean=true,onOpen:(()->Unit)?=null
 ) {
     val player=rememberMusicSessionController()
-    val MusicBlue=categoryColor(R.drawable.ic_music)
+    val MusicAccent=categoryColor(R.drawable.ic_music)
+    val playInk=musicControlInk(MusicAccent)
     val SecondaryInk=MaterialTheme.colorScheme.onSurfaceVariant
     val playerInk=MaterialTheme.colorScheme.onSurface
     var showQueue by remember { mutableStateOf(false) }
@@ -256,7 +259,7 @@ internal fun BackgroundMusicControls(
                     }
                     IconButton(onClick=toggle,enabled=player!=null) {
                         AppIcon(if(playing)R.drawable.ic_player_pause else R.drawable.ic_player_play,
-                            Modifier.size(24.dp),description=stringResource(if(playing) R.string.media_pause else R.string.media_play),tint=MusicBlue)
+                            Modifier.size(24.dp),description=stringResource(if(playing) R.string.media_pause else R.string.media_play),tint=MusicAccent)
                     }
                     if(onClose!=null) IconButton(onClick={
                         player?.stop()
@@ -266,18 +269,23 @@ internal fun BackgroundMusicControls(
                 }
                 LinearProgressIndicator(progress={
                     if(duration>0)(position.toFloat()/duration).coerceIn(0f,1f) else 0f
-                },modifier=Modifier.fillMaxWidth().height(3.dp))
+                },modifier=Modifier.fillMaxWidth().height(3.dp),color=MusicAccent,
+                    trackColor=MusicAccent.copy(alpha=.15f))
             }
         }
     } else {
-        Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+        BoxWithConstraints(modifier.fillMaxWidth()) {
+            val wide=maxWidth>maxHeight
+            val artSize=minOf(280.dp,if(wide) (maxHeight-24.dp).coerceAtLeast(64.dp) else maxHeight*.34f)
+            val body:@Composable () -> Unit={
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                 .padding(horizontal=22.dp,vertical=14.dp),
             verticalArrangement=Arrangement.spacedBy(12.dp),
             horizontalAlignment=Alignment.CenterHorizontally) {
-            AlbumCover(currentUri,Modifier.widthIn(max=280.dp).fillMaxWidth().aspectRatio(1f))
+            if(!wide) AlbumCover(currentUri,Modifier.size(artSize))
             Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                 Text(currentTitle,color=playerInk,
-                    style=MaterialTheme.typography.headlineMedium,maxLines=2,
+                    style=MaterialTheme.typography.headlineSmall,maxLines=2,
                     overflow=TextOverflow.Ellipsis)
                 Text(artwork?.artist ?: player?.mediaMetadata?.artist?.toString() ?: stringResource(R.string.music_local_audio),
                     color=SecondaryInk,style=MaterialTheme.typography.bodyLarge)
@@ -291,8 +299,8 @@ internal fun BackgroundMusicControls(
                         if(duration>0 && seeking>=0f) player?.seekTo((duration*seeking).toLong())
                         seeking=-1f
                     },enabled=player!=null && duration>0,
-                    colors=SliderDefaults.colors(activeTrackColor=MusicBlue,
-                        thumbColor=MusicBlue,inactiveTrackColor=MaterialTheme.colorScheme.surfaceVariant))
+                    colors=SliderDefaults.colors(activeTrackColor=MusicAccent,
+                        thumbColor=MusicAccent,inactiveTrackColor=MaterialTheme.colorScheme.surfaceVariant))
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                     Text(formatPosition(position),color=SecondaryInk,style=MaterialTheme.typography.labelMedium)
                     Text(formatPosition(duration),color=SecondaryInk,style=MaterialTheme.typography.labelMedium)
@@ -306,11 +314,11 @@ internal fun BackgroundMusicControls(
                 }
                 Spacer(Modifier.width(18.dp))
                 FilledIconButton(onClick=toggle,enabled=player!=null,
-                    modifier=Modifier.size(74.dp),
+                    modifier=Modifier.size(64.dp),
                     colors=IconButtonDefaults.filledIconButtonColors(
-                        containerColor=MusicBlue,contentColor=Color.White)) {
+                        containerColor=MusicAccent,contentColor=playInk)) {
                     AppIcon(if(playing)R.drawable.ic_player_pause else R.drawable.ic_player_play,
-                        Modifier.size(34.dp),description=stringResource(if(playing) R.string.media_pause else R.string.media_play),tint=Color.White)
+                        Modifier.size(34.dp),description=stringResource(if(playing) R.string.media_pause else R.string.media_play),tint=playInk)
                 }
                 Spacer(Modifier.width(18.dp))
                 IconButton(onClick={player?.seekToNextMediaItem();Unit},enabled=hasNext,
@@ -323,10 +331,10 @@ internal fun BackgroundMusicControls(
                 TextButton(onClick={player?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }; Unit},
                     enabled=player!=null) {
                     AppIcon(R.drawable.ic_player_shuffle,Modifier.size(20.dp),
-                        tint=if(shuffleEnabled) MusicBlue else SecondaryInk)
+                        tint=if(shuffleEnabled) MusicAccent else SecondaryInk)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.music_shuffle),color=if(shuffleEnabled)
-                        MusicBlue else SecondaryInk)
+                        MusicAccent else SecondaryInk)
                 }
                 TextButton(onClick={
                     player?.let { it.repeatMode=when(it.repeatMode) {
@@ -336,22 +344,31 @@ internal fun BackgroundMusicControls(
                     } }
                 },enabled=player!=null) {
                     AppIcon(R.drawable.ic_player_repeat,Modifier.size(20.dp),
-                        tint=if(repeatMode!=Player.REPEAT_MODE_OFF) MusicBlue else SecondaryInk)
+                        tint=if(repeatMode!=Player.REPEAT_MODE_OFF) MusicAccent else SecondaryInk)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(when(repeatMode) {
                         Player.REPEAT_MODE_ONE -> R.string.music_repeat_one
                         Player.REPEAT_MODE_ALL -> R.string.music_repeat_all
                         else -> R.string.music_repeat
                     }),color=if(repeatMode!=Player.REPEAT_MODE_OFF)
-                        MusicBlue else SecondaryInk)
+                        MusicAccent else SecondaryInk)
                 }
             }
             if(playbackError) Text(stringResource(R.string.media_playback_failed),
                 color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
             TextButton(onClick={showQueue=true},enabled=player!=null) {
-                AppIcon(R.drawable.ic_queue,tint=MusicBlue)
-                Spacer(Modifier.width(8.dp));Text(stringResource(R.string.music_queue),color=MusicBlue)
+                AppIcon(R.drawable.ic_queue,tint=MusicAccent)
+                Spacer(Modifier.width(8.dp));Text(stringResource(R.string.music_queue),color=MusicAccent)
             }
+        }
+            }
+            if(wide) Row(Modifier.fillMaxSize().padding(horizontal=12.dp),
+                verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(.4f),contentAlignment=Alignment.Center) {
+                    AlbumCover(currentUri,Modifier.size(artSize))
+                }
+                Box(Modifier.weight(.6f)) { body() }
+            } else body()
         }
     }
     if(showQueue) Dialog(onDismissRequest={showQueue=false}) {
@@ -419,7 +436,7 @@ fun HomeMusicMiniPlayer(onOpen:()->Unit) {
 @Composable
 fun PersistentMusicPlayer() {
     val controller=rememberMusicSessionController()
-    var show by remember { mutableStateOf(false) }
+    var show by rememberSaveable { mutableStateOf(false) }
     HomeMusicMiniPlayer(onOpen={show=true})
     val media=controller?.currentMediaItem
     val uri=localMusicUri(media)

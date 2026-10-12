@@ -12,6 +12,7 @@ import java.text.DateFormat
 import java.util.Date
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -26,7 +27,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateMap
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -43,6 +44,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
+
+// SwiftDrop @bugfix Codex 12/10/2026 Keep the actual open media item through rotation.
+private val previewSaver=Saver<LocalMedia?,List<String>>(
+    save={ item -> item?.let { listOf(it.uri.toString(),it.name,it.size.toString(),it.duration.toString(),
+        it.addedAtSeconds.toString(),it.artist.orEmpty(),it.album.orEmpty()) } },
+    restore={ values -> LocalMedia(Uri.parse(values[0]),values[1],values[2].toLong(),values[3].toLong(),
+        values[4].toLong(),values[5].ifEmpty { null },values[6].ifEmpty { null }) }
+)
 
 private data class PickedMedia(val kind:MediaKind,val bytes:Long)
 
@@ -220,7 +229,7 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
     var rows by remember(kind) { mutableStateOf<List<LocalMedia>>(emptyList()) }
     var loading by remember(kind) { mutableStateOf(false) }
     var failed by remember(kind) { mutableStateOf(false) }
-    var preview by remember(kind) { mutableStateOf<LocalMedia?>(null) }
+    var preview by rememberSaveable(kind,stateSaver=previewSaver) { mutableStateOf<LocalMedia?>(null) }
     // A tap must work even when the asynchronous MediaController is not ready yet.
     var pendingMusic by remember(kind) { mutableStateOf<LocalMedia?>(null) }
     LaunchedEffect(musicController,pendingMusic) {
@@ -387,7 +396,7 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
                             Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
                                 Text(group.title,style=MaterialTheme.typography.titleSmall,
                                     maxLines=1,overflow=TextOverflow.Ellipsis)
-                                Text(stringResource(R.string.doc_item_count,group.count),
+                                Text(androidx.compose.ui.res.pluralStringResource(R.plurals.browser_item_count,group.count,group.count),
                                     style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }

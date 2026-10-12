@@ -117,3 +117,10 @@ fun SwiftSearchField(query: String, change: (String) -> Unit, hint: String,
             focusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,
             unfocusedBorderColor=Color.Transparent))
 }
+
+// SwiftDrop @tweak Codex 12/10/2026 Preserve small-text contrast on the blue transfer action.
+fun actionCaptionColor(ink:Color):Color=ink.copy(alpha=.94f)
+
+/** A light coral transport button needs a dark glyph in the dark theme. */
+fun musicControlInk(accent:Color):Color=
+    if(accent.luminance()>.4f) Color(0xFF24181A) else Color.White

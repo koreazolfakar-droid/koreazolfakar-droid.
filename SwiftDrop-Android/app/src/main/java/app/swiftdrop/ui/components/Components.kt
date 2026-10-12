@@ -32,14 +32,17 @@ val LocalPageBack=staticCompositionLocalOf<(() -> Unit)?> {null}
 // SwiftDrop @tweak Codex 12/10/2026 Shared screen hierarchy and compact metadata rows.
 @Composable
 fun PageHeading(title: String,subtitle: String) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement=Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.fillMaxWidth().heightIn(min=56.dp),verticalAlignment=Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         LocalPageBack.current?.let { back ->
             IconButton(back) { AppIcon(R.drawable.ic_back,
-                description=stringResource(R.string.back), tint=MaterialTheme.colorScheme.onSurface) }
+                description=stringResource(R.string.back),tint=MaterialTheme.colorScheme.onSurface) }
         }
-        Text(title, style=MaterialTheme.typography.headlineLarge)
-        if(subtitle.isNotBlank()) Text(subtitle, style=MaterialTheme.typography.bodyMedium,
-            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            Text(title,style=MaterialTheme.typography.headlineMedium)
+            if(subtitle.isNotBlank()) Text(subtitle,style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 

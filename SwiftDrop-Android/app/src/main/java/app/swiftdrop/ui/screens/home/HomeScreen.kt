@@ -123,7 +123,8 @@ private fun ConnectionStatus(state:TransferUiState,error:String,action:()->Unit)
         state.progress?.outcome==TransferOutcome.Running -> stringResource(
             if(state.progress.direction=="Sending") R.string.sending else R.string.receiving)
         state.connectedName!=null -> stringResource(R.string.home_connected_to,state.connectedName)
-        state.connectingId!=null -> stringResource(R.string.connecting)
+        state.connectingId!=null -> stringResource(R.string.connecting,
+            state.peers.firstOrNull { it.id==state.connectingId }?.name ?: stringResource(R.string.nearby_device))
         state.isDiscovering -> stringResource(R.string.searching)
         state.isAdvertising -> stringResource(R.string.waiting_sender)
         else -> stringResource(R.string.home_ready_to_share)
@@ -138,7 +139,8 @@ private fun ConnectionStatus(state:TransferUiState,error:String,action:()->Unit)
                 Row(verticalAlignment=Alignment.CenterVertically,
                     horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                     Surface(Modifier.size(6.dp),shape=CircleShape,color=if(state.hasError)
-                        MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) {}
+                        MaterialTheme.colorScheme.error else if(state.connectingId!=null || state.isDiscovering)
+                        MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary) {}
                     Text(text,style=MaterialTheme.typography.bodySmall,maxLines=2,
                         color=if(state.hasError) MaterialTheme.colorScheme.error
                             else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -170,7 +172,7 @@ private fun TransferAction(@DrawableRes icon:Int,@StringRes title:Int,@StringRes
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
                     Text(stringResource(title),style=MaterialTheme.typography.titleMedium,color=ink)
                     Text(stringResource(caption),style=MaterialTheme.typography.bodySmall,
-                        color=ink.copy(alpha=.85f))
+                        color=actionCaptionColor(ink))
                 }
                 AppIcon(R.drawable.ic_chevron,Modifier.size(18.dp),tint=ink)
             }

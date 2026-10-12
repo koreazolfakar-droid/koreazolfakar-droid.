@@ -477,7 +477,7 @@ fun DocumentBrowserScreen(back: () -> Unit, onSend: (List<Uri>) -> Unit, documen
                                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                                         val meta = when {
                                             entry.isFolder && entry.children >= 0 ->
-                                                stringResource(R.string.doc_item_count, entry.children)
+                                                androidx.compose.ui.res.pluralStringResource(R.plurals.browser_item_count,entry.children,entry.children)
                                             entry.isFolder -> stringResource(R.string.doc_folder_label)
                                             else -> sizeLabel(entry.size)
                                         }

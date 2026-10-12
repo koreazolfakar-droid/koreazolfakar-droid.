@@ -24,7 +24,7 @@ class TransferFlowsUiTest {
                 progress=TransferProgress("QA.txt","Sending",1024,2048)),{cancelled=true}) }
         }
         compose.onNodeWithText("50%").assertIsDisplayed()
-        compose.onNodeWithText("Cancel transfer").performScrollTo().performClick()
+        compose.onNodeWithText("Cancel transfer").assertIsDisplayed().performClick()
         compose.runOnIdle { assertTrue(cancelled) }
     }
 

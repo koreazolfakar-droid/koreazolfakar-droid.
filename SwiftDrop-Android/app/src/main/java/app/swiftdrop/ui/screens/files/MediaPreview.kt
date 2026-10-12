@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -118,25 +119,41 @@ private fun ZoomPhoto(item: LocalMedia, modifier: Modifier = Modifier) {
 private fun LocalPlayer(item: LocalMedia, video: Boolean, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
+    var resumePosition by rememberSaveable(item.uri) { mutableLongStateOf(0L) }
+    var resumePlaying by rememberSaveable(item.uri) { mutableStateOf(true) }
     val player = remember(item.uri) {
         ExoPlayer.Builder(context).build().apply {
             setAudioAttributes(androidx.media3.common.AudioAttributes.DEFAULT,true)
-            setMediaItem(MediaItem.fromUri(item.uri))
+            setMediaItem(MediaItem.fromUri(item.uri),resumePosition)
             prepare()
-            playWhenReady = true
+            playWhenReady = resumePlaying
         }
     }
     var playbackFailed by remember(player) { mutableStateOf(player.playerError != null) }
     DisposableEffect(player, owner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) player.pause()
+            if(event==Lifecycle.Event.ON_STOP) {
+                resumePosition=player.currentPosition.coerceAtLeast(0L)
+                resumePlaying=player.playWhenReady
+                player.pause()
+            } else if(event==Lifecycle.Event.ON_START && resumePlaying) player.play()
         }
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) { playbackFailed = true }
+            override fun onEvents(player:Player,events:Player.Events) {
+                if(owner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
+                    resumePlaying=player.playWhenReady
+            }
         }
         owner.lifecycle.addObserver(observer)
         player.addListener(listener)
         onDispose { owner.lifecycle.removeObserver(observer); player.removeListener(listener); player.release() }
+    }
+    LaunchedEffect(player) {
+        while(isActive) {
+            resumePosition=player.currentPosition.coerceAtLeast(0L)
+            delay(300L)
+        }
     }
     if (video) {
         Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {

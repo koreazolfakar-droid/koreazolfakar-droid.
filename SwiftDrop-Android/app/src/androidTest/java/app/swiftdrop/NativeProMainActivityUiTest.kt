@@ -5,6 +5,7 @@ import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.ui.test.*
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.MediaItem
@@ -45,9 +46,24 @@ class NativeProMainActivityUiTest {
         return result.get()
     }
     private fun screenshot(name:String) {
-        val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot() ?: return
-        val folder=File(compose.activity.getExternalFilesDir(null),"visual-qa").apply { mkdirs() }
-        File(folder,"$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
+        if(android.os.Build.VERSION.SDK_INT<29) return
+        val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+            ?: compose.onAllNodes(isRoot()).onLast().captureToImage().asAndroidBitmap()
+        // AGP uninstalls the app after connected tests; app-owned directories are removed.
+        // Public, test-only MediaStore downloads survive so CI can retrieve the evidence.
+        val resolver=compose.activity.contentResolver
+        val uri=resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            android.content.ContentValues().apply {
+                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME,"$name.png")
+                put(android.provider.MediaStore.MediaColumns.MIME_TYPE,"image/png")
+                put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH,"Download/SwiftDrop-visual-qa")
+                put(android.provider.MediaStore.MediaColumns.IS_PENDING,1)
+            }) ?: error("Cannot store visual QA screenshot")
+        resolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
+            ?: error("Cannot write visual QA screenshot")
+        resolver.update(uri,android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.IS_PENDING,0)
+        },null,null)
         bitmap.recycle()
     }
 
@@ -84,10 +100,12 @@ class NativeProMainActivityUiTest {
 
     @android.annotation.TargetApi(30)
     @Test fun fileFoldersSelectionAlbumsAndMediaPlaybackUseActualStorage() {
-        org.junit.Assume.assumeTrue("This pass requires emulator-only library grants",
-            android.os.Environment.isExternalStorageManager() &&
+        val granted=android.os.Environment.isExternalStorageManager() &&
             compose.activity.checkSelfPermission("android.permission.READ_MEDIA_IMAGES")==android.content.pm.PackageManager.PERMISSION_GRANTED &&
-            compose.activity.checkSelfPermission("android.permission.READ_MEDIA_AUDIO")==android.content.pm.PackageManager.PERMISSION_GRANTED)
+            compose.activity.checkSelfPermission("android.permission.READ_MEDIA_AUDIO")==android.content.pm.PackageManager.PERMISSION_GRANTED
+        if(InstrumentationRegistry.getArguments().getString("requireLibraryAccess")=="true")
+            assertTrue("The granted-access pass must execute the real storage/media workflow",granted)
+        else org.junit.Assume.assumeTrue("This pass requires emulator-only library grants",granted)
         val context=compose.activity.applicationContext
         val root=android.os.Environment.getExternalStorageDirectory()
         val folderName="SwiftDrop-QA-"+java.util.UUID.randomUUID().toString().take(8)
@@ -142,7 +160,13 @@ class NativeProMainActivityUiTest {
             compose.waitUntil(15_000) { compose.onAllNodesWithContentDescription(video.name).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithContentDescription(video.name).performClick()
             screenshot("video-player-with-fixture")
+            compose.runOnUiThread { compose.activity.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
+            compose.waitForIdle()
+            compose.onNodeWithText("Close").assertExists()
+            screenshot("video-player-landscape")
             compose.onNodeWithText("Close").performClick()
+            compose.runOnUiThread { compose.activity.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
+            compose.waitForIdle()
             home()
             compose.onNodeWithText("Music").performScrollTo().performClick()
             compose.waitUntil(15_000) { compose.onAllNodesWithText("QA-song").fetchSemanticsNodes().isNotEmpty() }
@@ -228,7 +252,14 @@ class NativeProMainActivityUiTest {
             compose.onNodeWithText("QA track two").performClick()
             compose.waitUntil(10_000) { musicState { controller.currentMediaItem?.mediaId==Uri.fromFile(secondTrack).toString() } }
             screenshot("music-now-playing")
+            compose.runOnUiThread { compose.activity.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
+            compose.waitForIdle()
+            compose.waitUntil(15_000) { compose.onAllNodesWithText("Close").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithText("Queue").performScrollTo().assertExists()
+            screenshot("music-now-playing-landscape")
             compose.onNodeWithText("Close").performClick()
+            compose.runOnUiThread { compose.activity.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
+            compose.waitForIdle()
             compose.onNodeWithText("Settings").performClick()
             compose.runOnIdle { assertTrue(controller.isPlaying) }
             compose.activityRule.scenario.recreate()

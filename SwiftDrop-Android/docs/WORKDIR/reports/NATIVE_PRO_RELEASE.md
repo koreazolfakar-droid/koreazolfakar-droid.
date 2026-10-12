@@ -22,8 +22,9 @@ from the current session; this release does not invent failed or persisted histo
 
 CI runs unit tests, Android Lint and real MainActivity Compose tests on Android 16,
 including English/Arabic Storage, all home categories, theme switching, recreation,
-rotation, music queue and playback while navigating/backgrounded. A second pass
-covers a smaller display and increased font size. The APK is published only after
+rotation, portrait/landscape players, music queue and playback while navigating/backgrounded. A second pass
+covers a smaller display, increased font size and actual test-only indexed media/folder
+workflows. Storage is also tested with both gesture and three-button navigation. The APK is published only after
 these checks and comparison against the previous release's signing certificate.
 
 No physical-device test is claimed. Two-device radio transfer, real QR scanning,

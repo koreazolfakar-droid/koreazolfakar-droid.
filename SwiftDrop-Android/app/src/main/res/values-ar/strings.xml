@@ -283,4 +283,5 @@
     <string name="music_queue">قائمة التشغيل</string>
     <string name="music_queue_empty">قائمة التشغيل فارغة</string>
     <string name="nearby_active">المشاركة القريبة نشطة</string>
+    <plurals name="browser_item_count"><item quantity="zero">لا عناصر</item><item quantity="one">عنصر واحد</item><item quantity="two">عنصران</item><item quantity="few">%1$d عناصر</item><item quantity="many">%1$d عنصرًا</item><item quantity="other">%1$d عنصر</item></plurals>
 </resources>

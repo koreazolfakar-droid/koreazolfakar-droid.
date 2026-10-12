@@ -56,4 +56,12 @@ class HomeCategoriesUiTest {
         compose.onNodeWithText("Browse all").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(generic) }
     }
+    @Test fun connectingStatusFormatsTheActualPeerName() {
+        compose.setContent { SwiftDropTheme(false) {
+            HomeScreen(TransferUiState(peers=listOf(Peer("qa","QA receiver")),connectingId="qa"),
+                send={},receive={},seeAll={},resume={},status="")
+        } }
+        compose.onNodeWithText("Connecting to QA receiver…").assertExists()
+    }
+
 }

@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -43,7 +45,8 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
         animationSpec = tween(SwiftDropDesign.MotionMillis),label="file progress")
     val success = MaterialTheme.colorScheme.tertiary
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
         horizontalAlignment=Alignment.CenterHorizontally,
         verticalArrangement=Arrangement.spacedBy(16.dp)) {
         Box(Modifier.fillMaxWidth()) {
@@ -142,8 +145,9 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
         }
         if(state.selectedFiles.size>1 && p?.direction=="Sending") {
             Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
-                Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    state.selectedFiles.forEachIndexed { index,file ->
+                LazyColumn(Modifier.fillMaxWidth().heightIn(max=240.dp),contentPadding=PaddingValues(12.dp),
+                    verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    itemsIndexed(state.selectedFiles,key={_,file -> file.uri.toString()}) { index,file ->
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                             CategoryBadge(fileIcon(file.name),Modifier.size(36.dp))
                             Column(Modifier.weight(1f)) {
@@ -172,6 +176,10 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
+    }
+    Surface(color=MaterialTheme.colorScheme.surface) {
+        Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),
+            verticalArrangement=Arrangement.spacedBy(8.dp)) {
         if((complete || failed) && sendMore!=null) Button(sendMore,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
             Text(stringResource(if(failed) R.string.retry_send else R.string.send_more))
         }
@@ -181,6 +189,8 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
         OutlinedButton(disconnect,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
             Text(stringResource(if(complete) R.string.done else if(terminal || p==null) R.string.disconnect else R.string.cancel_transfer))
         }
+        }
+    }
     }
 }
 

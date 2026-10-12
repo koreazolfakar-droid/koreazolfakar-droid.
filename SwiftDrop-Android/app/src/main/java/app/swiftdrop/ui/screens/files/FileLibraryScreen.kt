@@ -57,7 +57,7 @@ fun InstalledAppsScreen(state: AppsState,refresh: () -> Unit,export: (List<Share
         Text(stringResource(R.string.split_apk_notice),Modifier.padding(horizontal=16.dp),
             style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
-            Text(stringResource(R.string.doc_item_count,shown.size),Modifier.weight(1f),
+            Text(androidx.compose.ui.res.pluralStringResource(R.plurals.browser_item_count,shown.size,shown.size),Modifier.weight(1f),
                 style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick={largest=!largest}) { Text(stringResource(
                 if(largest) R.string.media_sort_largest else R.string.media_sort_name)) }
