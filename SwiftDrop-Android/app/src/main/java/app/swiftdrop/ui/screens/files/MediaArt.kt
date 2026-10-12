@@ -9,6 +9,13 @@ import android.os.Build
 import android.util.LruCache
 import android.util.Size
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.MaterialTheme
+import app.swiftdrop.R
+import app.swiftdrop.ui.components.AppIcon
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -64,8 +71,15 @@ fun MediaArt(uri: Uri, kind: MediaKind, modifier: Modifier = Modifier, fullSize:
             loadArt(context, uri, kind, fullSize)?.also { if (!fullSize) ArtCache.thumbnails.put(key, it) }
         }
     }
-    bitmap?.let {
-        Image(it.asImageBitmap(), null, modifier.fillMaxSize(),
-            contentScale = if(fullSize) ContentScale.Fit else ContentScale.Crop)
+    Box(modifier.fillMaxSize()
+        .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment=Alignment.Center) {
+        if(bitmap==null) {
+            AppIcon(if(kind==MediaKind.Videos) R.drawable.ic_videos else R.drawable.ic_photos,
+                modifier=Modifier, tint=MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            Image(bitmap!!.asImageBitmap(),null,Modifier.fillMaxSize(),
+                contentScale=if(fullSize) ContentScale.Fit else ContentScale.Crop)
+        }
     }
 }

@@ -341,8 +341,10 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
                                 val item=entry.file
                                 val checked=item.uri in selected
                                 if(kind==MediaKind.Photos)
-                                    PhotoTile(item,checked,onOpen={open(item)},onToggle={toggle(item)})
-                                else VideoTile(item,checked,onOpen={open(item)},onToggle={toggle(item)})
+                                    PhotoTile(item,checked,onOpen={open(item)},onToggle={toggle(item)},
+                                        selectionMode=selected.isNotEmpty())
+                                else VideoTile(item,checked,onOpen={open(item)},onToggle={toggle(item)},
+                                        selectionMode=selected.isNotEmpty())
                             }
                         }
                     }

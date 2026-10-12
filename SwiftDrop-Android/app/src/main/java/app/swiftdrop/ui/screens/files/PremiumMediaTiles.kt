@@ -1,5 +1,9 @@
 package app.swiftdrop.ui.screens.files
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -9,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -42,25 +47,35 @@ fun formatMediaDuration(durationMs: Long): String {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun PhotoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit) {
-    Card(Modifier.fillMaxWidth().aspectRatio(1f).semantics { contentDescription=item.name }
+internal fun PhotoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit,
+    selectionMode:Boolean=false) {
+    val scale by animateFloatAsState(if(checked) .96f else 1f,tween(130),label="photo selection")
+    Card(Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer(scaleX=scale,scaleY=scale)
+        .semantics { contentDescription=item.name }
         .combinedClickable(onClick=onOpen,onLongClick=onToggle),
         shape=RoundedCornerShape(10.dp),
+        border=if(checked) BorderStroke(2.dp,MaterialTheme.colorScheme.primary) else null,
         colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceVariant)) {
         Box(Modifier.fillMaxSize()) {
             MediaArt(item.uri,MediaKind.Photos,Modifier.fillMaxSize())
-            Checkbox(checked=checked,onCheckedChange={onToggle()},
-                modifier=Modifier.align(Alignment.TopEnd))
+            AnimatedVisibility(visible=selectionMode || checked,
+                modifier=Modifier.align(Alignment.TopEnd)) {
+                Checkbox(checked=checked,onCheckedChange={onToggle()})
+            }
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun VideoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit) {
-    Card(Modifier.fillMaxWidth().semantics { contentDescription=item.name }
+internal fun VideoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit,
+    selectionMode:Boolean=false) {
+    val scale by animateFloatAsState(if(checked) .97f else 1f,tween(130),label="video selection")
+    Card(Modifier.fillMaxWidth().graphicsLayer(scaleX=scale,scaleY=scale)
+        .semantics { contentDescription=item.name }
         .combinedClickable(onClick=onOpen,onLongClick=onToggle),
         shape=RoundedCornerShape(10.dp),
+        border=if(checked) BorderStroke(2.dp,MaterialTheme.colorScheme.primary) else null,
         colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)) {
         Column {
             Box(Modifier.fillMaxWidth().aspectRatio(16f/9f)) {
@@ -70,8 +85,10 @@ internal fun VideoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle
                     Text(formatMediaDuration(item.duration),Modifier.padding(horizontal=5.dp,vertical=2.dp),
                         style=MaterialTheme.typography.labelSmall,color=Color.White)
                 }
-                Checkbox(checked=checked,onCheckedChange={onToggle()},
-                    modifier=Modifier.align(Alignment.TopEnd))
+                AnimatedVisibility(visible=selectionMode || checked,
+                    modifier=Modifier.align(Alignment.TopEnd)) {
+                    Checkbox(checked=checked,onCheckedChange={onToggle()})
+                }
             }
             Column(Modifier.padding(horizontal=8.dp,vertical=7.dp),
                 verticalArrangement=Arrangement.spacedBy(2.dp)) {
