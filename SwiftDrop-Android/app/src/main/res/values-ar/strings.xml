@@ -195,7 +195,7 @@
     <string name="home_your_files">ملفاتك</string>
     <string name="home_browse_all">تصفّح الكل</string>
     <string name="home_apps_short">تطبيقات</string>
-    <string name="home_docs_short">مستندات</string>
+    <string name="home_docs_short">الذاكرة</string>
     <string name="home_no_recent">لا توجد عمليات نقل حديثة</string>
     <string name="home_recent_hint">الملفات المكتملة خلال هالجلسة رح تظهر هون.</string>
     <string name="transfer_queue_position">الملف %1$d من %2$d</string>
@@ -251,4 +251,14 @@
     <string name="doc_empty_folder">ما في ملفات بهالمجلد.</string>
     <string name="doc_no_viewer">ما في تطبيق متوافق لفتح هيدا الملف.</string>
     <string name="doc_selected_count">المحدد: %1$d</string>
+
+    <string name="doc_storage_title">الذاكرة الداخلية</string>
+    <string name="doc_open_internal_storage">فتح الذاكرة الداخلية</string>
+    <string name="doc_access_explanation">لتتصفح المجلدات المشتركة داخل SwiftDrop، فيك تمنح صلاحية الوصول لكل الملفات من إعدادات أندرويد. أو اختار مجلد واحد بصلاحية محدودة.</string>
+    <string name="doc_allow_storage">السماح بالوصول إلى الذاكرة</string>
+    <string name="doc_access_settings_failed">تعذّر فتح إعدادات الذاكرة. جرّب اختيار مجلد.</string>
+    <string name="doc_search_files">ابحث بهذا المجلد</string>
+    <string name="doc_reset_folder">اختيار مجلد آخر</string>
+    <string name="doc_item_count">%1$d عنصر</string>
+    <string name="doc_folder_label">مجلد</string>
 </resources>
