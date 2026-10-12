@@ -61,17 +61,6 @@ fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -
                 }
             }
         }
-        if(state.hasError && report != null) item {
-            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
-                Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.nearby_diagnostics_title),style=MaterialTheme.typography.titleMedium)
-                    Text(report,style=MaterialTheme.typography.bodySmall)
-                    TextButton({ clipboard.setText(AnnotatedString(report)) }) {
-                        Text(stringResource(R.string.copy_diagnostics))
-                    }
-                }
-            }
-        }
         if(state.peers.isEmpty()) item {
             Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {

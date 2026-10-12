@@ -13,8 +13,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.ViewModelProvider
 import android.widget.Toast
-import com.google.android.gms.vision.barcode.GmsBarcodeScanning
-import com.google.android.gms.vision.barcode.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.barcode.common.Barcode
 
 // Uses ComponentActivity directly; the old transitive Fragment artifact is never used.

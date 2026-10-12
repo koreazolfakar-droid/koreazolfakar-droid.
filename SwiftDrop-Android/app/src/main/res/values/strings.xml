@@ -159,4 +159,11 @@
     <string name="nearby_diagnostics_title">Connection diagnostics (no personal data)</string>
     <string name="copy_diagnostics">Copy diagnostics</string>
     <string name="nearby_precise_location_required">Google Nearby requires Precise location on this device. Open SwiftDrop App permissions, choose Location, turn on Precise location, then retry. Location is used only for Nearby permission compatibility; SwiftDrop does not access GPS coordinates.</string>
+    <string name="qr_scan">Scan receiver QR</string>
+    <string name="qr_choose_files">Send with QR — choose files first</string>
+    <string name="qr_receiver_title">Scan to pair with this phone</string>
+    <string name="qr_receiver_hint">On the sending phone, choose files and scan this QR. This code expires when receiving stops.</string>
+    <string name="qr_searching">Finding the scanned receiver…</string>
+    <string name="qr_invalid">Not a SwiftDrop pairing QR. Scan the code in the receiver's SwiftDrop app.</string>
+    <string name="qr_scan_unavailable">QR scanner unavailable. Ensure Google Play services is updated and try again. First use may need an internet connection to install the scanner module.</string>
 </resources>
