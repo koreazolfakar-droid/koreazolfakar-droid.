@@ -76,8 +76,37 @@ class NearbyTransferManager(private val context: Context) {
         } catch (_: Exception) { true }
     }
 
+    // Reports only system permission state. Does not collect GPS data or filenames.
+    private fun nearbyDiagnostics(code: Int?): String {
+        fun allowed(permission: String) =
+            context.checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val googleVersion = runCatching {
+            @Suppress("DEPRECATION")
+            context.packageManager.getPackageInfo("com.google.android.gms",0).versionName
+        }.getOrNull() ?: "unknown"
+        val playLocation = runCatching {
+            context.packageManager.checkPermission(
+                android.Manifest.permission.ACCESS_COARSE_LOCATION, "com.google.android.gms"
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }.getOrNull()
+        return listOf(
+            "Nearby status: " + (code?.toString() ?: "unknown"),
+            "Android API: " + Build.VERSION.SDK_INT,
+            "System location ON: " + isDeviceLocationEnabled(),
+            "SwiftDrop coarse location granted: " + allowed(android.Manifest.permission.ACCESS_COARSE_LOCATION),
+            "SwiftDrop Bluetooth scan granted: " + (Build.VERSION.SDK_INT < 31 || allowed(android.Manifest.permission.BLUETOOTH_SCAN)),
+            "SwiftDrop Bluetooth connect granted: " + (Build.VERSION.SDK_INT < 31 || allowed(android.Manifest.permission.BLUETOOTH_CONNECT)),
+            "SwiftDrop Bluetooth advertise granted: " + (Build.VERSION.SDK_INT < 31 || allowed(android.Manifest.permission.BLUETOOTH_ADVERTISE)),
+            "SwiftDrop nearby Wi-Fi granted: " + (Build.VERSION.SDK_INT < 33 || allowed(android.Manifest.permission.NEARBY_WIFI_DEVICES)),
+            "Google Play services version: " + googleVersion,
+            "Google Play services coarse location allowed: " + (playLocation?.toString() ?: "unknown")
+        ).joinToString("\n")
+    }
+
     private fun radioStartFailed(defaultMessage: Int, exception: Exception) {
         val code = (exception as? ApiException)?.statusCode
+        val diagnostics = nearbyDiagnostics(code)
+        android.util.Log.w("SwiftDropNearby", diagnostics)
         val (message, recovery) = when (classifyNearbyFailure(code, isDeviceLocationEnabled())) {
             NearbyFailure.LocationOff -> R.string.nearby_location_off to NearbyRecoveryAction.LocationSettings
             NearbyFailure.LocationDependency -> R.string.nearby_location_dependency to NearbyRecoveryAction.LocationSettings
@@ -87,12 +116,12 @@ class NearbyTransferManager(private val context: Context) {
                 state.update { it.copy(
                     status = UiMessage(defaultMessage,listOf(exception.localizedMessage ?: exception.javaClass.simpleName)),
                     isDiscovering = false, isAdvertising = false, hasError = true,
-                    recoveryAction = NearbyRecoveryAction.None) }
+                    recoveryAction = NearbyRecoveryAction.None, diagnostics = diagnostics) }
                 return
             }
         }
         state.update { it.copy(status = UiMessage(message), isDiscovering = false,
-            isAdvertising = false, hasError = true, recoveryAction = recovery) }
+            isAdvertising = false, hasError = true, recoveryAction = recovery, diagnostics = diagnostics) }
     }
 
     fun setPage(page: String) { state.update { it.copy(page = page) } }
@@ -214,7 +243,7 @@ class NearbyTransferManager(private val context: Context) {
         client.stopAllEndpoints()
         connectedId = null
         outboundUris = emptyList()
-        state.update { it.copy(page = "receive", status = UiMessage(R.string.making_visible), hasError = false, recoveryAction = NearbyRecoveryAction.None, progress = null, connectingId = null,
+        state.update { it.copy(page = "receive", status = UiMessage(R.string.making_visible), hasError = false, recoveryAction = NearbyRecoveryAction.None, diagnostics = null, progress = null, connectingId = null,
             peers = emptyList(), selected = emptyList(), selectedFiles = emptyList()) }
         client.startAdvertising(Build.MODEL.take(26), serviceId, connectionCallback,
             AdvertisingOptions.Builder().setStrategy(strategy).build())
@@ -230,7 +259,7 @@ class NearbyTransferManager(private val context: Context) {
         connectedId = null
         outboundUris = uris
         outboundIndex = 0
-        state.update { it.copy(page = "discover", status = UiMessage(R.string.searching), hasError = false, progress = null, connectingId = null,
+        state.update { it.copy(page = "discover", status = UiMessage(R.string.searching), hasError = false, diagnostics = null, progress = null, connectingId = null,
             peers = emptyList(), selected = uris) }
         client.startDiscovery(serviceId, discoveryCallback,
             DiscoveryOptions.Builder().setStrategy(strategy).build())
@@ -433,7 +462,7 @@ class NearbyTransferManager(private val context: Context) {
         incomingMetadata.clear()
         incomingPeers.clear()
         completed.clear()
-        state.update { it.copy(status = UiMessage(), hasError = false, recoveryAction = NearbyRecoveryAction.None, connectingId = null, isAdvertising = false,
+        state.update { it.copy(status = UiMessage(), hasError = false, recoveryAction = NearbyRecoveryAction.None, diagnostics = null, connectingId = null, isAdvertising = false,
             isDiscovering = false, connectedName = null, pending = null, peers = emptyList(),
             selected = emptyList(), selectedFiles = emptyList(), loadingSelection = false, progress = null, page = "home") }
     }

@@ -164,4 +164,6 @@
     <string name="nearby_permission_problem">النظام أو خدمات Google Play عم يبلّغوا عن صلاحية أجهزة قريبة ناقصة. راجع صلاحيات SwiftDrop بإعدادات التطبيق وجرّب مجدداً.</string>
     <string name="nearby_radio_busy">خدمة الأجهزة القريبة مشغولة حالياً. أنهِ جلسات المشاركة الثانية وجرّب مجدداً.</string>
     <string name="open_location_settings">فتح إعدادات الموقع</string>
+    <string name="nearby_diagnostics_title">تشخيص الاتصال (بدون بيانات شخصية)</string>
+    <string name="copy_diagnostics">نسخ التقرير</string>
 </resources>

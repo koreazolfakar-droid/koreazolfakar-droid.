@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -41,10 +43,34 @@ fun DiscoveryRadar(active: Boolean) {
 
 @Composable
 fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -> Unit, cancel: () -> Unit, openRecoverySettings: () -> Unit) {
+    val clipboard = LocalClipboardManager.current
+    val report = state.diagnostics
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { PageHeading(stringResource(R.string.nearby_devices),stringResource(R.string.discovery_caption)) }
         item { DiscoveryRadar(state.isDiscovering) }
         item { if(state.hasError) ErrorNotice(messageText(state.status)) else Text(messageText(state.status),color=MaterialTheme.colorScheme.onSurfaceVariant) }
+        if(state.hasError && report != null) item {
+            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+                Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Text(stringResource(R.string.nearby_diagnostics_title),style=MaterialTheme.typography.titleMedium)
+                    Text(report,style=MaterialTheme.typography.bodySmall)
+                    TextButton({ clipboard.setText(AnnotatedString(report)) }) {
+                        Text(stringResource(R.string.copy_diagnostics))
+                    }
+                }
+            }
+        }
+        if(state.hasError && report != null) item {
+            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+                Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Text(stringResource(R.string.nearby_diagnostics_title),style=MaterialTheme.typography.titleMedium)
+                    Text(report,style=MaterialTheme.typography.bodySmall)
+                    TextButton({ clipboard.setText(AnnotatedString(report)) }) {
+                        Text(stringResource(R.string.copy_diagnostics))
+                    }
+                }
+            }
+        }
         if(state.peers.isEmpty()) item {
             Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -88,6 +114,8 @@ fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -
 
 @Composable
 fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit, openRecoverySettings: () -> Unit) {
+    val clipboard = LocalClipboardManager.current
+    val report = state.diagnostics
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
         item { PageHeading(stringResource(R.string.receive_files),stringResource(R.string.receive_caption)) }
         item { DiscoveryRadar(state.isAdvertising) }

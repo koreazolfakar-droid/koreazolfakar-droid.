@@ -38,5 +38,6 @@ data class TransferUiState(
     val isAdvertising: Boolean = false,
     val isDiscovering: Boolean = false,
     val recoveryAction: NearbyRecoveryAction = NearbyRecoveryAction.None,
+    val diagnostics: String? = null,
     val hasError: Boolean = false
 )
