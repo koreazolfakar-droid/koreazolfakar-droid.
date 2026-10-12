@@ -1,16 +1,20 @@
 package app.swiftdrop.ui.screens.files
 
-import android.content.pm.PackageManager
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import android.os.Environment
 import android.os.StatFs
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import android.provider.Settings
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -23,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.swiftdrop.*
 import app.swiftdrop.R
@@ -30,200 +35,280 @@ import app.swiftdrop.ui.components.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.isActive
 
-// SwiftDrop @feature Codex 12/10/2026 Local MediaStore gallery with scoped grants and provider paging.
+private data class PickedMedia(val kind:MediaKind,val bytes:Long)
+
+/** Unified, horizontally scrollable categories and compact layouts for each media type. */
 @Composable
 fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
     appsState: AppsState, refreshApps: () -> Unit, exportApps: (List<ShareableApp>) -> Unit,
     sendSelected: (List<Uri>) -> Unit, permissionRevision: Int, requestMedia: (MediaKind) -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    val selected = remember { mutableStateMapOf<Uri, MediaKind>() }
+    val selected = remember { mutableStateMapOf<Uri,PickedMedia>() }
     val context = LocalContext.current
     LaunchedEffect(permissionRevision) {
-        selected.keys.toList().forEach { uri ->
-            val kind = selected[uri] ?: return@forEach
-            if (!mediaAccess(kind, Build.VERSION.SDK_INT) {
-                context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
+        selected.entries.toList().forEach { (uri,picked) ->
+            if (!mediaAccess(picked.kind,Build.VERSION.SDK_INT) {
+                context.checkSelfPermission(it)==PackageManager.PERMISSION_GRANTED
             }.allowed) selected.remove(uri)
         }
         clearMediaThumbnails()
     }
-    val storage = remember { runCatching {
+    val storage=remember { runCatching {
         StatFs(Environment.getDataDirectory().path).let { it.totalBytes to it.availableBytes }
     }.getOrNull() }
+
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp)) {
-            PageHeading(stringResource(R.string.file_library), stringResource(R.string.library_caption))
-            Spacer(Modifier.height(12.dp))
-            if (storage != null && storage.first > 0) {
-                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceVariant) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(stringResource(R.string.device_storage), style = MaterialTheme.typography.labelMedium)
-                        Text(stringResource(R.string.storage_available, sizeLabel(storage.second), sizeLabel(storage.first)),
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        LinearProgressIndicator(progress = {
-                            (storage.first - storage.second).toFloat().div(storage.first).coerceIn(0f, 1f)
-                        }, modifier = Modifier.fillMaxWidth())
-                    }
+        // Compact header frees screen space for the actual files.
+        Row(Modifier.fillMaxWidth().padding(start=12.dp,end=18.dp,top=8.dp,bottom=4.dp),
+            verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            LocalPageBack.current?.let { back ->
+                IconButton(onClick=back,modifier=Modifier.size(48.dp)) {
+                    AppIcon(R.drawable.ic_back,description=stringResource(R.string.back))
                 }
-                Spacer(Modifier.height(12.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.file_library),
+                    style=MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.media_gallery_caption),
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines=1,overflow=TextOverflow.Ellipsis)
             }
         }
-        val labels = listOf(R.string.photos, R.string.videos, R.string.music, R.string.applications)
-        PrimaryScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp) {
-            labels.forEachIndexed { index, label -> Tab(selected = tab == index, onClick = {
-                tab = index
-                if (index == 3) refreshApps()
-            }, text = { Text(stringResource(label)) }) }
+        if(storage!=null && storage.first>0) {
+            Surface(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=5.dp),
+                shape=MaterialTheme.shapes.small,color=MaterialTheme.colorScheme.surfaceVariant) {
+                Row(Modifier.padding(horizontal=12.dp,vertical=10.dp),
+                    verticalAlignment=Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    AppIcon(R.drawable.ic_folder,modifier=Modifier.size(18.dp),
+                        tint=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.media_storage_free,sizeLabel(storage.second)),
+                        style=MaterialTheme.typography.labelMedium,maxLines=1)
+                    LinearProgressIndicator(progress={
+                        ((storage.first-storage.second).toDouble()/storage.first).toFloat().coerceIn(0f,1f)
+                    },modifier=Modifier.weight(1f).height(5.dp))
+                }
+            }
         }
-        if (tab == 3) {
-            InstalledAppsScreen(appsState, refreshApps, exportApps,
-                { choose(arrayOf("application/vnd.android.package-archive")) }, apps, embedded = true)
-        } else {
-            MediaGrid(MediaKind.entries[tab], selected, sendSelected, permissionRevision, requestMedia,
-                { choose(arrayOf("application/pdf", "text/*", "application/msword",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document")) },
-                { choose(arrayOf("*/*")) })
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+            .padding(horizontal=16.dp,vertical=6.dp),
+            horizontalArrangement=Arrangement.spacedBy(8.dp),
+            verticalAlignment=Alignment.CenterVertically) {
+            val labels=listOf(R.string.photos,R.string.videos,R.string.music,R.string.applications)
+            labels.forEachIndexed { index,label ->
+                FilterChip(selected=tab==index,onClick={
+                    tab=index
+                    if(index==3)refreshApps()
+                },label={Text(stringResource(label))})
+            }
+            AssistChip(onClick={choose(arrayOf("application/pdf","text/*","application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))},
+                label={Text(stringResource(R.string.documents))})
+            AssistChip(onClick={choose(arrayOf("*/*"))},
+                label={Text(stringResource(R.string.all_files))})
+        }
+        Box(Modifier.weight(1f)) {
+            if(tab==3) {
+                InstalledAppsScreen(appsState,refreshApps,exportApps,
+                    {choose(arrayOf("application/vnd.android.package-archive"))},
+                    apps,embedded=true)
+            } else {
+                MediaGrid(MediaKind.entries[tab],selected,permissionRevision,requestMedia)
+            }
+        }
+        if(selected.isNotEmpty()) {
+            val known=selected.values.all { it.bytes>=0 }
+            val total=selected.values.sumOf { it.bytes.coerceAtLeast(0L) }
+            Surface(tonalElevation=3.dp,color=MaterialTheme.colorScheme.primaryContainer) {
+                Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
+                    verticalAlignment=Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(pluralStringResource(R.plurals.media_selected_count,selected.size,selected.size),
+                            style=MaterialTheme.typography.labelMedium,
+                            color=MaterialTheme.colorScheme.onPrimaryContainer)
+                        if(known) Text(sizeLabel(total),style=MaterialTheme.typography.labelSmall,
+                            color=MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                    TextButton(onClick={selected.clear()}) { Text(stringResource(R.string.media_clear)) }
+                    Button(onClick={sendSelected(selected.keys.toList())}) {
+                        Text(stringResource(R.string.media_send_selected))
+                    }
+                }
+            }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MediaGrid(kind: MediaKind, selected: SnapshotStateMap<Uri, MediaKind>, sendSelected: (List<Uri>) -> Unit,
-    permissionRevision: Int, requestMedia: (MediaKind) -> Unit, chooseDocuments: () -> Unit,
-    chooseFiles: () -> Unit) {
-    val context = LocalContext.current
-    val access = remember(kind, permissionRevision) {
-        mediaAccess(kind, Build.VERSION.SDK_INT) {
-            context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
+private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
+    permissionRevision:Int,requestMedia:(MediaKind)->Unit) {
+    val context=LocalContext.current
+    val access=remember(kind,permissionRevision) {
+        mediaAccess(kind,Build.VERSION.SDK_INT) {
+            context.checkSelfPermission(it)==PackageManager.PERMISSION_GRANTED
         }
     }
-    val library = remember(context) { MediaLibrary(context.contentResolver) }
+    val library=remember(context) { MediaLibrary(context.contentResolver) }
     var revision by remember { mutableIntStateOf(0) }
     var search by rememberSaveable(kind) { mutableStateOf("") }
     var query by remember(kind) { mutableStateOf("") }
+    var sort by rememberSaveable(kind) { mutableStateOf(MediaSort.Newest) }
+    var sortingMenu by remember { mutableStateOf(false) }
     var rows by remember(kind) { mutableStateOf<List<LocalMedia>>(emptyList()) }
     var loading by remember(kind) { mutableStateOf(false) }
     var failed by remember(kind) { mutableStateOf(false) }
-    var preview by remember { mutableStateOf<LocalMedia?>(null) }
-    val grid = rememberLazyGridState()
+    var preview by remember(kind) { mutableStateOf<LocalMedia?>(null) }
+    var miniPlayer by remember(kind) { mutableStateOf<LocalMedia?>(null) }
+    val grid=rememberLazyGridState()
+    val list=rememberLazyListState()
 
+    fun toggle(item:LocalMedia) {
+        if(item.uri in selected) selected.remove(item.uri)
+        else selected[item.uri]=PickedMedia(kind,item.size)
+    }
+    fun open(item:LocalMedia) {
+        if(selected.isNotEmpty()) toggle(item)
+        else preview=item
+    }
     LaunchedEffect(library) { library.changes().collect { revision++ } }
-    LaunchedEffect(search) { delay(250); query = search.trim() }
-    LaunchedEffect(kind, query, permissionRevision, revision, access.allowed) {
-        rows = emptyList(); failed = false
-        if (!access.allowed) { preview = null; return@LaunchedEffect }
-        grid.scrollToItem(0)
-        var offset = 0
-        while (isActive) {
-            loading = true
-            val page = try { library.page(kind, query, offset) }
-                catch (error: Exception) {
-                    if (error is CancellationException) throw error
-                    failed = true; loading = false; break
+    LaunchedEffect(search) { delay(220); query=search.trim() }
+    LaunchedEffect(kind,query,sort,permissionRevision,revision,access.allowed) {
+        rows=emptyList();failed=false
+        if(!access.allowed) { preview=null;miniPlayer=null;return@LaunchedEffect }
+        if(kind==MediaKind.Music) list.scrollToItem(0) else grid.scrollToItem(0)
+        var offset=0
+        while(isActive) {
+            loading=true
+            val page=try { library.page(kind,query,offset,sort=sort) }
+                catch (e:Exception) {
+                    if(e is CancellationException)throw e
+                    failed=true;loading=false;break
                 }
-            rows = rows + page
-            offset += page.size
-            loading = false
-            if (page.size < 48) break
-            snapshotFlow { grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
-                .first { it >= rows.size - 7 }
+            rows=rows+page
+            offset+=page.size
+            loading=false
+            if(page.size<48)break
+            snapshotFlow {
+                if(kind==MediaKind.Music) list.layoutInfo.visibleItemsInfo.lastOrNull()?.index?:0
+                else grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index?:0
+            }.first { it>=rows.size-7 }
         }
     }
 
     Column(Modifier.fillMaxSize()) {
-        if (selected.isNotEmpty()) Surface(color = MaterialTheme.colorScheme.primaryContainer) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(pluralStringResource(R.plurals.media_selected_count, selected.size, selected.size), Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer)
-                TextButton({ selected.clear() }) { Text(stringResource(R.string.media_clear)) }
-                Button({ sendSelected(selected.keys.toList()) }) { Text(stringResource(R.string.media_send_selected)) }
-            }
-        }
-        LazyVerticalGrid(GridCells.Adaptive(148.dp), Modifier.fillMaxSize(), state = grid,
-            contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(chooseDocuments, Modifier.weight(1f)) { Text(stringResource(R.string.documents)) }
-                    OutlinedButton(chooseFiles, Modifier.weight(1f)) { Text(stringResource(R.string.all_files)) }
+        if(!access.allowed) {
+            Box(Modifier.padding(16.dp)) { PermissionCard(kind,requestMedia) }
+        } else {
+            Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),
+                verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value=search,onValueChange={search=it},
+                    modifier=Modifier.weight(1f),singleLine=true,
+                    placeholder={Text(stringResource(R.string.media_search))},
+                    leadingIcon={AppIcon(R.drawable.ic_search)},
+                    textStyle=MaterialTheme.typography.bodyMedium)
+                Box {
+                    OutlinedButton(onClick={sortingMenu=true},modifier=Modifier.heightIn(min=48.dp)) {
+                        Text(stringResource(R.string.media_sort))
+                    }
+                    DropdownMenu(expanded=sortingMenu,onDismissRequest={sortingMenu=false}) {
+                        MediaSort.entries.forEach { option ->
+                            DropdownMenuItem(text={Text(stringResource(when(option) {
+                                MediaSort.Newest -> R.string.media_sort_newest
+                                MediaSort.Oldest -> R.string.media_sort_oldest
+                                MediaSort.Name -> R.string.media_sort_name
+                                MediaSort.Largest -> R.string.media_sort_largest
+                            }))},onClick={ sort=option; sortingMenu=false })
+                        }
+                    }
                 }
             }
-            if (!access.allowed) item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                PermissionCard(kind, requestMedia)
+            Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=3.dp),
+                verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.SpaceBetween) {
+                Text(stringResource(R.string.media_select_hint),
+                    style=MaterialTheme.typography.labelSmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(access.partial) TextButton(onClick={requestMedia(kind)}) {
+                    Text(stringResource(R.string.media_reselect))
+                }
+            }
+            if(failed) {
+                Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Text(stringResource(R.string.media_unavailable),
+                        color=MaterialTheme.colorScheme.error,modifier=Modifier.weight(1f))
+                    TextButton(onClick={revision++}) {Text(stringResource(R.string.retry))}
+                }
+            }
+            if(kind==MediaKind.Music) {
+                LazyColumn(Modifier.weight(1f),state=list,
+                    contentPadding=PaddingValues(horizontal=16.dp,vertical=8.dp),
+                    verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    if(!loading && !failed && rows.isEmpty()) item {
+                        Text(stringResource(if(query.isBlank())R.string.media_empty else R.string.no_matches))
+                    }
+                    items(rows,key={it.uri.toString()}) { item ->
+                        MusicRow(item,item.uri in selected,
+                            onOpen={open(item)},onToggle={toggle(item)},onPlay={miniPlayer=item})
+                    }
+                    if(loading) item {LinearProgressIndicator(Modifier.fillMaxWidth())}
+                }
+                miniPlayer?.let { item ->
+                    MusicMiniPlayer(item,onClose={miniPlayer=null})
+                }
             } else {
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), singleLine = true,
-                            label = { Text(stringResource(R.string.media_search)) },
-                            leadingIcon = { AppIcon(R.drawable.ic_search) })
-                        Text(stringResource(R.string.media_select_hint), style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (access.partial) {
-                            Text(stringResource(R.string.media_partial), style = MaterialTheme.typography.bodySmall)
-                            TextButton({ requestMedia(kind) }) { Text(stringResource(R.string.media_reselect)) }
-                        }
+                LazyVerticalGrid(columns=GridCells.Adaptive(if(kind==MediaKind.Photos) 100.dp else 166.dp),
+                    modifier=Modifier.weight(1f),state=grid,
+                    contentPadding=PaddingValues(horizontal=10.dp,vertical=8.dp),
+                    horizontalArrangement=Arrangement.spacedBy(6.dp),
+                    verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    if(!loading && !failed && rows.isEmpty()) item(span={GridItemSpan(maxLineSpan)}) {
+                        Text(stringResource(if(query.isBlank())R.string.media_empty else R.string.no_matches),
+                            modifier=Modifier.padding(12.dp))
                     }
-                }
-                if (failed) item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    Column {
-                        Text(stringResource(R.string.media_unavailable), color = MaterialTheme.colorScheme.error)
-                        TextButton({ revision++ }) { Text(stringResource(R.string.retry)) }
+                    items(rows,key={it.uri.toString()}) { item ->
+                        val checked=item.uri in selected
+                        if(kind==MediaKind.Photos)
+                            PhotoTile(item,checked,onOpen={open(item)},onToggle={toggle(item)})
+                        else VideoTile(item,checked,onOpen={open(item)},onToggle={toggle(item)})
                     }
-                }
-                if (!loading && !failed && rows.isEmpty()) item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    Text(stringResource(if (query.isBlank()) R.string.media_empty else R.string.no_matches))
-                }
-                items(rows, key = { it.uri.toString() }) { item ->
-                    val checked = item.uri in selected
-                    Card(Modifier.combinedClickable(onClick = {
-                        if (selected.isNotEmpty()) {
-                            if (checked) selected.remove(item.uri) else selected[item.uri] = kind
-                        } else preview = item
-                    }, onLongClick = {
-                        if (checked) selected.remove(item.uri) else selected[item.uri] = kind
-                    }), colors = CardDefaults.cardColors(containerColor =
-                        if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)) {
-                        Column {
-                            Box(Modifier.fillMaxWidth().height(130.dp), contentAlignment = Alignment.Center) {
-                                if (kind == MediaKind.Music) CategoryBadge(R.drawable.ic_music)
-                                else MediaArt(item.uri, kind, Modifier.fillMaxSize())
-                                if (checked) Checkbox(true, null, Modifier.align(Alignment.TopEnd))
-                            }
-                            Column(Modifier.padding(10.dp)) {
-                                Text(item.name, maxLines = 1, style = MaterialTheme.typography.bodyMedium)
-                                Text(sizeLabel(item.size), style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
+                    if(loading) item(span={GridItemSpan(maxLineSpan)}) {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
                     }
-                }
-                if (loading) item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
             }
         }
     }
     preview?.let { item ->
-        if (access.allowed) MediaPreview(item, kind, { preview = null },
-            { if (item.uri !in selected) selected[item.uri] = kind; preview = null })
+        if(access.allowed) MediaPreview(item,kind,{preview=null},{
+            if(item.uri !in selected)selected[item.uri]=PickedMedia(kind,item.size)
+            preview=null
+        })
     }
 }
 
 @Composable
-private fun PermissionCard(kind: MediaKind, requestMedia: (MediaKind) -> Unit) {
-    val context = LocalContext.current
-    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.media_permission_title), style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(R.string.media_permission_body), style = MaterialTheme.typography.bodyMedium)
-            Button({ requestMedia(kind) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.media_allow)) }
-            TextButton({ context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }, Modifier.fillMaxWidth()) {
+private fun PermissionCard(kind:MediaKind,requestMedia:(MediaKind)->Unit) {
+    val context=LocalContext.current
+    Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceVariant) {
+        Column(Modifier.fillMaxWidth().padding(18.dp),
+            verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(R.string.media_permission_title),
+                style=MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.media_permission_body),
+                style=MaterialTheme.typography.bodyMedium)
+            Button(onClick={requestMedia(kind)},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                Text(stringResource(R.string.media_allow))
+            }
+            TextButton(onClick={
+                context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }) {
                 Text(stringResource(R.string.media_settings))
             }
         }
