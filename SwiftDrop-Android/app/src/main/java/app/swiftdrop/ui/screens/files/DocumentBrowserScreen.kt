@@ -100,11 +100,12 @@ fun DocumentBrowserScreen(back:()->Unit,onSend:(List<Uri>)->Unit) {
         if(result.isNotEmpty()) onSend(result)
     }
 
-    LaunchedEffect(rootUri) {
+    val documentRootName=stringResource(R.string.documents)
+    LaunchedEffect(rootUri,documentRootName) {
         folders.clear()
         rootUri?.let { uri ->
             runCatching { DocumentsContract.getTreeDocumentId(uri) }.onSuccess { id ->
-                folders.add(BrowserFolder(id,context.getString(R.string.documents)))
+                folders.add(BrowserFolder(id,documentRootName))
             }.onFailure { failed=true }
         }
     }
