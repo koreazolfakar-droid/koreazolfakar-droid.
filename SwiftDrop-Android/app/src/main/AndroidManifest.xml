@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <!-- Nearby on some Android 16 devices requires both approximate and precise foreground location. -->
     <!-- Asked only when sharing files, never in the background. No coordinates are collected. -->
+    <!-- The code-scanner library contributes INTERNET; SwiftDrop itself makes no network calls.
+         The scanner downloads models via the Google Play services process if needed. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
