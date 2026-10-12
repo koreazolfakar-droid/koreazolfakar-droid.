@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -40,11 +41,11 @@ fun ReceiverQrCard(payload: String) {
             Box(Modifier.background(androidx.compose.ui.graphics.Color.White, RoundedCornerShape(16.dp)).padding(12.dp),
                 contentAlignment=Alignment.Center) {
                 Image(bitmap,contentDescription=stringResource(R.string.qr_receiver_title),
-                    modifier=Modifier.size(220.dp))
+                    modifier=Modifier.size(240.dp))
             }
-            Text(stringResource(R.string.qr_receiver_hint),style=MaterialTheme.typography.bodySmall,
+            Text(stringResource(R.string.qr_receiver_hint),textAlign=TextAlign.Center,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(stringResource(R.string.security_hint),style=MaterialTheme.typography.bodySmall,
+            Text(stringResource(R.string.security_hint),textAlign=TextAlign.Center,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.primary)
         }
     }

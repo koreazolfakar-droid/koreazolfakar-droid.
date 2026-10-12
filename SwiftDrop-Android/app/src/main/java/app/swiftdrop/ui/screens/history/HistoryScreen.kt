@@ -22,6 +22,22 @@ fun HistoryScreen(history: List<HistoryEntry>) {
     }}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {PageHeading(stringResource(R.string.history_title),stringResource(R.string.history_caption))}
+        if(history.isNotEmpty()) item {
+            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+                Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween) {
+                    Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text(history.size.toString(),style=MaterialTheme.typography.titleLarge)
+                        Text(stringResource(R.string.history_files_count),style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text(sizeLabel(history.sumOf { it.bytes.coerceAtLeast(0) }),style=MaterialTheme.typography.titleLarge)
+                        Text(stringResource(R.string.history_total_size),style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
         item {OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),label={Text(stringResource(R.string.search_history))},leadingIcon={AppIcon(R.drawable.ic_search)},singleLine=true)}
         item {FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             listOf("All" to R.string.all,"Sent" to R.string.sent,"Received" to R.string.received).forEach { (value,label) ->

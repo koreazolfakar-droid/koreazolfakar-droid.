@@ -166,4 +166,18 @@
     <string name="qr_searching">Finding the scanned receiver…</string>
     <string name="qr_invalid">Not a SwiftDrop pairing QR. Scan the code in the receiver\'s SwiftDrop app.</string>
     <string name="qr_scan_unavailable">QR scanner unavailable. Ensure Google Play services is updated and try again. First use may need an internet connection to install the scanner module.</string>
+    <string name="connection_status_title">Connection status</string>
+    <string name="home_connected_to">Connected to %1$s</string>
+    <string name="home_ready_to_share">Ready to start a transfer</string>
+    <string name="this_device">This device</string>
+    <string name="connected_device">Connected device</string>
+    <string name="code_confirmed">Code accepted</string>
+    <string name="selected_for_transfer">%1$d files selected for this transfer</string>
+    <string name="estimating">Estimating…</string>
+    <string name="transfer_security_note">Confirm the matching security digits on both phones before accepting a connection.</string>
+    <string name="completed_this_session">%1$d completed files in this session</string>
+    <string name="history_files_count">Completed files</string>
+    <string name="history_total_size">Total transferred</string>
+    <string name="show_diagnostics">Show technical diagnostics</string>
+    <string name="hide_diagnostics">Hide technical diagnostics</string>
 </resources>

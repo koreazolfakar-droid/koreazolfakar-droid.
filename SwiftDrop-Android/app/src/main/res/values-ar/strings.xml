@@ -174,4 +174,18 @@
     <string name="qr_searching">عم نبحث عن الجهاز الموجود بالـQR…</string>
     <string name="qr_invalid">هيدا مش كود اقتران SwiftDrop. امسح الكود اللي بيظهر عند المستقبِل.</string>
     <string name="qr_scan_unavailable">الماسح غير متوفر. حدّث Google Play services وجرّب من جديد. أول استخدام ممكن يحتاج إنترنت لتنزيل الماسح.</string>
+    <string name="connection_status_title">حالة الاتصال</string>
+    <string name="home_connected_to">متصل بـ %1$s</string>
+    <string name="home_ready_to_share">جاهز لبدء نقل الملفات</string>
+    <string name="this_device">هيدا الجهاز</string>
+    <string name="connected_device">الجهاز المتصل</string>
+    <string name="code_confirmed">تم قبول الرمز</string>
+    <string name="selected_for_transfer">تم اختيار %1$d ملفات للنقل</string>
+    <string name="estimating">عم نقدّر الوقت…</string>
+    <string name="transfer_security_note">تأكد من تطابق رمز الأمان على الهاتفين قبل قبول الاتصال.</string>
+    <string name="completed_this_session">اكتمل نقل %1$d ملفات بهالجلسة</string>
+    <string name="history_files_count">الملفات المكتملة</string>
+    <string name="history_total_size">إجمالي الحجم المنقول</string>
+    <string name="show_diagnostics">عرض تفاصيل التشخيص</string>
+    <string name="hide_diagnostics">إخفاء تفاصيل التشخيص</string>
 </resources>

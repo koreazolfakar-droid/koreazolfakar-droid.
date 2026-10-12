@@ -11,87 +11,173 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.swiftdrop.*
 import app.swiftdrop.R
 import app.swiftdrop.ui.components.*
 import app.swiftdrop.ui.theme.SwiftDropDesign
 
+/** A measured, never simulated transfer dashboard. All values come from the live payload. */
 @Composable
 fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -> Unit)? = null,history: (() -> Unit)? = null) {
-    val p=state.progress
-    val complete=p?.outcome==TransferOutcome.Complete
-    val terminal=complete || p?.outcome==TransferOutcome.Failed || p?.outcome==TransferOutcome.Cancelled
-    val status=when(p?.outcome) {
-        TransferOutcome.Complete -> R.string.complete;TransferOutcome.Failed -> R.string.failed
-        TransferOutcome.Cancelled -> R.string.cancelled;TransferOutcome.Saving -> R.string.saving
-        TransferOutcome.Running -> if(p.direction=="Sending") R.string.sending else R.string.receiving
+    val p = state.progress
+    val complete = p?.outcome == TransferOutcome.Complete
+    val failed = p?.outcome == TransferOutcome.Failed || p?.outcome == TransferOutcome.Cancelled
+    val terminal = complete || failed
+    val working = p?.outcome == TransferOutcome.Running || p?.outcome == TransferOutcome.Saving
+    val status = when(p?.outcome) {
+        TransferOutcome.Complete -> R.string.complete
+        TransferOutcome.Failed -> R.string.failed
+        TransferOutcome.Cancelled -> R.string.cancelled
+        TransferOutcome.Saving -> R.string.saving
+        TransferOutcome.Running -> if(p.direction == "Sending") R.string.sending else R.string.receiving
         null -> R.string.waiting
     }
-    val progress by animateFloatAsState(p?.fraction ?: 0f,tween(SwiftDropDesign.MotionMillis),label="measured progress")
-    val success=MaterialTheme.colorScheme.tertiary
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),horizontalAlignment=Alignment.CenterHorizontally,
-        verticalArrangement=Arrangement.spacedBy(18.dp)) {
-        Box(Modifier.fillMaxWidth()) {PageHeading(stringResource(R.string.file_transfer),state.connectedName ?: stringResource(R.string.nearby_device))}
-        Box(Modifier.size(184.dp),contentAlignment=Alignment.Center) {
-            if(p?.outcome==TransferOutcome.Running || p?.outcome==TransferOutcome.Saving) {
-                val animation=rememberInfiniteTransition(label="active file")
-                val rotation by animation.animateFloat(0f,360f,infiniteRepeatable(tween(2400,easing=LinearEasing)),label="activity arc")
-                val accent=MaterialTheme.colorScheme.secondary
-                Canvas(Modifier.fillMaxSize()) {drawArc(accent.copy(alpha=.7f),rotation,42f,false,style=Stroke(2.dp.toPx()))}
+    val progress by animateFloatAsState(
+        targetValue = if(complete) 1f else p?.fraction ?: 0f,
+        animationSpec = tween(SwiftDropDesign.MotionMillis),label="file progress")
+    val success = MaterialTheme.colorScheme.tertiary
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        horizontalAlignment=Alignment.CenterHorizontally,
+        verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        Box(Modifier.fillMaxWidth()) {
+            PageHeading(stringResource(R.string.file_transfer),state.connectedName ?: stringResource(R.string.nearby_device))
+        }
+
+        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+            Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                IconBadge(R.drawable.ic_security)
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                    Text(stringResource(R.string.connected_device),style=MaterialTheme.typography.labelMedium,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(state.connectedName ?: stringResource(R.string.nearby_device),
+                        style=MaterialTheme.typography.titleMedium,maxLines=1,overflow=TextOverflow.Ellipsis)
+                }
+                if(state.connectedName != null && !failed) {
+                    Text(stringResource(R.string.code_confirmed),style=MaterialTheme.typography.labelSmall,
+                        color=MaterialTheme.colorScheme.tertiary)
+                }
             }
-            if(p==null || (p.total<=0 && !terminal)) CircularProgressIndicator(Modifier.fillMaxSize().padding(8.dp),strokeWidth=7.dp)
-            else CircularProgressIndicator(progress={if(complete) 1f else progress},modifier=Modifier.fillMaxSize().padding(8.dp),strokeWidth=7.dp,
-                color=if(p.outcome==TransferOutcome.Failed) MaterialTheme.colorScheme.error else if(complete) success else MaterialTheme.colorScheme.primary,
-                trackColor=MaterialTheme.colorScheme.primaryContainer)
-            Column {
-                AnimatedVisibility(complete) {
-                    Surface(shape=androidx.compose.foundation.shape.CircleShape,color=MaterialTheme.colorScheme.tertiaryContainer) {
-                        AppIcon(R.drawable.ic_check,Modifier.padding(20.dp).size(48.dp),description=stringResource(R.string.complete),tint=success)
+        }
+
+        Box(Modifier.size(168.dp),contentAlignment=Alignment.Center) {
+            if(working) {
+                val transition=rememberInfiniteTransition(label="active file")
+                val rotation by transition.animateFloat(0f,360f,
+                    infiniteRepeatable(tween(2600,easing=LinearEasing)),label="rotation")
+                val color=MaterialTheme.colorScheme.secondary
+                Canvas(Modifier.fillMaxSize()) {
+                    drawArc(color.copy(alpha=.5f),rotation,44f,false,style=Stroke(2.dp.toPx()))
+                }
+            }
+            if(p==null || (p.total <= 0 && !terminal)) {
+                CircularProgressIndicator(Modifier.fillMaxSize().padding(9.dp),strokeWidth=7.dp)
+            } else {
+                CircularProgressIndicator(progress={progress},modifier=Modifier.fillMaxSize().padding(9.dp),
+                    strokeWidth=7.dp,
+                    color=if(failed) MaterialTheme.colorScheme.error else if(complete) success else MaterialTheme.colorScheme.primary,
+                    trackColor=MaterialTheme.colorScheme.primaryContainer)
+            }
+            if(complete) {
+                Surface(shape=androidx.compose.foundation.shape.CircleShape,
+                    color=MaterialTheme.colorScheme.tertiaryContainer) {
+                    AppIcon(R.drawable.ic_check,Modifier.padding(16.dp).size(44.dp),
+                        description=stringResource(R.string.complete),tint=success)
+                }
+            } else {
+                Column(horizontalAlignment=Alignment.CenterHorizontally) {
+                    Text(if(p!=null && p.total>0) "${p.percent}%" else "—",
+                        style=MaterialTheme.typography.headlineLarge)
+                    Text(stringResource(if(p!=null && p.total>0) R.string.per_file else R.string.measuring),
+                        style=MaterialTheme.typography.labelSmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        Text(stringResource(status),style=MaterialTheme.typography.titleLarge,
+            color=if(failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+
+        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    CategoryBadge(fileIcon(p?.name ?: ""))
+                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        Text(p?.name ?: stringResource(R.string.ready_files),
+                            style=MaterialTheme.typography.titleMedium,maxLines=2,
+                            overflow=TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.per_file),
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            }
-            if(!complete && p!=null && p.total>0) Text("${p.percent}%",style=MaterialTheme.typography.headlineLarge)
-        }
-        Text(stringResource(status),style=MaterialTheme.typography.titleLarge,color=if(p?.outcome==TransferOutcome.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-        Text(sizeLabel(p?.bytes ?: 0)+" / "+sizeLabel(p?.total ?: -1),style=MaterialTheme.typography.bodyLarge)
-        Text(stringResource(R.string.per_file),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
-            Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                CategoryBadge(fileIcon(p?.name ?: ""))
-                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                    Text(p?.name ?: stringResource(R.string.ready_files),style=MaterialTheme.typography.titleMedium)
-                    Text(state.connectedName ?: stringResource(R.string.nearby_device),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                    Text(sizeLabel(p?.bytes ?: 0),style=MaterialTheme.typography.labelMedium)
+                    Text(sizeLabel(p?.total ?: -1),style=MaterialTheme.typography.labelMedium,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                if(p!=null && p.total>0) {
+                    LinearProgressIndicator(progress={if(complete) 1f else progress},
+                        modifier=Modifier.fillMaxWidth(),color=if(failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                } else LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
             }
         }
-        if(p!=null && !terminal && p.outcome==TransferOutcome.Running) {
-            FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp),maxItemsInEachRow=if(LocalDensity.current.fontScale>=1.3f) 1 else 2) {
-                Metric(stringResource(R.string.speed),p.measurement.bytesPerSecond?.let {stringResource(R.string.speed_value,sizeLabel(it.toLong()))} ?: stringResource(R.string.measuring),Modifier.weight(1f).widthIn(min=144.dp))
-                p.measurement.remainingSeconds?.let {
-                    Metric(stringResource(R.string.remaining),pluralStringResource(R.plurals.eta_seconds,it.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),it),Modifier.weight(1f).widthIn(min=144.dp))
-                }
+
+        if(working) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                DashboardMetric(R.drawable.ic_progress,stringResource(R.string.speed),
+                    p?.measurement?.bytesPerSecond?.let {
+                        stringResource(R.string.speed_value,sizeLabel(it.toLong()))
+                    } ?: stringResource(R.string.measuring),Modifier.weight(1f))
+                DashboardMetric(R.drawable.ic_history,stringResource(R.string.remaining),
+                    p?.measurement?.remainingSeconds?.let {
+                        pluralStringResource(R.plurals.eta_seconds,it.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),it)
+                    } ?: stringResource(R.string.estimating),Modifier.weight(1f))
             }
+        }
+
+        if(state.selected.isNotEmpty() && p?.direction=="Sending") {
+            Text(stringResource(R.string.selected_for_transfer,state.selected.size),
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if(state.hasError) ErrorNotice(messageText(state.status))
-        else Text(messageText(state.status),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(stringResource(R.string.engine_value),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        if(complete && sendMore!=null) Button(sendMore,Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text(stringResource(R.string.send_more))}
-        if(complete && history!=null) OutlinedButton(history,Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text(stringResource(R.string.view_history))}
-        TextButton(disconnect,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+        else Text(messageText(state.status),style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            AppIcon(R.drawable.ic_security,Modifier.size(18.dp))
+            Text(stringResource(R.string.transfer_security_note),Modifier.weight(1f),
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(stringResource(R.string.engine_value),style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+
+        if(complete && sendMore!=null) Button(sendMore,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+            Text(stringResource(R.string.send_more))
+        }
+        if(complete && history!=null) OutlinedButton(history,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+            Text(stringResource(R.string.view_history))
+        }
+        OutlinedButton(disconnect,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
             Text(stringResource(if(complete) R.string.done else if(terminal || p==null) R.string.disconnect else R.string.cancel_transfer))
         }
     }
 }
 
 @Composable
-private fun Metric(label: String,value: String,modifier: Modifier) {
-    Surface(modifier,shape=MaterialTheme.shapes.small,color=MaterialTheme.colorScheme.primaryContainer.copy(alpha=.55f)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+private fun DashboardMetric(icon: Int,label: String,value: String,modifier: Modifier) {
+    Surface(modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.primaryContainer.copy(alpha=.55f)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+            AppIcon(icon,Modifier.size(20.dp))
             Text(value,style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onPrimaryContainer)
             Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }

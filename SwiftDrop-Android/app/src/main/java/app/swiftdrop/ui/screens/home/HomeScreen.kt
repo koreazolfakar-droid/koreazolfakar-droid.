@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import android.os.Build
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -20,10 +21,26 @@ fun HomeScreen(state: TransferUiState,send: (Array<String>) -> Unit,receive: () 
     openApps: () -> Unit = {send(arrayOf("application/vnd.android.package-archive"))},onSettings: (() -> Unit)? = null) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         BrandHeader(onSettings)
-        Surface(shape=MaterialTheme.shapes.small,color=MaterialTheme.colorScheme.primaryContainer.copy(alpha=.55f)) {
-            Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                AppIcon(if(state.connectedName!=null) R.drawable.ic_security else R.drawable.ic_nearby,Modifier.size(18.dp))
-                Text(status,Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onPrimaryContainer)
+        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    IconBadge(if(state.connectedName!=null) R.drawable.ic_security else R.drawable.ic_nearby)
+                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                        Text(stringResource(R.string.connection_status_title),style=MaterialTheme.typography.titleMedium)
+                        Text(when {
+                            state.connectedName!=null -> stringResource(R.string.home_connected_to,state.connectedName)
+                            state.isDiscovering -> stringResource(R.string.searching)
+                            state.isAdvertising -> stringResource(R.string.waiting_sender)
+                            else -> stringResource(R.string.home_ready_to_share)
+                        },style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                    Text(stringResource(R.string.this_device),style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(Build.MODEL.take(32),style=MaterialTheme.typography.bodySmall,maxLines=1)
+                }
             }
         }
         FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp),maxItemsInEachRow=if(LocalDensity.current.fontScale>=1.3f) 1 else 2) {
@@ -48,7 +65,13 @@ fun HomeScreen(state: TransferUiState,send: (Array<String>) -> Unit,receive: () 
             Text(stringResource(R.string.recent),Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
             TextButton(seeAll,Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.see_all))}
         }
-        if(state.history.isEmpty()) EmptyTransfers() else state.history.take(3).forEach {TransferHistoryItem(it)}
+        if(state.history.isEmpty()) EmptyTransfers()
+        else {
+            Text(stringResource(R.string.completed_this_session,state.history.size),
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            state.history.take(3).forEach {TransferHistoryItem(it)}
+        }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
             AppIcon(R.drawable.ic_security,Modifier.size(18.dp))
             Text(stringResource(R.string.private_caption),Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
