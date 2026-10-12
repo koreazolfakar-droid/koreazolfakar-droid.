@@ -26,8 +26,8 @@ android {
         applicationId = "app.swiftdrop"
         minSdk = 26
         targetSdk = 35
-        versionCode = 21
-        versionName = "0.4.10-alpha"
+        versionCode = 22
+        versionName = "0.4.11-alpha"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {

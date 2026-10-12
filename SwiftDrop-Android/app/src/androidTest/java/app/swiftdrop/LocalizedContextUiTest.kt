@@ -3,7 +3,7 @@ package app.swiftdrop
 import android.content.res.Configuration
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -26,9 +26,9 @@ class LocalizedContextUiTest {
 
     @Test fun documentsOpensThroughLocalizedAppProviders() {
         compose.setContent {
-            val context = LocalContext.current
-            val config = remember(context) {
-                Configuration(context.resources.configuration).apply {
+            val systemConfiguration = LocalConfiguration.current
+            val config = remember(systemConfiguration) {
+                Configuration(systemConfiguration).apply {
                     val locale = Locale.forLanguageTag("ar")
                     setLocale(locale)
                     setLayoutDirection(locale)
