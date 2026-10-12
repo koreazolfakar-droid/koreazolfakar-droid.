@@ -1,3 +1,5 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="prepared_apks" path="shared-apks/" />
+    <!-- Read-only content URIs for explicitly selected files in public shared storage. -->
+    <external-path name="shared_storage" path="." />
 </paths>
