@@ -32,6 +32,13 @@ import app.swiftdrop.ui.screens.permissions.PermissionsScreen
 import app.swiftdrop.ui.screens.history.HistoryScreen
 import app.swiftdrop.ui.theme.*
 
+/** Navigation returns to the actual parent instead of jumping to Home from every screen. */
+fun backDestination(page:String,appsParent:String="home"):String=when(page) {
+    "apps" -> if(appsParent=="files") "files" else "home"
+    "selection" -> "files"
+    else -> "home"
+}
+
 @Composable
 fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: InstalledAppsController,send: (Array<String>) -> Unit,
                  receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,
@@ -78,6 +85,7 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
     val state by manager.state.collectAsState()
     val appsState by apps.state.collectAsState()
     var chosenFileTab by rememberSaveable { mutableIntStateOf(0) }
+    var appsParent by rememberSaveable { mutableStateOf("home") }
     var leaveAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering || state.connectingId != null
     val guardedSend: (Array<String>) -> Unit = { mime ->
@@ -100,13 +108,12 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
     BackHandler(state.page != "home" && state.pending == null && leaveAction == null) {
         when(state.page) {
             "welcome" -> welcomeDone()
-            "apps" -> manager.setPage("files")
-            else -> manager.setPage("home")
+            else -> manager.setPage(backDestination(state.page,appsParent))
         }
     }
     SwiftDropTheme(dark) {
         CompositionLocalProvider(LocalPageBack provides {
-            manager.setPage(if(state.page=="apps") "files" else "home")
+            manager.setPage(backDestination(state.page,appsParent))
         }) {
         Scaffold(modifier=Modifier.imePadding(),bottomBar = {
             if(state.page in setOf("home","history","settings")) NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
@@ -126,12 +133,14 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                         "home" -> HomeScreen(state,guardedSend,guardedReceive,{manager.setPage("history")},{
                             manager.setPage(if(state.connectedName!=null || state.progress!=null) "transfer"
                                 else if(state.isAdvertising) "receive" else if(state.selectedFiles.isNotEmpty() && !state.isDiscovering) "selection" else "discover")
-                        },messageText(state.status),openFiles={chosenFileTab=0;manager.setPage("files")},openApps={apps.load();manager.setPage("apps")},onSettings={manager.setPage("settings")},
+                        },messageText(state.status),openFiles={chosenFileTab=0;manager.setPage("files")},openApps={appsParent="home";apps.load();manager.setPage("apps")},onSettings={manager.setPage("settings")},
                             openMedia={ kind ->
                                 chosenFileTab=kind.ordinal
                                 manager.setPage("files")
                             })
-                        "files" -> FileLibraryScreen(guardedSend,{apps.load();manager.setPage("apps")},
+                        "files" -> FileLibraryScreen(guardedSend,{
+                            appsParent="files";apps.load();manager.setPage("apps")
+                        },
                             appsState,{apps.load(true)},guardedAppExport,guardedMediaSelect,
                             mediaPermissionRevision,requestMedia,chosenFileTab)
                         "apps" -> InstalledAppsScreen(appsState,{apps.load(true)},guardedAppExport,
