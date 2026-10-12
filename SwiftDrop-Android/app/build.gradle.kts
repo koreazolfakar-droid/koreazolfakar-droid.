@@ -1,7 +1,21 @@
+import com.android.build.api.artifact.SingleArtifact
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+// SwiftDrop @bugfix Codex 12/10/2026 Validate permissions in the packaged manifest.
+androidComponents.onVariants(androidComponents.selector().withBuildType("debug")) { variant ->
+    val manifest = variant.artifacts.get(SingleArtifact.MERGED_MANIFEST)
+    tasks.withType<Test>().configureEach {
+        if (name == "testDebugUnitTest") {
+            inputs.file(manifest)
+            dependsOn(manifest)
+            doFirst { systemProperty("swiftdrop.mergedManifest", manifest.get().asFile.absolutePath) }
+        }
+    }
 }
 
 android {
