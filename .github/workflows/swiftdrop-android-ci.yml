@@ -7,7 +7,7 @@ on:
       - '.github/workflows/swiftdrop-android-ci.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -73,6 +73,23 @@ jobs:
           path: SwiftDrop-Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+      # Public browser download instead of the login-gated Actions artifact.
+      # Published only after all unit, Lint, and Compose UI tests passed.
+      - name: Publish SwiftDrop alpha APK (public prerelease)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="swiftdrop-v0.4.10-alpha"
+          ASSET="app/build/outputs/apk/debug/app-debug.apk#SwiftDrop-v0.4.10-alpha.apk"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ASSET" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" "$ASSET" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --prerelease \
+              --title "SwiftDrop 0.4.10-alpha - Storage crash fix" \
+              --notes "Temporary alpha test build: fixes ActivityResultRegistryOwner loss when localized Compose context opened Storage on Android 16. Includes a crash report feature. Tested in CI. Android 16 device validation requested."
+          fi
       - name: Upload validation reports
         if: always()
         uses: actions/upload-artifact@v4
