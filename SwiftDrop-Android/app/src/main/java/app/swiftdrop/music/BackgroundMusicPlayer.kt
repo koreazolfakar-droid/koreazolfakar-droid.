@@ -172,7 +172,8 @@ private fun formatPosition(ms:Long):String {
 /** No independent ExoPlayer: notification, lock screen and both UIs use one session. */
 @Composable
 internal fun BackgroundMusicControls(
-    item:LocalMedia,modifier:Modifier=Modifier,compact:Boolean=false,onClose:(()->Unit)?=null
+    item:LocalMedia,modifier:Modifier=Modifier,compact:Boolean=false,
+    onClose:(()->Unit)?=null,autoStart:Boolean=true
 ) {
     val player=rememberMusicSessionController()
     var playing by remember(player) { mutableStateOf(false) }
@@ -191,7 +192,11 @@ internal fun BackgroundMusicControls(
         value=withContext(Dispatchers.IO) { readSongArtwork(context,currentUri) }
     }
 
-    LaunchedEffect(player,item.uri) { player?.let { startLocalMusic(it,item) } }
+    LaunchedEffect(player,item.uri,autoStart) {
+        player?.let {
+            if(autoStart || it.currentMediaItem == null) startLocalMusic(it,item)
+        }
+    }
     LaunchedEffect(player) {
         while(isActive) {
             playing=player?.isPlaying == true
