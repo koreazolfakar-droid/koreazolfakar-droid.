@@ -31,6 +31,7 @@ import androidx.media3.ui.PlayerView
 import app.swiftdrop.LocalMedia
 import app.swiftdrop.MediaKind
 import app.swiftdrop.R
+import app.swiftdrop.music.BackgroundMusicControls
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -53,7 +54,7 @@ fun MediaPreview(item: LocalMedia, kind: MediaKind, close: () -> Unit, select: (
                     ZoomPhoto(shown,Modifier.fillMaxSize())
                 }
                 MediaKind.Videos -> LocalPlayer(item, video = true, Modifier.weight(1f))
-                MediaKind.Music -> LocalPlayer(item, video = false, Modifier.weight(1f))
+                MediaKind.Music -> BackgroundMusicControls(item,Modifier.weight(1f))
             }
             if(kind==MediaKind.Photos && (previous!=null || next!=null)) {
                 Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),
@@ -99,6 +100,7 @@ private fun LocalPlayer(item: LocalMedia, video: Boolean, modifier: Modifier = M
     val owner = LocalLifecycleOwner.current
     val player = remember(item.uri) {
         ExoPlayer.Builder(context).build().apply {
+            setAudioAttributes(androidx.media3.common.AudioAttributes.DEFAULT,true)
             setMediaItem(MediaItem.fromUri(item.uri))
             prepare()
             playWhenReady = true

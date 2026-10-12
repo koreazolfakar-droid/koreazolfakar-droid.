@@ -222,4 +222,5 @@
     <string name="media_unknown_date">Unknown date</string>
     <string name="media_previous">Previous</string>
     <string name="media_next">Next</string>
+    <string name="music_background_hint">Music keeps playing when you leave SwiftDrop or lock your phone. Use system media controls to pause.</string>
 </resources>

@@ -122,62 +122,8 @@ internal fun MusicRow(item:LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:(
     }
 }
 
-/** One mini-player only, owned by the current Music tab; releases on leave/revocation. */
+/** Music playback now lives in a single MediaSessionService, not in a tab-owned ExoPlayer. */
 @Composable
 internal fun MusicMiniPlayer(item:LocalMedia,onClose:()->Unit) {
-    val context=LocalContext.current
-    val lifecycleOwner=LocalLifecycleOwner.current
-    val player=remember(item.uri) {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(item.uri))
-            prepare()
-            playWhenReady=true
-        }
-    }
-    var playing by remember(player) { mutableStateOf(false) }
-    var position by remember(player) { mutableLongStateOf(0L) }
-    var duration by remember(player) { mutableLongStateOf(0L) }
-    DisposableEffect(player,lifecycleOwner) {
-        val observer=LifecycleEventObserver { _,event ->
-            if(event==Lifecycle.Event.ON_STOP) player.pause()
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            player.release()
-        }
-    }
-    LaunchedEffect(player) {
-        while(isActive) {
-            playing=player.isPlaying
-            position=player.currentPosition.coerceAtLeast(0L)
-            duration=player.duration.coerceAtLeast(0L)
-            delay(350)
-        }
-    }
-    Surface(tonalElevation=5.dp,color=MaterialTheme.colorScheme.secondaryContainer) {
-        Column(Modifier.fillMaxWidth()) {
-            Row(Modifier.fillMaxWidth().padding(start=14.dp,end=8.dp,top=6.dp,bottom=6.dp),
-                verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                AppIcon(R.drawable.ic_music,modifier=Modifier.size(22.dp),
-                    tint=MaterialTheme.colorScheme.onSecondaryContainer)
-                Column(Modifier.weight(1f)) {
-                    Text(item.name,style=MaterialTheme.typography.labelMedium,
-                        maxLines=1,overflow=TextOverflow.Ellipsis)
-                    Text(formatMediaDuration(position)+" / "+formatMediaDuration(duration),
-                        style=MaterialTheme.typography.labelSmall,
-                        color=MaterialTheme.colorScheme.onSecondaryContainer)
-                }
-                TextButton(onClick={if(playing)player.pause() else player.play()}) {
-                    Text(stringResource(if(playing) R.string.media_pause else R.string.media_play))
-                }
-                IconButton(onClick=onClose) {
-                    AppIcon(R.drawable.ic_close,modifier=Modifier.size(20.dp))
-                }
-            }
-            LinearProgressIndicator(
-                progress={if(duration>0) (position.toFloat()/duration).coerceIn(0f,1f) else 0f},
-                modifier=Modifier.fillMaxWidth().height(3.dp))
-        }
-    }
+    app.swiftdrop.music.BackgroundMusicControls(item,compact=true,onClose=onClose)
 }

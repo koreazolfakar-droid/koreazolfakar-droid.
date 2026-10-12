@@ -234,4 +234,5 @@
     <string name="media_unknown_date">تاريخ غير معروف</string>
     <string name="media_previous">السابق</string>
     <string name="media_next">التالي</string>
+    <string name="music_background_hint">الموسيقى بتكمل حتى لو طلعت من SwiftDrop أو قفلت الشاشة. فيك تتحكّم فيها من إشعارات الهاتف.</string>
 </resources>

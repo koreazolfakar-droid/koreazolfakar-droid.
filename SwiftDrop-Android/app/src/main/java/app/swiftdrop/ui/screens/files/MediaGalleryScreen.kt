@@ -213,7 +213,10 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
     }
     fun open(item:LocalMedia) {
         if(selected.isNotEmpty()) toggle(item)
-        else preview=item
+        else {
+            if(kind==MediaKind.Music) miniPlayer=item
+            preview=item
+        }
     }
     LaunchedEffect(library) { library.changes().collect { revision++ } }
     LaunchedEffect(search) { delay(220); query=search.trim() }
