@@ -15,5 +15,4 @@ fun requiredNearbyPermissions(sdk: Int): List<String> = buildList {
         add("android.permission.BLUETOOTH_CONNECT")
     }
     if (sdk >= 33) add("android.permission.NEARBY_WIFI_DEVICES")
-    if (sdk <= 32) add("android.permission.READ_EXTERNAL_STORAGE")
 }

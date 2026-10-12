@@ -191,4 +191,25 @@
     <string name="home_no_recent">No recent transfers</string>
     <string name="home_recent_hint">Completed files from this session appear here.</string>
     <string name="transfer_queue_position">File %1$d of %2$d</string>
+    <plurals name="media_selected_count">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <string name="media_clear">Clear</string>
+    <string name="media_send_selected">Send selected</string>
+    <string name="media_search">Search this section</string>
+    <string name="media_select_hint">Tap to preview · touch and hold to select</string>
+    <string name="media_partial">Showing photos or videos you allowed.</string>
+    <string name="media_reselect">Change selected media</string>
+    <string name="media_unavailable">Media is unavailable. Check access and try again.</string>
+    <string name="media_empty">No media found in this section.</string>
+    <string name="media_permission_title">Show your local media</string>
+    <string name="media_permission_body">Allow access to browse this section. You can still choose files with Android if you skip.</string>
+    <string name="media_allow">Allow access</string>
+    <string name="media_settings">App settings</string>
+    <string name="media_close">Close</string>
+    <string name="media_select">Select</string>
+    <string name="media_pause">Pause</string>
+    <string name="media_play">Play</string>
+    <string name="media_playback_failed">Could not play this file.</string>
 </resources>

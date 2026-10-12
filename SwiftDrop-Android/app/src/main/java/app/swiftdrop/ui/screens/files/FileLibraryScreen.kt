@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -19,40 +20,14 @@ import app.swiftdrop.AppsState
 import app.swiftdrop.ShareableApp
 import app.swiftdrop.ui.components.*
 
+// SwiftDrop @feature Codex 12/10/2026 Keep SAF actions alongside the integrated media gallery.
 @Composable
-fun FileLibraryScreen(choose: (Array<String>) -> Unit,apps: () -> Unit) {
-    val categories=listOf(Triple(R.drawable.ic_photos,R.string.photos,arrayOf("image/*")),
-        Triple(R.drawable.ic_videos,R.string.videos,arrayOf("video/*")),
-        Triple(R.drawable.ic_applications,R.string.applications,emptyArray<String>()),
-        Triple(R.drawable.ic_documents,R.string.documents,arrayOf("application/pdf","text/*","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document")),
-        Triple(R.drawable.ic_music,R.string.music,arrayOf("audio/*")),
-        Triple(R.drawable.ic_folder,R.string.all_files,arrayOf("*/*")))
-    val storage=remember { runCatching { StatFs(Environment.getDataDirectory().path).let { it.totalBytes to it.availableBytes } }.getOrNull() }
-    LazyVerticalGrid(GridCells.Adaptive(144.dp*LocalDensity.current.fontScale.coerceAtLeast(1f)),Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),
-        horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item(span={GridItemSpan(maxLineSpan)}) {PageHeading(stringResource(R.string.file_library),stringResource(R.string.library_caption))}
-        item(span={GridItemSpan(maxLineSpan)}) {FileTabs(false,{},apps)}
-        items(categories) { (icon,label,mime) ->
-            Card(onClick={if(mime.isEmpty()) apps() else choose(mime)},colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),
-                elevation=CardDefaults.cardElevation(defaultElevation=1.dp)) {
-                Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    CategoryBadge(icon)
-                    Text(stringResource(label),style=MaterialTheme.typography.titleMedium)
-                    Text(stringResource(if(mime.isEmpty()) R.string.select_installed else R.string.open_picker),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        if(storage!=null && storage.first>0) item(span={GridItemSpan(maxLineSpan)}) {
-            val used=(storage.first-storage.second).coerceAtLeast(0)
-            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
-                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.device_storage),style=MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.storage_available,sizeLabel(storage.second),sizeLabel(storage.first)),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    LinearProgressIndicator(progress={used.toDouble().div(storage.first).toFloat().coerceIn(0f,1f)},Modifier.fillMaxWidth())
-                }
-            }
-        }
-    }
+fun FileLibraryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
+    appsState: AppsState, refreshApps: () -> Unit, exportApps: (List<ShareableApp>) -> Unit,
+    sendSelected: (List<android.net.Uri>) -> Unit, mediaPermissionRevision: Int,
+    requestMedia: (app.swiftdrop.MediaKind) -> Unit) {
+    MediaGalleryScreen(choose, apps, appsState, refreshApps, exportApps, sendSelected,
+        mediaPermissionRevision, requestMedia)
 }
 
 @Composable
@@ -70,14 +45,16 @@ private fun FileTabs(appsSelected: Boolean,files: () -> Unit,apps: () -> Unit) {
 }
 
 @Composable
-fun InstalledAppsScreen(state: AppsState,refresh: () -> Unit,export: (List<ShareableApp>) -> Unit,chooseApk: () -> Unit,openFiles: () -> Unit = chooseApk) {
+fun InstalledAppsScreen(state: AppsState,refresh: () -> Unit,export: (List<ShareableApp>) -> Unit,chooseApk: () -> Unit,openFiles: () -> Unit = chooseApk, embedded: Boolean = false) {
     var selected by rememberSaveable { mutableStateOf(listOf<String>()) }
     var search by rememberSaveable { mutableStateOf("") }
     val shown=remember(state.apps,search) {state.apps.filter {it.name.contains(search,true) || it.packageName.contains(search,true)}}
     val selectedApps = state.apps.filter { it.packageName in selected }
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item { PageHeading(stringResource(R.string.applications),stringResource(R.string.apps_caption)) }
-        item {FileTabs(true,openFiles,{})}
+        if(!embedded) {
+            item { PageHeading(stringResource(R.string.applications),stringResource(R.string.apps_caption)) }
+            item {FileTabs(true,openFiles,{})}
+        }
         item {OutlinedTextField(search,{search=it},Modifier.fillMaxWidth(),label={Text(stringResource(R.string.search_apps))},leadingIcon={AppIcon(R.drawable.ic_search)},singleLine=true)}
         item { Text(stringResource(R.string.split_apk_notice),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant) }
         item { OutlinedButton(chooseApk,Modifier.fillMaxWidth().heightIn(min=48.dp),enabled=!state.exporting) { Text(stringResource(R.string.choose_apk)) } }
@@ -101,7 +78,7 @@ fun InstalledAppsScreen(state: AppsState,refresh: () -> Unit,export: (List<Share
             Card(onClick={selected=if(checked) selected-app.packageName else selected+app.packageName},enabled=!state.exporting,
                 colors=CardDefaults.cardColors(containerColor=if(checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)) {
                 Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    CategoryBadge(R.drawable.ic_applications)
+                    InstalledAppIcon(app.packageName)
                     Column(Modifier.weight(1f)) {
                         Text(app.name,style=MaterialTheme.typography.titleMedium)
                         Text(app.packageName,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -114,4 +91,28 @@ fun InstalledAppsScreen(state: AppsState,refresh: () -> Unit,export: (List<Share
         }
         item { TextButton(refresh,Modifier.heightIn(min=48.dp),enabled=!state.exporting && !state.loading) { Text(stringResource(R.string.refresh_apps)) } }
     }
+}
+
+// SwiftDrop @feature Codex 12/10/2026 Render the installed package icon in place of a generic badge.
+private val appIconCache = object : android.util.LruCache<String,android.graphics.Bitmap>(4*1024*1024) {
+    override fun sizeOf(key: String,value: android.graphics.Bitmap) = value.byteCount
+}
+
+@Composable
+private fun InstalledAppIcon(packageName: String) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val bitmap by produceState<android.graphics.Bitmap?>(appIconCache.get(packageName), packageName) {
+        if(value==null) value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val drawable = context.packageManager.getApplicationIcon(packageName)
+                android.graphics.Bitmap.createBitmap(96,96,android.graphics.Bitmap.Config.ARGB_8888).also {
+                    drawable.setBounds(0,0,96,96)
+                    drawable.draw(android.graphics.Canvas(it))
+                    appIconCache.put(packageName,it)
+                }
+            }.getOrNull()
+        }
+    }
+    if(bitmap==null) CategoryBadge(R.drawable.ic_applications)
+    else androidx.compose.foundation.Image(bitmap!!.asImageBitmap(),null,Modifier.size(44.dp))
 }

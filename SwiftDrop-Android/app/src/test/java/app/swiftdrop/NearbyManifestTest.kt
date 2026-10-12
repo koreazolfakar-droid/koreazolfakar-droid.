@@ -46,6 +46,18 @@ class NearbyManifestTest {
         for (sdk in 26..36) assertFalse(requiredNearbyPermissions(sdk).any { it.endsWith("WIFI_STATE") })
     }
 
+    @Test fun scopedMediaRequestsAreDeclaredOnlyForSupportedApiLevels() {
+        for (sdk in 26..36) for (kind in MediaKind.entries) {
+            for (name in requestedMediaPermissions(kind,sdk)) {
+                val declaration = requireNotNull(permissions[name]) { "Missing $name on API $sdk" }
+                val max = declaration.getAttributeNS(namespace,"maxSdkVersion").toIntOrNull() ?: Int.MAX_VALUE
+                assertTrue("$name expires before API $sdk", sdk <= max)
+            }
+        }
+        assertEquals("32",permissions["android.permission.READ_EXTERNAL_STORAGE"]
+            ?.getAttributeNS(namespace,"maxSdkVersion"))
+    }
+
     @Test fun manifestPreservesPackageAndAvoidsBroadAccess() {
         assertEquals("app.swiftdrop", manifest.documentElement.getAttribute("package"))
         listOf("INTERNET", "QUERY_ALL_PACKAGES", "MANAGE_EXTERNAL_STORAGE", "REQUEST_INSTALL_PACKAGES")

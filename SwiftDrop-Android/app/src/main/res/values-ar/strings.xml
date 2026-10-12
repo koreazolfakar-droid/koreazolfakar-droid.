@@ -199,4 +199,29 @@
     <string name="home_no_recent">لا توجد عمليات نقل حديثة</string>
     <string name="home_recent_hint">الملفات المكتملة خلال هالجلسة رح تظهر هون.</string>
     <string name="transfer_queue_position">الملف %1$d من %2$d</string>
+    <plurals name="media_selected_count">
+        <item quantity="zero">تم تحديد %1$d</item>
+        <item quantity="one">تم تحديد %1$d</item>
+        <item quantity="two">تم تحديد %1$d</item>
+        <item quantity="few">تم تحديد %1$d</item>
+        <item quantity="many">تم تحديد %1$d</item>
+        <item quantity="other">تم تحديد %1$d</item>
+    </plurals>
+    <string name="media_clear">مسح</string>
+    <string name="media_send_selected">إرسال المحدد</string>
+    <string name="media_search">ابحث في هذا القسم</string>
+    <string name="media_select_hint">اضغط للمعاينة · اضغط مطولاً للتحديد</string>
+    <string name="media_partial">تظهر الصور أو الفيديوهات التي سمحت بها.</string>
+    <string name="media_reselect">تغيير الوسائط المحددة</string>
+    <string name="media_unavailable">الوسائط غير متاحة. تحقق من الإذن وأعد المحاولة.</string>
+    <string name="media_empty">لا توجد وسائط في هذا القسم.</string>
+    <string name="media_permission_title">عرض الوسائط المحلية</string>
+    <string name="media_permission_body">اسمح بالوصول لتصفح هذا القسم. يمكنك اختيار الملفات عبر أندرويد إذا تخطيت ذلك.</string>
+    <string name="media_allow">السماح بالوصول</string>
+    <string name="media_settings">إعدادات التطبيق</string>
+    <string name="media_close">إغلاق</string>
+    <string name="media_select">تحديد</string>
+    <string name="media_pause">إيقاف مؤقت</string>
+    <string name="media_play">تشغيل</string>
+    <string name="media_playback_failed">تعذّر تشغيل هذا الملف.</string>
 </resources>

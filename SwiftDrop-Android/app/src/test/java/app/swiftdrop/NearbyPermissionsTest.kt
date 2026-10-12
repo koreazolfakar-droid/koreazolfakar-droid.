@@ -15,7 +15,7 @@ class NearbyPermissionsTest {
 
     @Test fun androidEightNineRequestsOnlyCoarseLocation() {
         for (sdk in 26..28) assertEquals(
-            setOf(coarse, "android.permission.READ_EXTERNAL_STORAGE"),
+            setOf(coarse),
             requiredNearbyPermissions(sdk).toSet()
         )
     }
@@ -41,7 +41,8 @@ class NearbyPermissionsTest {
             val requested = requiredNearbyPermissions(sdk)
             assertEquals("API $sdk duplicate permissions", requested.size, requested.distinct().size)
             assertFalse(requested.any { it.contains("BACKGROUND_LOCATION") ||
-                it.contains("MANAGE_EXTERNAL_STORAGE") || it.contains("READ_MEDIA_") })
+                it.contains("MANAGE_EXTERNAL_STORAGE") || it.contains("READ_MEDIA_") ||
+                it.contains("READ_EXTERNAL_STORAGE") })
         }
     }
 }

@@ -11,7 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: SwiftDrop-Android
@@ -47,10 +47,21 @@ jobs:
       - name: Validate unit tests, lint, and debug APK
         env:
           SWIFTDROP_DEBUG_KEYSTORE: ${{ runner.temp }}/swiftdrop-debug.keystore
-        run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+        run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Enable Android emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Run Compose UI tests
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          SWIFTDROP_DEBUG_KEYSTORE: ${{ runner.temp }}/swiftdrop-debug.keystore
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: cd SwiftDrop-Android && gradle --no-daemon :app:connectedDebugAndroidTest
       - uses: actions/upload-artifact@v4
         with:
-          name: swiftdrop-v0.4.0-alpha-debug-apk
+          name: swiftdrop-v0.4.1-alpha-debug-apk
           path: SwiftDrop-Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -58,7 +69,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: swiftdrop-v0.4.0-alpha-validation
+          name: swiftdrop-v0.4.1-alpha-validation
           path: SwiftDrop-Android/app/build/reports/
           if-no-files-found: warn
           retention-days: 14

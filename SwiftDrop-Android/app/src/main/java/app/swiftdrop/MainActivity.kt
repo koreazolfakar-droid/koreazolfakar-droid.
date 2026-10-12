@@ -13,6 +13,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.ViewModelProvider
 import android.widget.Toast
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -21,6 +24,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 @android.annotation.SuppressLint("InvalidFragmentVersionForActivityResult")
 class MainActivity : ComponentActivity() {
     private lateinit var model: SwiftDropViewModel
+    private var mediaPermissionRevision by mutableIntStateOf(0)
     private val manager get() = model.manager
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         val action = model.pendingAction
@@ -31,6 +35,9 @@ class MainActivity : ComponentActivity() {
     private val pickFiles = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) manager.selectFiles(uris)
     }
+    private val mediaPermissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        mediaPermissionRevision++
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,12 +45,19 @@ class MainActivity : ComponentActivity() {
         model = ViewModelProvider(this)[SwiftDropViewModel::class.java]
         setContent {
             SwiftDropApp(manager,model.settings,model.apps,send={mime -> pickFiles.launch(mime)},
+                mediaPermissionRevision=mediaPermissionRevision,
+                requestMedia={kind -> mediaPermissions.launch(requestedMediaPermissions(kind,Build.VERSION.SDK_INT))},
                 receive={withNearbyPermissions(PendingNearbyAction.Receive)},
                 discover={withNearbyPermissions(PendingNearbyAction.Discover)},
                 openSettings={startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))},
                  openLocationSettings={startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))},
                  scanQr={scanReceiverQr()})
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mediaPermissionRevision++
     }
 
     private fun scanReceiverQr() {
