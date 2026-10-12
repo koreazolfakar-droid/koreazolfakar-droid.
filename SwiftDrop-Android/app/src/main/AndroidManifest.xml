@@ -25,6 +25,8 @@
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.SwiftDrop"
         android:supportsRtl="true">
+        <!-- Google Code Scanner camera UI is owned by Play Services; no CAMERA permission required. -->
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
         <provider android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.sharedfiles" android:exported="false"
             android:grantUriPermissions="true">

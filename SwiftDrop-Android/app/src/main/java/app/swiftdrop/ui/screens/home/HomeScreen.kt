@@ -53,9 +53,10 @@ fun HomeScreen(state: TransferUiState,send: (Array<String>) -> Unit,receive: () 
             AppIcon(R.drawable.ic_security,Modifier.size(18.dp))
             Text(stringResource(R.string.private_caption),Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
-            AppIcon(R.drawable.ic_qr,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(stringResource(R.string.qr_upcoming),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedButton(openFiles,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+            AppIcon(R.drawable.ic_qr,Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(stringResource(R.string.qr_choose_files))
         }
     }
 }

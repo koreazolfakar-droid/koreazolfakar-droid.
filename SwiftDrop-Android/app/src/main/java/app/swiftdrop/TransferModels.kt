@@ -36,6 +36,7 @@ data class TransferUiState(
     val progress: TransferProgress? = null,
     val history: List<HistoryEntry> = emptyList(),
     val isAdvertising: Boolean = false,
+    val receiverQrPayload: String? = null,
     val isDiscovering: Boolean = false,
     val recoveryAction: NearbyRecoveryAction = NearbyRecoveryAction.None,
     val diagnostics: String? = null,

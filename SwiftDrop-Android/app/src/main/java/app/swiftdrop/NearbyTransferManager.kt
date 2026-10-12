@@ -55,6 +55,8 @@ class NearbyTransferManager(private val context: Context) {
     @Volatile private var activeOutboundId: Long? = null
     private var activeOutboundName = ""
     private var outboundPeer = ""
+    @Volatile private var qrTarget: String? = null
+    @Volatile private var activeAdvertisedToken: String? = null
 
     private data class IncomingMetadata(val name: String, val size: Long)
     private val measurements = TransferMeasurements()
@@ -128,12 +130,21 @@ class NearbyTransferManager(private val context: Context) {
 
     fun setPage(page: String) { state.update { it.copy(page = page) } }
 
+    fun armQrTarget(token: String?) {
+        require(token == null || QrPairing.parsePayload(QrPairing.payload(token)) == token)
+        qrTarget = token
+    }
+
+
     private val discoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, details: DiscoveredEndpointInfo) {
-            state.update {
-                it.copy(peers = (it.peers.filterNot { p -> p.id == endpointId } +
-                    Peer(endpointId, details.endpointName)))
-            }
+            val advertised = QrPairing.parseAdvertisement(details.endpointName)
+            val target = qrTarget
+            // QR pairing never connects to an unrelated or spoofed textual device name.
+            if (target != null && advertised?.token != target) return
+            val peer = Peer(endpointId,advertised?.name ?: details.endpointName)
+            state.update { it.copy(peers = (it.peers.filterNot { p -> p.id == endpointId } + peer)) }
+            if (target != null && advertised?.token == target) connect(peer)
         }
         override fun onEndpointLost(endpointId: String) {
             state.update { it.copy(peers = it.peers.filterNot { p -> p.id == endpointId }) }
@@ -159,7 +170,7 @@ class NearbyTransferManager(private val context: Context) {
                     ?: state.value.connectedName ?: context.getString(R.string.nearby_device)
                 outboundPeer = peerName
                 state.update { it.copy(connectedName = peerName, isAdvertising = false,
-                    isDiscovering = false, page = "transfer", status = UiMessage(R.string.connected), hasError = false) }
+                    isDiscovering = false, page = "transfer", status = UiMessage(R.string.connected), hasError = false, receiverQrPayload = null) }
                 if (outboundUris.isNotEmpty()) sendNext()
             } else {
                 state.update { it.copy(connectedName = null) }
@@ -242,16 +253,30 @@ class NearbyTransferManager(private val context: Context) {
 
     fun advertise() {
         resetSearching()
+        qrTarget = null
         client.stopAllEndpoints()
         connectedId = null
         outboundUris = emptyList()
+        val sessionToken = QrPairing.newToken()
+        activeAdvertisedToken = sessionToken
         state.update { it.copy(page = "receive", status = UiMessage(R.string.making_visible), hasError = false, recoveryAction = NearbyRecoveryAction.None, diagnostics = null, progress = null, connectingId = null,
-            peers = emptyList(), selected = emptyList(), selectedFiles = emptyList()) }
-        client.startAdvertising(Build.MODEL.take(26), serviceId, connectionCallback,
+            peers = emptyList(), selected = emptyList(), selectedFiles = emptyList(), receiverQrPayload = null) }
+        client.startAdvertising(QrPairing.advertisement(sessionToken,Build.MODEL), serviceId, connectionCallback,
             AdvertisingOptions.Builder().setStrategy(strategy).build())
-            .addOnSuccessListener { state.update { s -> s.copy(isAdvertising = true,
-                status = UiMessage(R.string.waiting_sender)) } }
-            .addOnFailureListener { radioStartFailed(R.string.cannot_receive, it) }
+            .addOnSuccessListener {
+                if(activeAdvertisedToken == sessionToken && !closed) {
+                    state.update { s -> s.copy(isAdvertising = true,
+                        receiverQrPayload = QrPairing.payload(sessionToken),
+                        status = UiMessage(R.string.waiting_sender)) }
+                }
+            }
+            .addOnFailureListener {
+                if(activeAdvertisedToken == sessionToken) {
+                    activeAdvertisedToken = null
+                    state.update { s -> s.copy(receiverQrPayload = null) }
+                    radioStartFailed(R.string.cannot_receive, it)
+                }
+            }
     }
 
     fun discover(uris: List<Uri>) {
@@ -262,7 +287,8 @@ class NearbyTransferManager(private val context: Context) {
         outboundUris = uris
         outboundIndex = 0
         state.update { it.copy(page = "discover", status = UiMessage(R.string.searching), hasError = false, diagnostics = null, progress = null, connectingId = null,
-            peers = emptyList(), selected = uris) }
+            peers = emptyList(), selected = uris, receiverQrPayload = null,
+            status = UiMessage(if(qrTarget != null) R.string.qr_searching else R.string.searching)) }
         client.startDiscovery(serviceId, discoveryCallback,
             DiscoveryOptions.Builder().setStrategy(strategy).build())
             .addOnSuccessListener { state.update { s -> s.copy(isDiscovering = true) } }
@@ -456,6 +482,7 @@ class NearbyTransferManager(private val context: Context) {
 
     fun disconnect() {
         resetSearching()
+        qrTarget = null
         client.stopAllEndpoints()
         connectedId = null
         activeOutboundId = null
@@ -465,7 +492,7 @@ class NearbyTransferManager(private val context: Context) {
         incomingPeers.clear()
         completed.clear()
         state.update { it.copy(status = UiMessage(), hasError = false, recoveryAction = NearbyRecoveryAction.None, diagnostics = null, connectingId = null, isAdvertising = false,
-            isDiscovering = false, connectedName = null, pending = null, peers = emptyList(),
+            isDiscovering = false, receiverQrPayload = null, connectedName = null, pending = null, peers = emptyList(),
             selected = emptyList(), selectedFiles = emptyList(), loadingSelection = false, progress = null, page = "home") }
     }
 
@@ -503,9 +530,10 @@ class NearbyTransferManager(private val context: Context) {
     private fun resetSearching() {
         sessionGeneration.incrementAndGet()
         measurements.reset()
+        activeAdvertisedToken = null
         client.stopAdvertising()
         client.stopDiscovery()
-        state.update { it.copy(isAdvertising = false, isDiscovering = false) }
+        state.update { it.copy(isAdvertising = false, isDiscovering = false, receiverQrPayload = null) }
     }
 
     fun close() {

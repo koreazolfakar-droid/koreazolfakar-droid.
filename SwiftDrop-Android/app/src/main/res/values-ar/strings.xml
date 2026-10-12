@@ -167,4 +167,18 @@
     <string name="nearby_diagnostics_title">تشخيص الاتصال (بدون بيانات شخصية)</string>
     <string name="copy_diagnostics">نسخ التقرير</string>
     <string name="nearby_precise_location_required">خدمة Google Nearby بحاجة لصلاحية الموقع الدقيق بهالجهاز. افتح إعدادات تطبيق SwiftDrop ثم الموقع واختار Precise location وبعدها جرّب مجدداً. التطبيق ما بيقرأ إحداثيات GPS.</string>
+    <string name="qr_scan">Scan receiver QR</string>
+    <string name="qr_choose_files">Send with QR — choose files first</string>
+    <string name="qr_receiver_title">Scan to pair with this phone</string>
+    <string name="qr_receiver_hint">On the sending phone, choose files and scan this QR. This code expires when receiving stops.</string>
+    <string name="qr_searching">Finding the scanned receiver…</string>
+    <string name="qr_invalid">Not a SwiftDrop pairing QR. Scan the code in the receiver's SwiftDrop app.</string>
+    <string name="qr_scan_unavailable">QR scanner unavailable. Ensure Google Play services is updated and try again. First use may need an internet connection to install the scanner module.</string>
+    <string name="qr_scan">مسح QR الخاص بالمستقبِل</string>
+    <string name="qr_choose_files">إرسال عبر QR — اختار الملفات أولاً</string>
+    <string name="qr_receiver_title">امسح الكود للاقتران بهالهاتف</string>
+    <string name="qr_receiver_hint">عالهاتف المُرسِل اختار الملفات وامسح هالكود. بيتغيّر كل مرة بتوقف فيها الاستقبال.</string>
+    <string name="qr_searching">عم نبحث عن الجهاز الموجود بالـQR…</string>
+    <string name="qr_invalid">هيدا مش كود اقتران SwiftDrop. امسح الكود اللي بيظهر عند المستقبِل.</string>
+    <string name="qr_scan_unavailable">الماسح غير متوفر. حدّث Google Play services وجرّب من جديد. أول استخدام ممكن يحتاج إنترنت لتنزيل الماسح.</string>
 </resources>

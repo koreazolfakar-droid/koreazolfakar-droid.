@@ -21,6 +21,7 @@ import app.swiftdrop.*
 import app.swiftdrop.R
 import app.swiftdrop.ui.components.*
 import app.swiftdrop.ui.theme.SwiftDropDesign
+import app.swiftdrop.ui.screens.qr.ReceiverQrCard
 
 @Composable
 fun DiscoveryRadar(active: Boolean) {
@@ -121,6 +122,9 @@ fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit,
         item { DiscoveryRadar(state.isAdvertising) }
         item { Text(stringResource(when {state.hasError -> R.string.receive_unavailable;state.isAdvertising -> R.string.waiting_sender;else -> R.string.making_visible}),style=MaterialTheme.typography.titleLarge) }
         if(state.isAdvertising) item {Text(stringResource(R.string.device_visible,android.os.Build.MODEL),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)}
+        if(state.isAdvertising && state.receiverQrPayload != null) item {
+            ReceiverQrCard(requireNotNull(state.receiverQrPayload))
+        }
         item { if(state.hasError) ErrorNotice(messageText(state.status)) else Text(messageText(state.status),color=MaterialTheme.colorScheme.onSurfaceVariant) }
         item {
             Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.primaryContainer) {
@@ -146,7 +150,7 @@ fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit,
 }
 
 @Composable
-fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: () -> Unit) {
+fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: () -> Unit, scanQr: () -> Unit) {
     val known = !state.loadingSelection && state.selectedFiles.size==state.selected.size && state.selectedFiles.all { it.bytes >= 0 }
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item { PageHeading(stringResource(R.string.selection_title),stringResource(R.string.selection_caption)) }
@@ -170,6 +174,12 @@ fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: (
             Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Button(discover,Modifier.fillMaxWidth().heightIn(min=48.dp),enabled=!state.loadingSelection && !state.hasError && state.selectedFiles.isNotEmpty()) {
                     AppIcon(R.drawable.ic_nearby,tint=LocalContentColor.current);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.find_receiver))
+                }
+                OutlinedButton(scanQr,Modifier.fillMaxWidth().heightIn(min=48.dp),
+                    enabled=!state.loadingSelection && !state.hasError && state.selectedFiles.isNotEmpty()) {
+                    AppIcon(R.drawable.ic_qr,tint=LocalContentColor.current)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.qr_scan))
                 }
                 OutlinedButton(chooseAgain,Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(stringResource(R.string.change_selection)) }
             }
