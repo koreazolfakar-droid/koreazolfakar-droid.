@@ -59,5 +59,8 @@ fun MediaArt(uri: Uri, kind: MediaKind, modifier: Modifier = Modifier, fullSize:
             loadArt(context, uri, kind, fullSize)?.also { if (!fullSize) ArtCache.thumbnails.put(key, it) }
         }
     }
-    bitmap?.let { Image(it.asImageBitmap(), null, modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
+    bitmap?.let {
+        Image(it.asImageBitmap(), null, modifier.fillMaxSize(),
+            contentScale = if(fullSize) ContentScale.Fit else ContentScale.Crop)
+    }
 }

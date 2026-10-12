@@ -39,6 +39,19 @@ fun mediaAccess(kind: MediaKind, sdk: Int, granted: (String) -> Boolean): MediaA
 
 data class LocalMedia(val uri: Uri, val name: String, val size: Long, val duration: Long)
 
+/** Provider-side sort, not a sort of only the first few loaded pages. */
+enum class MediaSort { Newest, Oldest, Name, Largest }
+
+fun mediaSortOrder(sort: MediaSort): String {
+    val id = MediaStore.MediaColumns._ID
+    return when(sort) {
+        MediaSort.Newest -> "${MediaStore.MediaColumns.DATE_ADDED} DESC, $id DESC"
+        MediaSort.Oldest -> "${MediaStore.MediaColumns.DATE_ADDED} ASC, $id ASC"
+        MediaSort.Name -> "${MediaStore.MediaColumns.DISPLAY_NAME} COLLATE NOCASE ASC, $id DESC"
+        MediaSort.Largest -> "${MediaStore.MediaColumns.SIZE} DESC, $id DESC"
+    }
+}
+
 /** Pages on the provider side; no media rows or file paths are loaded into memory up front. */
 class MediaLibrary(private val resolver: ContentResolver) {
     fun changes() = callbackFlow {
@@ -49,7 +62,8 @@ class MediaLibrary(private val resolver: ContentResolver) {
         awaitClose { resolver.unregisterContentObserver(observer) }
     }
 
-    suspend fun page(kind: MediaKind, search: String, offset: Int, limit: Int = 48): List<LocalMedia> = withContext(Dispatchers.IO) {
+    suspend fun page(kind: MediaKind, search: String, offset: Int, limit: Int = 48,
+        sort: MediaSort = MediaSort.Newest): List<LocalMedia> = withContext(Dispatchers.IO) {
         val collection = when (kind) {
             MediaKind.Photos -> MediaStore.Images.Media.getContentUri("external")
             MediaKind.Videos -> MediaStore.Video.Media.getContentUri("external")
@@ -65,8 +79,7 @@ class MediaLibrary(private val resolver: ContentResolver) {
                     (if (search.isBlank()) "" else " AND ${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ? ESCAPE '\\'"))
             putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS,
                 if (search.isBlank()) emptyArray() else arrayOf("%${search.trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")}%"))
-            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
-                "${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC")
+            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, mediaSortOrder(sort))
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
             putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
         }
