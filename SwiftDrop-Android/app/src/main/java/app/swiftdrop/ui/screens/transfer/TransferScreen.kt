@@ -37,6 +37,7 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
         TransferOutcome.Running -> if(p.direction == "Sending") R.string.sending else R.string.receiving
         null -> R.string.waiting
     }
+    // The gate in the engine limits recompositions while this animation smooths visible updates.
     val progress by animateFloatAsState(
         targetValue = if(complete) 1f else p?.fraction ?: 0f,
         animationSpec = tween(SwiftDropDesign.MotionMillis),label="file progress")
@@ -143,6 +144,11 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
             }
         }
 
+        if(p != null && p.direction=="Sending" && p.fileCount > 1) {
+            Text(stringResource(R.string.transfer_queue_position,p.fileIndex,p.fileCount),
+                style=MaterialTheme.typography.titleMedium,
+                color=MaterialTheme.colorScheme.primary)
+        }
         if(state.selected.isNotEmpty() && p?.direction=="Sending") {
             Text(stringResource(R.string.selected_for_transfer,state.selected.size),
                 style=MaterialTheme.typography.bodySmall,

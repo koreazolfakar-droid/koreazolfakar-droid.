@@ -190,4 +190,5 @@
     <string name="home_docs_short">Docs</string>
     <string name="home_no_recent">No recent transfers</string>
     <string name="home_recent_hint">Completed files from this session appear here.</string>
+    <string name="transfer_queue_position">File %1$d of %2$d</string>
 </resources>

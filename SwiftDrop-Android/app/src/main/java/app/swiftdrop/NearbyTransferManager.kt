@@ -45,6 +45,7 @@ class NearbyTransferManager(private val context: Context) {
     private val io = Executors.newSingleThreadExecutor()
     private val incomingPayloads = ConcurrentHashMap<Long, Payload>()
     private val incomingMetadata = ConcurrentHashMap<Long, IncomingMetadata>()
+    private val incomingTransportLengths = ConcurrentHashMap<Long, Long>()
     private val completed = ConcurrentHashMap.newKeySet<Long>()
     private val persisting = ConcurrentHashMap.newKeySet<Long>()
     private val sessionGeneration = AtomicLong()
@@ -60,6 +61,7 @@ class NearbyTransferManager(private val context: Context) {
 
     private data class IncomingMetadata(val name: String, val size: Long)
     private val measurements = TransferMeasurements()
+    private val emissionGate = ProgressEmissionGate()
     private fun info(resource: Int, vararg arguments: String, error: Boolean = false) {
         state.update { it.copy(status = UiMessage(resource, arguments.toList()), hasError = error, recoveryAction = NearbyRecoveryAction.None) }
     }
@@ -225,11 +227,21 @@ class NearbyTransferManager(private val context: Context) {
                 PayloadTransferUpdate.Status.CANCELED -> TransferOutcome.Cancelled
                 else -> TransferOutcome.Running
             }
-            val measurement = measurements.sample(id, update.bytesTransferred, total, SystemClock.elapsedRealtime())
-            state.update { it.copy(page = if (it.page == "receive" || it.page == "discover") "transfer" else it.page, progress = TransferProgress(name,
-                direction, update.bytesTransferred.coerceAtLeast(0L), total,
-                finished = sent && update.status == PayloadTransferUpdate.Status.SUCCESS,
-                outcome = outcome, measurement = measurement, payloadId = id)) }
+            val timestamp = SystemClock.elapsedRealtime()
+            val measurement = measurements.sample(id, update.bytesTransferred, total, timestamp)
+            // Never suppress a success, failure, or cancellation. Only throttle UI work.
+            if (emissionGate.shouldEmit(id,update.bytesTransferred,timestamp,
+                update.status != PayloadTransferUpdate.Status.IN_PROGRESS)) {
+                val currentIndex = if (sent) outboundIndex else 0
+                val fileCount = if (sent) outboundUris.size else 0
+                state.update { it.copy(
+                    page = if (it.page == "receive" || it.page == "discover") "transfer" else it.page,
+                    progress = TransferProgress(name,direction,update.bytesTransferred.coerceAtLeast(0L),total,
+                        finished = sent && update.status == PayloadTransferUpdate.Status.SUCCESS,
+                        outcome = outcome, measurement = measurement, payloadId = id,
+                        fileIndex = currentIndex, fileCount = fileCount))
+                }
+            }
             when (update.status) {
                 PayloadTransferUpdate.Status.SUCCESS -> {
                     if (sent) {
@@ -239,12 +251,23 @@ class NearbyTransferManager(private val context: Context) {
                         ) + it.history) }
                         sendNext()
                     } else {
+                        incomingTransportLengths[id] = update.totalBytes
                         completed.add(id)
                         maybePersistReceived(id)
                     }
                 }
                 PayloadTransferUpdate.Status.FAILURE, PayloadTransferUpdate.Status.CANCELED -> {
                     if (sent) activeOutboundId = null
+                    else {
+                        val temporary = incomingPayloads.remove(id)?.asFile()?.asUri()
+                        incomingMetadata.remove(id)
+                        incomingTransportLengths.remove(id)
+                        incomingPeers.remove(id)
+                        completed.remove(id)
+                        if (temporary != null) io.execute {
+                            runCatching { context.contentResolver.delete(temporary,null,null) }
+                        }
+                    }
                     info(if (update.status == PayloadTransferUpdate.Status.CANCELED) R.string.cancelled else R.string.failed, error = true)
                 }
             }
@@ -340,7 +363,8 @@ class NearbyTransferManager(private val context: Context) {
                 }
                 activeOutboundId = filePayload.id
                 activeOutboundName = meta.name
-                state.update { it.copy(progress = TransferProgress(meta.name, "Sending", 0, meta.size, payloadId = filePayload.id),
+                state.update { it.copy(progress = TransferProgress(meta.name, "Sending", 0, meta.size,
+                    payloadId = filePayload.id,fileIndex=outboundIndex,fileCount=outboundUris.size),
                     status = UiMessage(R.string.sending), hasError = false) }
                 val metadata = JSONObject().put("type", "file-metadata")
                     .put("id", filePayload.id).put("name", meta.name).put("size", meta.size)
@@ -397,11 +421,16 @@ class NearbyTransferManager(private val context: Context) {
         val meta = incomingMetadata[id] ?: return
         if (!persisting.add(id)) return // prevent metadata/transfer completion race
         val peerName = incomingPeers[id] ?: state.value.connectedName ?: context.getString(R.string.nearby_device)
+        val generation = sessionGeneration.get()
+        val transportLength = incomingTransportLengths[id] ?: -1L
         io.execute {
             try {
                 val uri = requireNotNull(file.asFile()?.asUri())
-                val written = saveIntoDownloads(uri, meta.name)
+                val written = saveIntoDownloads(uri, meta.name,meta.size,transportLength) {
+                    !closed && sessionGeneration.get() == generation
+                }
                 try { context.contentResolver.delete(uri, null, null) } catch (_: Exception) {}
+                if (closed || sessionGeneration.get() != generation) return@execute
                 state.update { s ->
                     val current = s.progress?.payloadId == id
                     s.copy(status = if (current) UiMessage(R.string.saved_file, listOf(meta.name, written.location)) else s.status,
@@ -411,10 +440,12 @@ class NearbyTransferManager(private val context: Context) {
                             System.currentTimeMillis())) + s.history)
                 }
             } catch (e: Exception) {
-                if (state.value.progress?.payloadId == id) failTransfer(R.string.save_failed, e)
+                if (!closed && sessionGeneration.get() == generation &&
+                    state.value.progress?.payloadId == id) failTransfer(R.string.save_failed, e)
             } finally {
                 incomingPayloads.remove(id)
                 incomingMetadata.remove(id)
+                incomingTransportLengths.remove(id)
                 completed.remove(id)
                 incomingPeers.remove(id)
                 persisting.remove(id)
@@ -424,7 +455,8 @@ class NearbyTransferManager(private val context: Context) {
 
     private data class SavedFile(val location: String, val bytes: Long)
 
-    private fun saveIntoDownloads(source: Uri, untrustedName: String): SavedFile {
+    private fun saveIntoDownloads(source: Uri, untrustedName: String,
+        metadataSize: Long, transportSize: Long, isSessionActive: () -> Boolean): SavedFile {
         var writtenBytes = 0L
         val filename = SafeFileName.normalize(untrustedName)
         if (Build.VERSION.SDK_INT >= 29) {
@@ -445,7 +477,7 @@ class NearbyTransferManager(private val context: Context) {
                     requireNotNull(input)
                     resolver.openOutputStream(destination).use { output ->
                         requireNotNull(output)
-                        writtenBytes = input.copyTo(output, 64 * 1024)
+                        writtenBytes = VerifiedFileCopy.copy(input,output,metadataSize,transportSize,isSessionActive)
                     }
                 }
                 resolver.update(destination, ContentValues().apply {
@@ -471,7 +503,9 @@ class NearbyTransferManager(private val context: Context) {
         try {
             context.contentResolver.openInputStream(source).use { input ->
                 requireNotNull(input)
-                FileOutputStream(dest).use { output -> writtenBytes = input.copyTo(output, 64 * 1024) }
+                FileOutputStream(dest).use { output ->
+                    writtenBytes = VerifiedFileCopy.copy(input,output,metadataSize,transportSize,isSessionActive)
+                }
             }
         } catch (e: Exception) {
             dest.delete()
@@ -489,6 +523,7 @@ class NearbyTransferManager(private val context: Context) {
         outboundUris = emptyList()
         incomingPayloads.clear()
         incomingMetadata.clear()
+        incomingTransportLengths.clear()
         incomingPeers.clear()
         completed.clear()
         state.update { it.copy(status = UiMessage(), hasError = false, recoveryAction = NearbyRecoveryAction.None, diagnostics = null, connectingId = null, isAdvertising = false,
@@ -530,6 +565,7 @@ class NearbyTransferManager(private val context: Context) {
     private fun resetSearching() {
         sessionGeneration.incrementAndGet()
         measurements.reset()
+        emissionGate.reset()
         activeAdvertisedToken = null
         client.stopAdvertising()
         client.stopDiscovery()
