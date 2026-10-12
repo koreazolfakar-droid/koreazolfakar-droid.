@@ -26,7 +26,7 @@ class NavigationRoutingTest {
     }
 
     @Test fun categoryBackNavigationNeverOpensWrongTab() {
-        for(page in listOf("gallery_photos","gallery_videos","gallery_music","documents")) {
+        for(page in listOf("gallery_photos","gallery_videos","gallery_music","documents","storage")) {
             assertEquals("home",backDestination(page))
         }
     }

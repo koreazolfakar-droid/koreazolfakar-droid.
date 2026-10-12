@@ -20,6 +20,7 @@ class HomeCategoriesUiTest {
     @Test fun photosVideosMusicAndDocumentsDispatchDistinctActions() {
         var target:MediaKind?=null
         var documents=false
+        var storage=false
         var apps=false
         var generic=false
         compose.setContent {
@@ -27,7 +28,7 @@ class HomeCategoriesUiTest {
                 HomeScreen(TransferUiState(),
                     send={generic=true},receive={},seeAll={},resume={},status="Ready",
                     openFiles={generic=true},openApps={apps=true},
-                    openMedia={target=it},openDocuments={documents=true})
+                    openMedia={target=it},openDocuments={documents=true},openStorage={storage=true})
             }
         }
         compose.onNodeWithText("Photos").performScrollTo().performClick()
@@ -39,7 +40,9 @@ class HomeCategoriesUiTest {
         compose.onNodeWithText("Apps").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(apps) }
         compose.onNodeWithText("Storage").performScrollTo().performClick()
-        compose.runOnIdle { assertTrue(documents); assertEquals(false,generic) }
+        compose.runOnIdle { assertTrue(storage); assertEquals(false,documents); assertEquals(false,generic) }
+        compose.onNodeWithText("Documents").performScrollTo().performClick()
+        compose.runOnIdle { assertTrue(documents) }
     }
 
     @Test fun browseAllRemainsGenericFileLibraryShortcut() {

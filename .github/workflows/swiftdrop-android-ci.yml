@@ -66,35 +66,72 @@ jobs:
           api-level: 36
           target: google_apis
           arch: x86_64
-          script: cd SwiftDrop-Android && gradle --no-daemon :app:connectedDebugAndroidTest
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 3072
+          script: |
+            cd SwiftDrop-Android && gradle --no-daemon :app:connectedDebugAndroidTest
+            mkdir -p SwiftDrop-Android/app/build/reports/ui-normal
+            cp -R SwiftDrop-Android/app/build/reports/androidTests/connected/. SwiftDrop-Android/app/build/reports/ui-normal/
+            adb shell settings put system font_scale 1.3
+            adb shell wm size 720x1280
+            adb shell wm density 320
+            adb shell appops set app.swiftdrop MANAGE_EXTERNAL_STORAGE allow
+            adb shell pm grant app.swiftdrop android.permission.READ_MEDIA_IMAGES
+            adb shell pm grant app.swiftdrop android.permission.READ_MEDIA_VIDEO
+            adb shell pm grant app.swiftdrop android.permission.READ_MEDIA_AUDIO
+            cd SwiftDrop-Android && gradle --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.swiftdrop.StorageFromMainActivityUiTest,app.swiftdrop.NativeProMainActivityUiTest
+            mkdir -p SwiftDrop-Android/app/build/reports/visual-qa
+            adb pull /sdcard/Android/data/app.swiftdrop/files/visual-qa SwiftDrop-Android/app/build/reports/visual-qa
+            adb shell settings put system font_scale 1.0
+            adb shell wm size reset
+            adb shell wm density reset
       - uses: actions/upload-artifact@v4
         with:
-          name: swiftdrop-v0.4.11-alpha-debug-apk
+          name: swiftdrop-v0.5.0-alpha-debug-apk
           path: SwiftDrop-Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
-      # Public browser download instead of the login-gated Actions artifact.
-      # Published only after all unit, Lint, and Compose UI tests passed.
-      - name: Publish SwiftDrop alpha APK (public prerelease)
+      - name: Verify package, version and signing upgrade compatibility
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="swiftdrop-v0.4.11-alpha"
-          ASSET="app/build/outputs/apk/debug/app-debug.apk#SwiftDrop-v0.4.11-alpha.apk"
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -1 | \
+            grep -F "package: name='app.swiftdrop' versionCode='23' versionName='0.5.0-alpha'"
+          gh release download swiftdrop-v0.4.11-alpha --repo "$GITHUB_REPOSITORY" \
+            --pattern app-debug.apk --dir "$RUNNER_TEMP/swiftdrop-previous"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" > "$RUNNER_TEMP/current-certificate.txt"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs \
+            "$RUNNER_TEMP/swiftdrop-previous/app-debug.apk" > "$RUNNER_TEMP/previous-certificate.txt"
+          CURRENT="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/current-certificate.txt")"
+          PREVIOUS="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/previous-certificate.txt")"
+          test -n "$CURRENT"
+          test "$CURRENT" = "$PREVIOUS"
+          sha256sum "$APK" > app/build/reports/apk-sha256.txt
+          cp "$RUNNER_TEMP/current-certificate.txt" app/build/reports/apk-certificate.txt
+      # Publish only after unit, Lint, both emulator configurations, and identity checks pass.
+      - name: Publish SwiftDrop Native Pro alpha APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="swiftdrop-v0.5.0-alpha"
+          APK="$RUNNER_TEMP/SwiftDrop-v0.5.0-alpha.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$APK"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ASSET" --clobber --repo "$GITHUB_REPOSITORY"
+            gh release upload "$TAG" "$APK" --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$TAG" "$ASSET" --repo "$GITHUB_REPOSITORY" \
+            gh release create "$TAG" "$APK" --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" --prerelease \
-              --title "SwiftDrop 0.4.11-alpha - Storage crash fix verified" \
-              --notes "Temporary alpha test build: fixes ActivityResultRegistryOwner loss when localized Compose context opened Storage on Android 16. Includes a crash report feature. Tested in CI. Android 16 device validation requested. Regression tested through MainActivity."
+              --title "SwiftDrop 0.5.0-alpha — Native Pro" \
+              --notes-file docs/WORKDIR/reports/NATIVE_PRO_RELEASE.md
           fi
       - name: Upload validation reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: swiftdrop-v0.4.11-alpha-validation
+          name: swiftdrop-v0.5.0-alpha-validation
           path: SwiftDrop-Android/app/build/reports/
           if-no-files-found: warn
           retention-days: 14
