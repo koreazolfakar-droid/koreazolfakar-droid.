@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
 import app.swiftdrop.R
 import app.swiftdrop.ui.components.AppIcon
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState

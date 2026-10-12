@@ -1,6 +1,5 @@
 package app.swiftdrop.ui.screens.files
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -58,9 +57,9 @@ internal fun PhotoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle
         colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceVariant)) {
         Box(Modifier.fillMaxSize()) {
             MediaArt(item.uri,MediaKind.Photos,Modifier.fillMaxSize())
-            AnimatedVisibility(visible=selectionMode || checked,
-                modifier=Modifier.align(Alignment.TopEnd)) {
-                Checkbox(checked=checked,onCheckedChange={onToggle()})
+            if(selectionMode || checked) {
+                Checkbox(checked=checked,onCheckedChange={onToggle()},
+                    modifier=Modifier.align(Alignment.TopEnd))
             }
         }
     }
@@ -85,9 +84,9 @@ internal fun VideoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle
                     Text(formatMediaDuration(item.duration),Modifier.padding(horizontal=5.dp,vertical=2.dp),
                         style=MaterialTheme.typography.labelSmall,color=Color.White)
                 }
-                AnimatedVisibility(visible=selectionMode || checked,
-                    modifier=Modifier.align(Alignment.TopEnd)) {
-                    Checkbox(checked=checked,onCheckedChange={onToggle()})
+                if(selectionMode || checked) {
+                    Checkbox(checked=checked,onCheckedChange={onToggle()},
+                        modifier=Modifier.align(Alignment.TopEnd))
                 }
             }
             Column(Modifier.padding(horizontal=8.dp,vertical=7.dp),
