@@ -1,19 +1,17 @@
 package app.swiftdrop
 
 /**
- * Explicit Nearby Connections permission matrix, matching the platform rules:
- * API 26-28: coarse location, API 29-30: fine location,
- * API 31-32: both coarse and fine location (Android 12 restriction),
- * API 31+: nearby Bluetooth, API 33+: nearby Wi-Fi.
+ * Nearby Connections compatibility (API 26-36).
  *
- * Never request location permission on Android 13+ solely for Nearby Connections.
- * A device's global Location setting is distinct from an app permission; some
- * Google Play Services versions still require the switch enabled for discovery.
+ * Some Google Play Services implementations still reject discovery with 8034
+ * (MISSING_PERMISSION_ACCESS_COARSE_LOCATION) on Android 13-16 even if all
+ * Nearby Devices permissions are granted. Request foreground approximate
+ * location explicitly only at the point of Send / Receive, never background.
+ * We do not use a location provider or collect coordinates.
  */
 fun requiredNearbyPermissions(sdk: Int): List<String> = buildList {
-    if (sdk <= 28) add("android.permission.ACCESS_COARSE_LOCATION")
+    add("android.permission.ACCESS_COARSE_LOCATION")
     if (sdk in 29..32) add("android.permission.ACCESS_FINE_LOCATION")
-    if (sdk in 31..32) add("android.permission.ACCESS_COARSE_LOCATION")
     if (sdk >= 31) {
         add("android.permission.BLUETOOTH_SCAN")
         add("android.permission.BLUETOOTH_ADVERTISE")

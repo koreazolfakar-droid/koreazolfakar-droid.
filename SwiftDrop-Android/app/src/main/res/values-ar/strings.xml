@@ -83,7 +83,7 @@
     <string name="about">حول SwiftDrop</string>
     <string name="version">الإصدار %1$s</string>
     <string name="permissions_title">السماح بالاتصال بالأجهزة القريبة</string>
-    <string name="permissions_caption">صلاحيات الأجهزة القريبة بتسمح بالبحث والاتصال. الوصول للملفات بيضل عبر منتقي مستندات أندرويد.</string>
+    <string name="permissions_caption">اسمح بالبلوتوث وNearby Wi-Fi والموقع التقريبي عند الطلب. بعض أجهزة Google Play بتحتاج صلاحية الموقع لاكتشاف الهواتف. SwiftDrop ما بيقرأ إحداثيات GPS ولا بيطلب الموقع بالخلفية.</string>
     <string name="open_settings">فتح إعدادات التطبيق</string>
     <string name="retry_send">إعادة محاولة الإرسال</string>
     <string name="back">رجوع</string>

@@ -31,12 +31,15 @@ class NearbyManifestTest {
         }
     }
 
-    @Test fun android12LLocationDeclaredButNewerAndroidHasNoLocationPrompt() {
+    @Test fun approximateLocationAvailableThroughAndroid16WithoutPreciseModernAccess() {
         val coarse = requireNotNull(permissions["android.permission.ACCESS_COARSE_LOCATION"])
         val fine = requireNotNull(permissions["android.permission.ACCESS_FINE_LOCATION"])
-        assertEquals(32,coarse.getAttributeNS(namespace,"maxSdkVersion").toInt())
+        assertFalse(coarse.hasAttributeNS(namespace,"maxSdkVersion"))
         assertEquals(32,fine.getAttributeNS(namespace,"maxSdkVersion").toInt())
-        for (sdk in 33..36) assertFalse(requiredNearbyPermissions(sdk).any { it.contains("LOCATION") })
+        for (sdk in 33..36) {
+            assertTrue(requiredNearbyPermissions(sdk).contains("android.permission.ACCESS_COARSE_LOCATION"))
+            assertFalse(requiredNearbyPermissions(sdk).contains("android.permission.ACCESS_FINE_LOCATION"))
+        }
     }
 
     @Test fun normalWifiPermissionsDoNotCreateRuntimePrompts() {

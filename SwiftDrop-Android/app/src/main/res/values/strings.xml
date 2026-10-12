@@ -83,7 +83,7 @@
     <string name="about">About SwiftDrop</string>
     <string name="version">Version %1$s</string>
     <string name="permissions_title">Allow nearby connections</string>
-    <string name="permissions_caption">Nearby permissions allow SwiftDrop to discover and connect. File access stays inside the Android document picker.</string>
+    <string name="permissions_caption">Allow Bluetooth, Nearby Wi-Fi and approximate Location when prompted. Some Google Play services devices require Location permission for discovery. SwiftDrop does not read GPS coordinates or use background location.</string>
     <string name="open_settings">Open app settings</string>
     <string name="retry_send">Try sending again</string>
     <string name="back">Back</string>

@@ -50,7 +50,7 @@ jobs:
         run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: swiftdrop-v0.2.1-alpha-debug-apk
+          name: swiftdrop-v0.2.3-alpha-debug-apk
           path: SwiftDrop-Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -58,7 +58,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: swiftdrop-v0.2.1-alpha-validation
+          name: swiftdrop-v0.2.3-alpha-validation
           path: SwiftDrop-Android/app/build/reports/
           if-no-files-found: warn
           retention-days: 14

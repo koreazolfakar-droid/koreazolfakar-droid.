@@ -4,37 +4,44 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NearbyPermissionsTest {
-    @Test fun androidEightUsesCoarseLocation() {
-        assertEquals(setOf("android.permission.ACCESS_COARSE_LOCATION","android.permission.READ_EXTERNAL_STORAGE"),
-            requiredNearbyPermissions(26).toSet())
+    private val coarse = "android.permission.ACCESS_COARSE_LOCATION"
+    private val fine = "android.permission.ACCESS_FINE_LOCATION"
+    private val wifi = "android.permission.NEARBY_WIFI_DEVICES"
+    private val bluetooth = setOf(
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_ADVERTISE",
+        "android.permission.BLUETOOTH_CONNECT"
+    )
+
+    @Test fun androidEightNineRequestsCoarseAndLegacyStorage() {
+        for (sdk in 26..28) assertEquals(
+            setOf(coarse,"android.permission.READ_EXTERNAL_STORAGE"),
+            requiredNearbyPermissions(sdk).toSet())
     }
-    @Test fun androidTenAndElevenRequireFineLocationOnly() {
-        for (sdk in 29..30) {
-            val permissions = requiredNearbyPermissions(sdk)
-            assertTrue(permissions.contains("android.permission.ACCESS_FINE_LOCATION"))
-            assertFalse(permissions.contains("android.permission.ACCESS_COARSE_LOCATION"))
-            assertFalse(permissions.contains("android.permission.BLUETOOTH_SCAN"))
+
+    @Test fun androidTenToTwelveLRequestsBothLocationPermissions() {
+        for (sdk in 29..32) {
+            val requested = requiredNearbyPermissions(sdk).toSet()
+            assertTrue("missing coarse on API $sdk",coarse in requested)
+            assertTrue("missing fine on API $sdk",fine in requested)
+            assertEquals("API $sdk",sdk>=31,bluetooth.all { it in requested })
         }
     }
-    @Test fun androidTwelveAndTwelveLRequireBluetoothAndFineLocation() {
-        for (sdk in 31..32) {
-            val permissions = requiredNearbyPermissions(sdk)
-            assertTrue("API $sdk",permissions.contains("android.permission.ACCESS_FINE_LOCATION"))
-            assertTrue(permissions.contains("android.permission.ACCESS_COARSE_LOCATION"))
-            assertTrue(permissions.contains("android.permission.BLUETOOTH_SCAN"))
-            assertTrue(permissions.contains("android.permission.BLUETOOTH_ADVERTISE"))
-            assertTrue(permissions.contains("android.permission.BLUETOOTH_CONNECT"))
-        }
-    }
-    @Test fun androidThirteenThroughSixteenUseOnlyNearbyRadios() {
+
+    @Test fun androidThirteenToSixteenRequestsApproximateLocationAndNearbyRadios() {
         for (sdk in 33..36) {
-            val permissions = requiredNearbyPermissions(sdk)
-            assertEquals("API $sdk",4,permissions.size)
-            assertTrue(permissions.contains("android.permission.NEARBY_WIFI_DEVICES"))
-            assertFalse(permissions.any { "STORAGE" in it || "MEDIA" in it || "LOCATION" in it })
+            val perms = requiredNearbyPermissions(sdk).toSet()
+            assertEquals("API $sdk",bluetooth+coarse+wifi,perms)
+            assertFalse("API $sdk must not demand precise location",fine in perms)
         }
     }
-    @Test fun everyAndroidVersionHasNoDuplicates() {
-        for (sdk in 26..36) assertEquals(requiredNearbyPermissions(sdk).size,requiredNearbyPermissions(sdk).distinct().size)
+
+    @Test fun permissionListNeverRequestsBackgroundOrUnnecessaryBroadAccess() {
+        for (sdk in 26..36) {
+            val requested = requiredNearbyPermissions(sdk)
+            assertEquals(requested.size,requested.distinct().size)
+            assertFalse(requested.any { it.contains("BACKGROUND_LOCATION") ||
+                it.contains("MANAGE_EXTERNAL_STORAGE") || it.contains("READ_MEDIA_") })
+        }
     }
 }

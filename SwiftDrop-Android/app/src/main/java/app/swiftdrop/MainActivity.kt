@@ -51,9 +51,20 @@ class MainActivity : ComponentActivity() {
     private fun withNearbyPermissions(action: PendingNearbyAction) {
         val names = requiredNearbyPermissions(Build.VERSION.SDK_INT)
         val missing = names.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
-        if (missing.isEmpty()) perform(action) else {
+        if (missing.isEmpty()) {
+            perform(action)
+        } else {
+            // Android 12+ requires COARSE and FINE to be requested in a single
+            // runtime call whenever FINE is requested. Preserve that invariant.
+            val request = if (Build.VERSION.SDK_INT in 31..32 &&
+                missing.any { it == Manifest.permission.ACCESS_COARSE_LOCATION ||
+                    it == Manifest.permission.ACCESS_FINE_LOCATION }
+            ) {
+                (missing + Manifest.permission.ACCESS_COARSE_LOCATION +
+                    Manifest.permission.ACCESS_FINE_LOCATION).distinct()
+            } else missing
             model.pendingAction = action
-            permissions.launch(missing.toTypedArray())
+            permissions.launch(request.toTypedArray())
         }
     }
 }
