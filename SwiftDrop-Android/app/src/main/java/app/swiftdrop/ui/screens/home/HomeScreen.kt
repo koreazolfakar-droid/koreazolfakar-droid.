@@ -157,22 +157,18 @@ fun HomeScreen(
             }
         }
 
+        // All five categories stay visible: no hidden fifth tile behind a horizontal swipe.
+        // Three columns normally; two columns on narrow screens or with large accessibility fonts.
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val scrollCategories = maxWidth < 350.dp || LocalDensity.current.fontScale >= 1.3f
-            if (scrollCategories) {
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement=Arrangement.spacedBy(8.dp)
-                ) {
-                    categories.forEach { c ->
-                        FileCategoryAction(c, Modifier.width(78.dp))
-                    }
-                }
-            } else {
-                Row(Modifier.fillMaxWidth(),
-                    horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                    categories.forEach { c ->
-                        FileCategoryAction(c,Modifier.weight(1f))
+            val columns=if(maxWidth<305.dp || LocalDensity.current.fontScale>=1.35f) 2 else 3
+            Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                categories.chunked(columns).forEach { group ->
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        group.forEach { category ->
+                            FileCategoryAction(category,Modifier.weight(1f))
+                        }
+                        repeat(columns-group.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
             }
