@@ -272,4 +272,15 @@
     <string name="music_queue_empty">The queue is empty</string>
     <string name="nearby_active">Nearby sharing is active</string>
     <plurals name="browser_item_count"><item quantity="one">%1$d item</item><item quantity="other">%1$d items</item></plurals>
+    <string name="ultra_hotspot_title">Ultra · Local Wi-Fi hotspot (preview)</string>
+    <string name="ultra_hotspot_description">Create a private local Wi-Fi network for the other phone. No internet connection is needed.</string>
+    <string name="ultra_hotspot_start">Create local hotspot</string>
+    <string name="ultra_hotspot_stop">Stop hotspot</string>
+    <string name="ultra_hotspot_active">Hotspot is ready</string>
+    <string name="ultra_hotspot_ssid">Network: %1$s</string>
+    <string name="ultra_hotspot_password">Password: %1$s</string>
+    <string name="ultra_hotspot_join">On the other phone, open Wi-Fi settings and join this network. Use Stop to switch back to normal Nearby sharing.</string>
+    <string name="ultra_hotspot_failed">Could not start local hotspot. Check Wi-Fi permissions and disable any other active hotspot.</string>
+    <string name="ultra_hotspot_use_nearby">Use Nearby instead</string>
+    <string name="ultra_hotspot_preview_notice">Development preview: Wi-Fi setup only. Ultra file transport is not wired up yet; use Nearby to send files.</string>
 </resources>
