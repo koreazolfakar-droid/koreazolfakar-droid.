@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -134,9 +135,9 @@ internal fun BackgroundMusicControls(
             verticalArrangement=Arrangement.Center,
             horizontalAlignment=Alignment.CenterHorizontally) {
             Text("♫",style=MaterialTheme.typography.displayLarge,
-                color=MaterialTheme.colorScheme.primary)
+                color=Color.White)
             Spacer(Modifier.height(22.dp))
-            Text(cleanMusicTitle(item.name),style=MaterialTheme.typography.titleLarge)
+            Text(cleanMusicTitle(item.name),style=MaterialTheme.typography.titleLarge,color=Color.White)
             Spacer(Modifier.height(12.dp))
             Slider(
                 value=if(seekPosition>=0f) seekPosition else
@@ -146,9 +147,11 @@ internal fun BackgroundMusicControls(
                     if(duration>0) player?.seekTo((seekPosition*duration).toLong())
                     seekPosition=-1f
                 },
-                enabled=player!=null && duration>0
+                enabled=player!=null && duration>0,
+                colors=SliderDefaults.colors(activeTrackColor=Color(0xFF428BFF),
+                    inactiveTrackColor=Color(0xFF4D607D),thumbColor=Color.White)
             )
-            Text("${formatPosition(position)} / ${formatPosition(duration)}")
+            Text("${formatPosition(position)} / ${formatPosition(duration)}",color=Color.White)
             Spacer(Modifier.height(18.dp))
             Button(onClick={ player?.let { p -> {if(p.isPlaying)p.pause() else p.play()} } ?: {} },
                 enabled=player!=null) {
@@ -157,7 +160,7 @@ internal fun BackgroundMusicControls(
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.music_background_hint),
                 style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                color=Color(0xFFBECDE2))
         }
     }
 }
