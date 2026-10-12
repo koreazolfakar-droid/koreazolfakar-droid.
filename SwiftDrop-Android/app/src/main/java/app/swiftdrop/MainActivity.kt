@@ -36,7 +36,8 @@ class MainActivity : ComponentActivity() {
             SwiftDropApp(manager,model.settings,model.apps,send={mime -> pickFiles.launch(mime)},
                 receive={withNearbyPermissions(PendingNearbyAction.Receive)},
                 discover={withNearbyPermissions(PendingNearbyAction.Discover)},
-                openSettings={startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))})
+                openSettings={startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))},
+                 openLocationSettings={startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))})
         }
     }
 

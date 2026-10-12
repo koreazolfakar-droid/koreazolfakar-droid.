@@ -159,4 +159,9 @@
     <string name="per_file">تقدّم الملف الحالي</string>
     <string name="send_more">إرسال ملفات أخرى</string>
     <string name="view_history">عرض السجل</string>
+    <string name="nearby_location_off">خدمة الموقع مطفّية بالجهاز. بعض الهواتف بتحتاج تشغيلها لاكتشاف الأجهزة حتى لو صلاحية الأجهزة القريبة مسموحة. فعّل الموقع واضغط إعادة المحاولة. SwiftDrop ما بيقرأ إحداثيات GPS.</string>
+    <string name="nearby_location_dependency">خدمات Google Play منعت البحث رغم الصلاحيات المتاحة. تأكد إن خدمة الموقع مفعّلة وإن Google Play services محدّثة، وبعدين جرّب مجدداً. SwiftDrop ما بيقرأ إحداثيات GPS.</string>
+    <string name="nearby_permission_problem">النظام أو خدمات Google Play عم يبلّغوا عن صلاحية أجهزة قريبة ناقصة. راجع صلاحيات SwiftDrop بإعدادات التطبيق وجرّب مجدداً.</string>
+    <string name="nearby_radio_busy">خدمة الأجهزة القريبة مشغولة حالياً. أنهِ جلسات المشاركة الثانية وجرّب مجدداً.</string>
+    <string name="open_location_settings">فتح إعدادات الموقع</string>
 </resources>

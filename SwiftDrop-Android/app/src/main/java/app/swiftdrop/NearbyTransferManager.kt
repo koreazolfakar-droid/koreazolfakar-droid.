@@ -3,6 +3,7 @@ package app.swiftdrop
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.location.LocationManager
 import android.os.Build
 import android.os.Environment
 import android.os.SystemClock
@@ -10,6 +11,7 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import com.google.android.gms.nearby.Nearby
+import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.google.android.gms.nearby.connection.ConnectionInfo
 import com.google.android.gms.nearby.connection.ConnectionLifecycleCallback
@@ -57,7 +59,40 @@ class NearbyTransferManager(private val context: Context) {
     private data class IncomingMetadata(val name: String, val size: Long)
     private val measurements = TransferMeasurements()
     private fun info(resource: Int, vararg arguments: String, error: Boolean = false) {
-        state.update { it.copy(status = UiMessage(resource, arguments.toList()), hasError = error) }
+        state.update { it.copy(status = UiMessage(resource, arguments.toList()), hasError = error, recoveryAction = NearbyRecoveryAction.None) }
+    }
+
+    /**
+     * Some Play Services builds return 8034 when the system Location switch is
+     * disabled, even though all Android 13+ Nearby permissions are granted.
+     * Do not request obsolete app-location access on modern phones.
+     */
+    private fun isDeviceLocationEnabled(): Boolean {
+        val location = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return true
+        return try {
+            if (Build.VERSION.SDK_INT >= 28) location.isLocationEnabled
+            else location.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                location.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        } catch (_: Exception) { true }
+    }
+
+    private fun radioStartFailed(defaultMessage: Int, exception: Exception) {
+        val code = (exception as? ApiException)?.statusCode
+        val (message, recovery) = when (classifyNearbyFailure(code, isDeviceLocationEnabled())) {
+            NearbyFailure.LocationOff -> R.string.nearby_location_off to NearbyRecoveryAction.LocationSettings
+            NearbyFailure.LocationDependency -> R.string.nearby_location_dependency to NearbyRecoveryAction.LocationSettings
+            NearbyFailure.MissingPermission -> R.string.nearby_permission_problem to NearbyRecoveryAction.AppSettings
+            NearbyFailure.RadioBusy -> R.string.nearby_radio_busy to NearbyRecoveryAction.None
+            NearbyFailure.Other -> {
+                state.update { it.copy(
+                    status = UiMessage(defaultMessage,listOf(exception.localizedMessage ?: exception.javaClass.simpleName)),
+                    isDiscovering = false, isAdvertising = false, hasError = true,
+                    recoveryAction = NearbyRecoveryAction.None) }
+                return
+            }
+        }
+        state.update { it.copy(status = UiMessage(message), isDiscovering = false,
+            isAdvertising = false, hasError = true, recoveryAction = recovery) }
     }
 
     fun setPage(page: String) { state.update { it.copy(page = page) } }
@@ -179,13 +214,13 @@ class NearbyTransferManager(private val context: Context) {
         client.stopAllEndpoints()
         connectedId = null
         outboundUris = emptyList()
-        state.update { it.copy(page = "receive", status = UiMessage(R.string.making_visible), hasError = false, progress = null, connectingId = null,
+        state.update { it.copy(page = "receive", status = UiMessage(R.string.making_visible), hasError = false, recoveryAction = NearbyRecoveryAction.None, progress = null, connectingId = null,
             peers = emptyList(), selected = emptyList(), selectedFiles = emptyList()) }
         client.startAdvertising(Build.MODEL.take(26), serviceId, connectionCallback,
             AdvertisingOptions.Builder().setStrategy(strategy).build())
             .addOnSuccessListener { state.update { s -> s.copy(isAdvertising = true,
                 status = UiMessage(R.string.waiting_sender)) } }
-            .addOnFailureListener { info(R.string.cannot_receive, it.localizedMessage ?: it.javaClass.simpleName, error = true) }
+            .addOnFailureListener { radioStartFailed(R.string.cannot_receive, it) }
     }
 
     fun discover(uris: List<Uri>) {
@@ -200,7 +235,7 @@ class NearbyTransferManager(private val context: Context) {
         client.startDiscovery(serviceId, discoveryCallback,
             DiscoveryOptions.Builder().setStrategy(strategy).build())
             .addOnSuccessListener { state.update { s -> s.copy(isDiscovering = true) } }
-            .addOnFailureListener { info(R.string.cannot_search, it.localizedMessage ?: it.javaClass.simpleName, error = true) }
+            .addOnFailureListener { radioStartFailed(R.string.cannot_search, it) }
     }
 
     fun connect(peer: Peer) {
@@ -398,7 +433,7 @@ class NearbyTransferManager(private val context: Context) {
         incomingMetadata.clear()
         incomingPeers.clear()
         completed.clear()
-        state.update { it.copy(status = UiMessage(), hasError = false, connectingId = null, isAdvertising = false,
+        state.update { it.copy(status = UiMessage(), hasError = false, recoveryAction = NearbyRecoveryAction.None, connectingId = null, isAdvertising = false,
             isDiscovering = false, connectedName = null, pending = null, peers = emptyList(),
             selected = emptyList(), selectedFiles = emptyList(), loadingSelection = false, progress = null, page = "home") }
     }

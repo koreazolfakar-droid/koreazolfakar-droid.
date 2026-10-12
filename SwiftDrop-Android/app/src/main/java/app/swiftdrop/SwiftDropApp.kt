@@ -33,7 +33,7 @@ import app.swiftdrop.ui.theme.*
 
 @Composable
 fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: InstalledAppsController,send: (Array<String>) -> Unit,
-                 receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit) {
+                 receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit) {
     val settings by preferences.state.collectAsState()
     val systemDark = isSystemInDarkTheme()
     val dark = when(settings.appearance) {
@@ -63,20 +63,23 @@ fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: I
     CompositionLocalProvider(LocalContext provides localized,LocalConfiguration provides configuration,
         LocalLayoutDirection provides if(configuration.layoutDirection == android.view.View.LAYOUT_DIRECTION_RTL) LayoutDirection.Rtl else LayoutDirection.Ltr) {
         SwiftDropContent(manager,apps,settings,dark,preferences::setAppearance,preferences::setLanguage,
-            {preferences.completeOnboarding();manager.setPage("home")},send,receive,discover,openSettings)
+            {preferences.completeOnboarding();manager.setPage("home")},send,receive,discover,openSettings,openLocationSettings)
     }
 }
 
 @Composable
 private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsController,settings: SettingsState,dark: Boolean,
     appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit,welcomeDone: () -> Unit,send: (Array<String>) -> Unit,
-    receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit) {
+    receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit) {
     val state by manager.state.collectAsState()
     val appsState by apps.state.collectAsState()
     var leaveAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering || state.connectingId != null
     val guardedSend: (Array<String>) -> Unit = { mime ->
         if(sessionActive) leaveAction = { manager.disconnect();send(mime) } else send(mime)
+    }
+    val openRecoverySettings: () -> Unit = {
+        if(state.recoveryAction == NearbyRecoveryAction.LocationSettings) openLocationSettings() else openSettings()
     }
     val guardedReceive: () -> Unit = {
         if(sessionActive) leaveAction = { manager.disconnect();receive() } else receive()
@@ -110,8 +113,8 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                             if(sessionActive) leaveAction={manager.disconnect();apps.export(selection)} else apps.export(selection)
                         },{guardedSend(arrayOf("application/vnd.android.package-archive"))},{manager.setPage("files")})
                         "selection" -> SelectionScreen(state,discover,{guardedSend(arrayOf("*/*"))})
-                        "discover" -> DiscoveryScreen(state,manager::connect,discover,manager::disconnect)
-                        "receive" -> ReceiveScreen(state,receive,manager::disconnect)
+                        "discover" -> DiscoveryScreen(state,manager::connect,discover,manager::disconnect,openRecoverySettings)
+                        "receive" -> ReceiveScreen(state,receive,manager::disconnect,openRecoverySettings)
                         "transfer" -> TransferScreen(state,{
                             if(state.progress?.outcome==TransferOutcome.Running) manager.cancelTransfer() else manager.disconnect()
                         },sendMore={

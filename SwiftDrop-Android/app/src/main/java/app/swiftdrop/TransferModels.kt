@@ -8,6 +8,7 @@ data class PendingConnection(val endpointId: String, val peerName: String, val c
 data class UiMessage(@param:StringRes val resource: Int = R.string.ready, val arguments: List<String> = emptyList())
 data class SelectedFile(val uri: Uri, val name: String, val bytes: Long)
 enum class TransferOutcome { Running, Saving, Complete, Failed, Cancelled }
+enum class NearbyRecoveryAction { None, LocationSettings, AppSettings }
 data class TransferProgress(
     val name: String,
     val direction: String,
@@ -36,5 +37,6 @@ data class TransferUiState(
     val history: List<HistoryEntry> = emptyList(),
     val isAdvertising: Boolean = false,
     val isDiscovering: Boolean = false,
+    val recoveryAction: NearbyRecoveryAction = NearbyRecoveryAction.None,
     val hasError: Boolean = false
 )

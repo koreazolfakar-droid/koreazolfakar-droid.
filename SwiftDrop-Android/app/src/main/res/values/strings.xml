@@ -151,4 +151,9 @@
     <string name="per_file">Progress for the current file</string>
     <string name="send_more">Send more files</string>
     <string name="view_history">View history</string>
+    <string name="nearby_location_off">Device Location is switched off. Some phones need it enabled to discover nearby devices, even with Nearby Devices allowed. Turn on Location, then tap Try again. SwiftDrop does not read your GPS coordinates.</string>
+    <string name="nearby_location_dependency">Nearby discovery was blocked by Google Play services despite the requested permissions. Check that device Location is on and Google Play services is updated, then retry. SwiftDrop does not read your GPS coordinates.</string>
+    <string name="nearby_permission_problem">Android or Google Play services reports a missing Nearby permission. Check SwiftDrop permissions in App settings and try again.</string>
+    <string name="nearby_radio_busy">Nearby Connections is currently busy. Close other nearby-sharing sessions and try again.</string>
+    <string name="open_location_settings">Open Location settings</string>
 </resources>

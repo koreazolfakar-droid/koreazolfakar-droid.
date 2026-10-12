@@ -40,7 +40,7 @@ fun DiscoveryRadar(active: Boolean) {
 }
 
 @Composable
-fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -> Unit, cancel: () -> Unit) {
+fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -> Unit, cancel: () -> Unit, openRecoverySettings: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { PageHeading(stringResource(R.string.nearby_devices),stringResource(R.string.discovery_caption)) }
         item { DiscoveryRadar(state.isDiscovering) }
@@ -74,6 +74,12 @@ fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -
                 if (state.hasError || !state.isDiscovering) Button(retry,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                     AppIcon(R.drawable.ic_retry,tint=LocalContentColor.current);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.retry))
                 }
+                if(state.hasError && state.recoveryAction != NearbyRecoveryAction.None) {
+                    FilledTonalButton(openRecoverySettings,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                        Text(stringResource(if(state.recoveryAction == NearbyRecoveryAction.LocationSettings)
+                            R.string.open_location_settings else R.string.open_settings))
+                    }
+                }
                 OutlinedButton(cancel,Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(stringResource(R.string.cancel)) }
             }
         }
@@ -81,7 +87,7 @@ fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -
 }
 
 @Composable
-fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit) {
+fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit, openRecoverySettings: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
         item { PageHeading(stringResource(R.string.receive_files),stringResource(R.string.receive_caption)) }
         item { DiscoveryRadar(state.isAdvertising) }
@@ -99,6 +105,12 @@ fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit)
         item {
             Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 if(state.hasError) Button(retry,Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(stringResource(R.string.retry)) }
+                if(state.hasError && state.recoveryAction != NearbyRecoveryAction.None) {
+                    FilledTonalButton(openRecoverySettings,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                        Text(stringResource(if(state.recoveryAction == NearbyRecoveryAction.LocationSettings)
+                            R.string.open_location_settings else R.string.open_settings))
+                    }
+                }
                 OutlinedButton(cancel,Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(stringResource(R.string.stop_receiving)) }
             }
         }
