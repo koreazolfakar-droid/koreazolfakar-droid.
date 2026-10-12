@@ -181,4 +181,13 @@
     <string name="show_diagnostics">Show technical diagnostics</string>
     <string name="hide_diagnostics">Hide technical diagnostics</string>
     <string name="home_connection_attention">Connection needs attention. Open the active session to retry.</string>
+
+    <string name="home_qr_title">Send using QR</string>
+    <string name="home_qr_hint">Choose files first, then scan the receiver code</string>
+    <string name="home_your_files">Your files</string>
+    <string name="home_browse_all">Browse all</string>
+    <string name="home_apps_short">Apps</string>
+    <string name="home_docs_short">Docs</string>
+    <string name="home_no_recent">No recent transfers</string>
+    <string name="home_recent_hint">Completed files from this session appear here.</string>
 </resources>

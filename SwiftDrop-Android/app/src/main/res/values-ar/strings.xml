@@ -189,4 +189,13 @@
     <string name="show_diagnostics">عرض تفاصيل التشخيص</string>
     <string name="hide_diagnostics">إخفاء تفاصيل التشخيص</string>
     <string name="home_connection_attention">الاتصال بحاجة لمراجعة. افتح الجلسة وحاول مجدداً.</string>
+
+    <string name="home_qr_title">إرسال عبر QR</string>
+    <string name="home_qr_hint">اختار الملفات أولاً وبعدين امسح كود المستقبِل</string>
+    <string name="home_your_files">ملفاتك</string>
+    <string name="home_browse_all">تصفّح الكل</string>
+    <string name="home_apps_short">تطبيقات</string>
+    <string name="home_docs_short">مستندات</string>
+    <string name="home_no_recent">لا توجد عمليات نقل حديثة</string>
+    <string name="home_recent_hint">الملفات المكتملة خلال هالجلسة رح تظهر هون.</string>
 </resources>
