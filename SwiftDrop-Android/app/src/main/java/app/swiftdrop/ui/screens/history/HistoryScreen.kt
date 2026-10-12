@@ -20,7 +20,7 @@ fun HistoryScreen(history: List<HistoryEntry>) {
     val shown=remember(history,filter,query) {history.filter {
         (filter=="All" || it.direction==filter) && (it.name.contains(query,true) || it.peer.contains(query,true))
     }}
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {PageHeading(stringResource(R.string.history_title),stringResource(R.string.history_caption))}
         if(history.isNotEmpty()) item {
             Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
@@ -38,7 +38,7 @@ fun HistoryScreen(history: List<HistoryEntry>) {
                 }
             }
         }
-        item {OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),label={Text(stringResource(R.string.search_history))},leadingIcon={AppIcon(R.drawable.ic_search)},singleLine=true)}
+        item {SwiftSearchField(query,{query=it},stringResource(R.string.search_history),Modifier.fillMaxWidth())}
         item {FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             listOf("All" to R.string.all,"Sent" to R.string.sent,"Received" to R.string.received).forEach { (value,label) ->
                 FilterChip(filter==value,{filter=value},label={Text(stringResource(label))},modifier=Modifier.heightIn(min=48.dp))

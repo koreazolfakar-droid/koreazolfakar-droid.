@@ -27,29 +27,22 @@ import app.swiftdrop.ui.components.*
 import app.swiftdrop.ui.theme.SwiftDropDesign
 import app.swiftdrop.ui.screens.qr.ReceiverQrCard
 
+// SwiftDrop @tweak Codex 12/10/2026 A live progress state, without decorative radar motion.
 @Composable
 fun DiscoveryRadar(active: Boolean) {
-    val transition = rememberInfiniteTransition(label = "discovery")
-    val pulse = if (active) transition.animateFloat(.65f,1f,
-        infiniteRepeatable(tween(SwiftDropDesign.RadarMillis),RepeatMode.Reverse),label="pulse").value else .8f
-    val color = MaterialTheme.colorScheme.primary
-    Box(Modifier.fillMaxWidth().heightIn(min = 180.dp).padding(12.dp),contentAlignment=Alignment.Center) {
-        Canvas(Modifier.size(172.dp)) {
-            val center = Offset(size.width/2,size.height/2)
-            listOf(1f,.75f,.5f).forEach {ratio ->
-                drawCircle(color.copy(alpha=.045f+.055f*(1-ratio)*pulse),size.minDimension/2*ratio,center)
-            }
-            drawCircle(Brush.radialGradient(listOf(color.copy(alpha=.14f*pulse),color.copy(alpha=0f))),size.minDimension/2*pulse,center)
-            if(active) drawArc(color.copy(alpha=.35f*pulse),-90f,90f*pulse,false,style=Stroke(2.dp.toPx()))
-        }
+    Row(Modifier.fillMaxWidth().heightIn(min=64.dp),verticalAlignment=Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.spacedBy(12.dp)) {
         IconBadge(R.drawable.ic_nearby)
+        Text(stringResource(if(active) R.string.nearby_active else R.string.nearby_devices),
+            Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+        if(active) CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp)
     }
 }
 
 @Composable
 fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -> Unit, cancel: () -> Unit, openRecoverySettings: () -> Unit) {
     val report = state.diagnostics
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { PageHeading(stringResource(R.string.nearby_devices),stringResource(R.string.discovery_caption)) }
         item { DiscoveryRadar(state.isDiscovering) }
         item { if(state.hasError) ErrorNotice(messageText(state.status)) else Text(messageText(state.status),color=MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -58,7 +51,7 @@ fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -
         }
         if(state.peers.isEmpty()) item {
             Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
-                Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     AppIcon(if(state.hasError) R.drawable.ic_error else R.drawable.ic_nearby)
                     Text(stringResource(if(state.hasError) R.string.discovery_unavailable else R.string.no_devices),style=MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.discovery_caption),style=MaterialTheme.typography.bodyMedium)
@@ -100,7 +93,7 @@ fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -
 @Composable
 fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit, openRecoverySettings: () -> Unit) {
     val report = state.diagnostics
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item { PageHeading(stringResource(R.string.receive_files),stringResource(R.string.receive_caption)) }
         item { DiscoveryRadar(state.isAdvertising) }
         item { Text(stringResource(when {state.hasError -> R.string.receive_unavailable;state.isAdvertising -> R.string.waiting_sender;else -> R.string.making_visible}),style=MaterialTheme.typography.titleLarge) }
@@ -112,9 +105,10 @@ fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit,
         if(state.hasError && report!=null) item { DiagnosticDetails(report) }
         item {
             Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.primaryContainer) {
-                Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     AppIcon(R.drawable.ic_security,tint=MaterialTheme.colorScheme.onPrimaryContainer)
-                    Text(stringResource(R.string.security_hint),color=MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(stringResource(R.string.security_hint),Modifier.weight(1f),
+                        style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
         }
@@ -136,7 +130,7 @@ fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit,
 @Composable
 fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: () -> Unit, scanQr: () -> Unit) {
     val known = !state.loadingSelection && state.selectedFiles.size==state.selected.size && state.selectedFiles.all { it.bytes >= 0 }
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item { PageHeading(stringResource(R.string.selection_title),stringResource(R.string.selection_caption)) }
         item { Text(pluralStringResource(R.plurals.selected_summary,state.selected.size,state.selected.size,
             if(known) sizeLabel(state.selectedFiles.sumOf { it.bytes }) else stringResource(R.string.unknown)),
@@ -148,7 +142,7 @@ fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: (
                 Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
                     CategoryBadge(fileIcon(file.name))
                     Column(Modifier.weight(1f)) {
-                        Text(file.name,style=MaterialTheme.typography.titleMedium)
+                        Text(file.name,style=MaterialTheme.typography.titleSmall,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         Text(sizeLabel(file.bytes),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

@@ -24,16 +24,25 @@ import app.swiftdrop.ui.components.*
 
 @Composable
 fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         PageHeading(stringResource(R.string.settings),stringResource(R.string.settings_caption))
-        ExpandableSetting(R.drawable.ic_appearance,stringResource(R.string.appearance),appearanceLabel(state.appearance)) {
-            Column(Modifier.selectableGroup()) {
-                Appearance.entries.forEach {value -> Choice(appearanceLabel(value),state.appearance==value) {appearance(value)}}
-            }
-        }
-        ExpandableSetting(R.drawable.ic_language,stringResource(R.string.language),languageLabel(state.language)) {
-            Column(Modifier.selectableGroup()) {
-                AppLanguage.entries.forEach {value -> Choice(languageLabel(value),state.language==value) {language(value)}}
+        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+            Column {
+                ExpandableSetting(R.drawable.ic_appearance,stringResource(R.string.appearance),appearanceLabel(state.appearance)) {
+                    Column(Modifier.selectableGroup()) {
+                        Appearance.entries.forEach { value ->
+                            Choice(appearanceLabel(value),state.appearance==value) { appearance(value) }
+                        }
+                    }
+                }
+                HorizontalDivider(Modifier.padding(start=68.dp),color=MaterialTheme.colorScheme.outlineVariant)
+                ExpandableSetting(R.drawable.ic_language,stringResource(R.string.language),languageLabel(state.language)) {
+                    Column(Modifier.selectableGroup()) {
+                        AppLanguage.entries.forEach { value ->
+                            Choice(languageLabel(value),state.language==value) { language(value) }
+                        }
+                    }
+                }
             }
         }
         Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
@@ -47,9 +56,9 @@ fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,languag
         }
         Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
             Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                IconBadge(R.drawable.ic_info)
+                BrandMark(Modifier.size(40.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.about),style=MaterialTheme.typography.titleMedium)
+                    Text("SwiftDrop",style=MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.version,BuildConfig.VERSION_NAME),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -71,7 +80,7 @@ private fun languageLabel(value: AppLanguage): String = stringResource(when(valu
 private fun ExpandableSetting(icon: Int,title: String,summary: String,content: @Composable () -> Unit) {
     var expanded by rememberSaveable {mutableStateOf(false)}
     val rotation by animateFloatAsState(if(expanded) 180f else 0f,label="setting disclosure")
-    Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+    Column {
         Column {
             Row(Modifier.fillMaxWidth().heightIn(min=64.dp).clickable(role=Role.Button) {expanded=!expanded}.padding(16.dp),
                 verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {

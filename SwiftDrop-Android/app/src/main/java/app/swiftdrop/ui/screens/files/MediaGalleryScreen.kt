@@ -1,6 +1,7 @@
 package app.swiftdrop.ui.screens.files
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -10,6 +11,7 @@ import android.provider.Settings
 import java.text.DateFormat
 import java.util.Date
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -123,7 +125,7 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
                     maxLines=1,overflow=TextOverflow.Ellipsis)
             }
         }
-        if(storage!=null && storage.first>0) {
+        if(!standaloneCategory && storage!=null && storage.first>0) {
             Surface(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=5.dp),
                 shape=MaterialTheme.shapes.small,color=MaterialTheme.colorScheme.surfaceVariant) {
                 Row(Modifier.padding(horizontal=12.dp,vertical=10.dp),
@@ -164,7 +166,14 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
             } else {
                 val kind=MediaKind.entries[tab]
                 galleryStates.SaveableStateProvider(kind.name) {
-                    MediaGrid(kind,selected,permissionRevision,requestMedia)
+                    val accent=categoryColor(when(kind) {
+                        MediaKind.Photos -> R.drawable.ic_photos
+                        MediaKind.Videos -> R.drawable.ic_videos
+                        MediaKind.Music -> R.drawable.ic_music
+                    })
+                    MaterialTheme(colorScheme=MaterialTheme.colorScheme.copy(primary=accent)) {
+                        MediaGrid(kind,selected,permissionRevision,requestMedia,choose)
+                    }
                 }
             }
         }
@@ -194,7 +203,7 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
 
 @Composable
 private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
-    permissionRevision:Int,requestMedia:(MediaKind)->Unit) {
+    permissionRevision:Int,requestMedia:(MediaKind)->Unit,choose:(Array<String>)->Unit) {
     val context=LocalContext.current
     val access=remember(kind,permissionRevision) {
         mediaAccess(kind,Build.VERSION.SDK_INT) {
@@ -212,7 +221,6 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
     var loading by remember(kind) { mutableStateOf(false) }
     var failed by remember(kind) { mutableStateOf(false) }
     var preview by remember(kind) { mutableStateOf<LocalMedia?>(null) }
-    var miniPlayer by remember(kind) { mutableStateOf<LocalMedia?>(null) }
     // A tap must work even when the asynchronous MediaController is not ready yet.
     var pendingMusic by remember(kind) { mutableStateOf<LocalMedia?>(null) }
     LaunchedEffect(musicController,pendingMusic) {
@@ -225,6 +233,27 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
     val grid=rememberLazyGridState()
     val list=rememberLazyListState()
     var lastFilter by rememberSaveable(kind) { mutableStateOf("") }
+    var section by rememberSaveable(kind) { mutableStateOf("Items") }
+    var groupId by rememberSaveable(kind) { mutableStateOf<String?>(null) }
+    var groupTitle by rememberSaveable(kind) { mutableStateOf<String?>(null) }
+    var groups by remember(kind) { mutableStateOf<List<MediaGroup>>(emptyList()) }
+    var groupsLoading by remember(kind) { mutableStateOf(false) }
+    var groupsFailed by remember(kind) { mutableStateOf(false) }
+    val grouping=when {
+        section=="Artists" -> MediaGrouping.Artist
+        kind==MediaKind.Music -> MediaGrouping.Album
+        else -> MediaGrouping.Folder
+    }
+    val showingGroups=section!="Items" && groupId==null
+    BackHandler(groupId!=null) { groupId=null; groupTitle=null; search="" }
+    LaunchedEffect(section,kind,access.allowed,revision,permissionRevision) {
+        groups=emptyList();groupsFailed=false
+        if(section=="Items" || !access.allowed) return@LaunchedEffect
+        groupsLoading=true
+        try { groups=library.groups(kind,grouping) }
+        catch(e:Exception) { if(e is CancellationException) throw e; groupsFailed=true }
+        finally { groupsLoading=false }
+    }
     val entries=remember(rows,sort) { galleryDisplay(rows,sort) }
 
     fun toggle(item:LocalMedia) {
@@ -236,20 +265,19 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
         else {
             if(kind==MediaKind.Music) {
                 pendingMusic=item
-                miniPlayer=item
             }
             preview=item
         }
     }
     LaunchedEffect(library) { library.changes().collect { revision++ } }
     LaunchedEffect(search) { delay(220); query=search.trim() }
-    LaunchedEffect(kind,query,sort,permissionRevision,revision,access.allowed) {
+    LaunchedEffect(kind,query,sort,permissionRevision,revision,access.allowed,groupId,showingGroups,grouping) {
         rows=emptyList();failed=false
-        if(!access.allowed) {
-            preview=null;miniPlayer=null;pendingMusic=null
+        if(!access.allowed || showingGroups) {
+            loading=false;preview=null;pendingMusic=null
             return@LaunchedEffect
         }
-        val filterId=kind.name+"|"+query+"|"+sort.name
+        val filterId=kind.name+"|"+query+"|"+sort.name+"|"+groupId
         if(lastFilter != filterId) {
             if(kind==MediaKind.Music) list.scrollToItem(0) else grid.scrollToItem(0)
             lastFilter=filterId
@@ -257,7 +285,8 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
         var offset=0
         while(isActive) {
             loading=true
-            val page=try { library.page(kind,query,offset,sort=sort) }
+            val page=try { library.page(kind,query,offset,sort=sort,
+                grouping=if(groupId!=null) grouping else null,groupId=groupId) }
                 catch (e:Exception) {
                     if(e is CancellationException)throw e
                     failed=true;loading=false;break
@@ -275,16 +304,37 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
 
     Column(Modifier.fillMaxSize()) {
         if(!access.allowed) {
-            Box(Modifier.padding(16.dp)) { PermissionCard(kind,requestMedia) }
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
+                PermissionCard(kind,requestMedia)
+                TextButton(onClick={ choose(arrayOf(when(kind) {
+                    MediaKind.Photos -> "image/*"
+                    MediaKind.Videos -> "video/*"
+                    MediaKind.Music -> "audio/*"
+                })) },modifier=Modifier.fillMaxWidth()) { Text(stringResource(R.string.doc_choose_files)) }
+            }
         } else {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=16.dp),
+                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                val tabs=listOf("Items" to when(kind) {
+                    MediaKind.Photos -> R.string.photos
+                    MediaKind.Videos -> R.string.videos
+                    MediaKind.Music -> R.string.music_songs
+                },"Albums" to if(kind==MediaKind.Videos) R.string.media_folders else R.string.media_albums)+
+                    if(kind==MediaKind.Music) listOf("Artists" to R.string.music_artists) else emptyList()
+                tabs.forEach { (value,label) -> FilterChip(selected=section==value,
+                    onClick={section=value;groupId=null;groupTitle=null;search=""},
+                    label={Text(stringResource(label))}) }
+            }
+            if(groupId!=null) Row(Modifier.padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically) {
+                IconButton(onClick={groupId=null;groupTitle=null;search=""}) {
+                    AppIcon(R.drawable.ic_back,description=stringResource(R.string.back))
+                }
+                Text(groupTitle.orEmpty(),style=MaterialTheme.typography.titleMedium)
+            }
             Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),
                 verticalAlignment=Alignment.CenterVertically,
                 horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value=search,onValueChange={search=it},
-                    modifier=Modifier.weight(1f),singleLine=true,
-                    placeholder={Text(stringResource(R.string.media_search))},
-                    leadingIcon={AppIcon(R.drawable.ic_search)},
-                    textStyle=MaterialTheme.typography.bodyMedium)
+                SwiftSearchField(search,{search=it},stringResource(R.string.media_search),Modifier.weight(1f))
                 Box {
                     OutlinedButton(onClick={sortingMenu=true},modifier=Modifier.heightIn(min=48.dp)) {
                         Text(stringResource(R.string.media_sort))
@@ -311,14 +361,39 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
                     Text(stringResource(R.string.media_reselect))
                 }
             }
-            if(failed) {
+            if(failed || groupsFailed) {
                 Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
                     Text(stringResource(R.string.media_unavailable),
                         color=MaterialTheme.colorScheme.error,modifier=Modifier.weight(1f))
                     TextButton(onClick={revision++}) {Text(stringResource(R.string.retry))}
                 }
             }
-            if(kind==MediaKind.Music) {
+            if(showingGroups) {
+                val shownGroups=groups.filter { search.isBlank() || it.title.contains(search,true) }
+                LazyVerticalGrid(columns=GridCells.Adaptive(144.dp),modifier=Modifier.weight(1f),
+                    contentPadding=PaddingValues(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),
+                    verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                    if(groupsLoading) item(span={GridItemSpan(maxLineSpan)}) { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                    if(!groupsLoading && shownGroups.isEmpty()) item(span={GridItemSpan(maxLineSpan)}) {
+                        Text(stringResource(if(search.isBlank()) R.string.media_empty else R.string.no_matches),
+                            style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    items(shownGroups,key={it.id}) { group ->
+                        Card(onClick={groupId=group.id;groupTitle=group.title;search=""},
+                            colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)) {
+                            if(kind==MediaKind.Music) app.swiftdrop.music.AlbumCover(group.cover,
+                                Modifier.fillMaxWidth().aspectRatio(1f))
+                            else MediaArt(group.cover,kind,Modifier.fillMaxWidth().aspectRatio(1f))
+                            Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                                Text(group.title,style=MaterialTheme.typography.titleSmall,
+                                    maxLines=1,overflow=TextOverflow.Ellipsis)
+                                Text(stringResource(R.string.doc_item_count,group.count),
+                                    style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            } else if(kind==MediaKind.Music) {
                 LazyColumn(Modifier.weight(1f),state=list,
                     contentPadding=PaddingValues(horizontal=16.dp,vertical=8.dp),
                     verticalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -329,15 +404,11 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
                         MusicRow(item,item.uri in selected,
                             onOpen={open(item)},onToggle={toggle(item)},onPlay={
                                 pendingMusic=item
-                                miniPlayer=item
-                            })
+                                            })
                     }
                     if(loading) item {LinearProgressIndicator(Modifier.fillMaxWidth())}
                 }
-                miniPlayer?.let { item ->
-                    MusicMiniPlayer(item,onClose={miniPlayer=null},
-                        onOpen={preview=item})
-                }
+
             } else {
                 LazyVerticalGrid(columns=GridCells.Adaptive(if(kind==MediaKind.Photos) 100.dp else 166.dp),
                     modifier=Modifier.weight(1f),state=grid,
@@ -362,7 +433,8 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
                                 val heading = if(entry.addedAtSeconds <= 0) {
                                     stringResource(R.string.media_unknown_date)
                                 } else {
-                                    DateFormat.getDateInstance(DateFormat.MEDIUM).format(
+                                    DateFormat.getDateInstance(DateFormat.MEDIUM,
+                                        androidx.compose.ui.platform.LocalConfiguration.current.locales[0]).format(
                                         Date(entry.addedAtSeconds * 1000L))
                                 }
                                 Text(heading,modifier=Modifier.fillMaxWidth().padding(

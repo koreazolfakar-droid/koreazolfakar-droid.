@@ -3,295 +3,195 @@ package app.swiftdrop.ui.screens.home
 import android.os.Build
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.swiftdrop.*
 import app.swiftdrop.R
-import app.swiftdrop.TransferUiState
 import app.swiftdrop.ui.components.*
 import app.swiftdrop.ui.theme.SwiftDropDesign
-import androidx.compose.runtime.*
-import app.swiftdrop.music.HomeMusicMiniPlayer
-import app.swiftdrop.music.MusicPlayerDialog
-import app.swiftdrop.music.rememberMusicSessionController
-import app.swiftdrop.LocalMedia
-import android.net.Uri
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 
-/**
- * v0.3.1 — a compact, accessible home screen.
- * All actions still route to existing file pickers and Nearby transfer flows.
- */
+// SwiftDrop @feature Codex 12/10/2026 Reference-led home hierarchy, six equal categories.
 @Composable
-fun HomeScreen(
-    state: TransferUiState,
-    send: (Array<String>) -> Unit,
-    receive: () -> Unit,
-    seeAll: () -> Unit,
-    resume: () -> Unit,
-    status: String,
+fun HomeScreen(state: TransferUiState, send: (Array<String>) -> Unit, receive: () -> Unit,
+    seeAll: () -> Unit, resume: () -> Unit, status: String,
     openFiles: () -> Unit = { send(arrayOf("*/*")) },
     openApps: () -> Unit = { send(arrayOf("application/vnd.android.package-archive")) },
-    onSettings: (() -> Unit)? = null,
-    openMedia: ((app.swiftdrop.MediaKind) -> Unit)? = null,
-    openDocuments: () -> Unit = { send(arrayOf("application/pdf","text/*")) }
-) {
-    var showMusic by remember { mutableStateOf(false) }
-    val musicController=rememberMusicSessionController()
-    var activeMedia by remember { mutableStateOf<LocalMedia?>(null) }
-    LaunchedEffect(musicController) {
-        while(isActive) {
-            val current=musicController?.currentMediaItem
-            val uri=current?.localConfiguration?.uri
-            activeMedia=if(uri!=null) LocalMedia(uri,current.mediaMetadata.title?.toString()
-                ?: uri.lastPathSegment ?: "Audio",0,0) else null
-            delay(750L)
-        }
-    }
-    if(showMusic && activeMedia!=null) {
-        MusicPlayerDialog(requireNotNull(activeMedia),close={showMusic=false})
-    }
-    val hasActiveSession = state.isDiscovering || state.isAdvertising ||
-        state.connectedName != null || state.progress != null || state.selected.isNotEmpty()
+    onSettings: (() -> Unit)? = null, openMedia: ((MediaKind) -> Unit)? = null,
+    openDocuments: () -> Unit = { send(arrayOf("application/pdf","text/*")) },
+    openStorage: () -> Unit = openDocuments) {
+    val active=state.isDiscovering || state.isAdvertising || state.connectingId!=null ||
+        state.connectedName!=null || state.progress!=null || state.selected.isNotEmpty()
+    val categories=listOf(
+        HomeCategory(R.drawable.ic_photos,R.string.photos) {
+            openMedia?.invoke(MediaKind.Photos) ?: send(arrayOf("image/*")) },
+        HomeCategory(R.drawable.ic_videos,R.string.videos) {
+            openMedia?.invoke(MediaKind.Videos) ?: send(arrayOf("video/*")) },
+        HomeCategory(R.drawable.ic_music,R.string.music) {
+            openMedia?.invoke(MediaKind.Music) ?: send(arrayOf("audio/*")) },
+        HomeCategory(R.drawable.ic_applications,R.string.home_apps_short,openApps),
+        HomeCategory(R.drawable.ic_folder,R.string.home_storage,openStorage),
+        HomeCategory(R.drawable.ic_documents,R.string.home_docs_short,openDocuments))
 
-    val categories = listOf(
-        HomeCategory(R.drawable.ic_photos, R.string.photos, {
-            openMedia?.invoke(app.swiftdrop.MediaKind.Photos) ?: send(arrayOf("image/*"))
-        }),
-        HomeCategory(R.drawable.ic_videos, R.string.videos, {
-            openMedia?.invoke(app.swiftdrop.MediaKind.Videos) ?: send(arrayOf("video/*"))
-        }),
-        HomeCategory(R.drawable.ic_music, R.string.music, {
-            openMedia?.invoke(app.swiftdrop.MediaKind.Music) ?: send(arrayOf("audio/*"))
-        }),
-        HomeCategory(R.drawable.ic_applications, R.string.home_apps_short, openApps),
-        HomeCategory(R.drawable.ic_documents, R.string.home_docs_short, openDocuments)
-    )
-
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal=18.dp, vertical=14.dp),
-        verticalArrangement=Arrangement.spacedBy(16.dp)
-    ) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        .padding(horizontal=SwiftDropDesign.ScreenPadding).padding(top=16.dp,bottom=20.dp),
+        verticalArrangement=Arrangement.spacedBy(12.dp)) {
         BrandHeader(onSettings)
-
-        CompactConnectionStatus(state, status)
-        HomeMusicMiniPlayer(onOpen={showMusic=true})
-
+        Spacer(Modifier.height(4.dp))
+        ConnectionStatus(state,status,if(active) resume else receive)
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val stacked = maxWidth < 335.dp || LocalDensity.current.fontScale >= 1.3f
-            if (stacked) {
-                Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    MainTransferAction(R.drawable.ic_send, stringResource(R.string.send_files),
-                        stringResource(R.string.choose_files), openFiles,
-                        modifier=Modifier.fillMaxWidth().height(134.dp))
-                    MainTransferAction(R.drawable.ic_receive, stringResource(R.string.receive_files),
-                        stringResource(R.string.make_visible), receive,
-                        modifier=Modifier.fillMaxWidth().height(134.dp), receiving=true)
-                }
-            } else {
-                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    MainTransferAction(R.drawable.ic_send, stringResource(R.string.send_files),
-                        stringResource(R.string.choose_files), openFiles,
-                        modifier=Modifier.weight(1f).height(162.dp))
-                    MainTransferAction(R.drawable.ic_receive, stringResource(R.string.receive_files),
-                        stringResource(R.string.make_visible), receive,
-                        modifier=Modifier.weight(1f).height(162.dp), receiving=true)
-                }
+            val stacked=maxWidth<320.dp || LocalDensity.current.fontScale>=1.35f
+            if(stacked) Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                TransferAction(R.drawable.ic_send,R.string.send_files,R.string.choose_files,
+                    openFiles,Modifier.fillMaxWidth(),compact=true)
+                TransferAction(R.drawable.ic_receive,R.string.receive_files,R.string.make_visible,
+                    receive,Modifier.fillMaxWidth(),receiving=true,compact=true,
+                    busy=state.isAdvertising || state.connectingId!=null)
+            } else Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                TransferAction(R.drawable.ic_send,R.string.send_files,R.string.choose_files,
+                    openFiles,Modifier.weight(1f))
+                TransferAction(R.drawable.ic_receive,R.string.receive_files,R.string.make_visible,
+                    receive,Modifier.weight(1f),receiving=true,
+                    busy=state.isAdvertising || state.connectingId!=null)
             }
         }
-
-        if (hasActiveSession) {
-            FilledTonalButton(resume, Modifier.fillMaxWidth().heightIn(min=48.dp)) {
-                AppIcon(R.drawable.ic_progress, Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.active_session))
-            }
+        if(active) TextButton(resume,Modifier.fillMaxWidth()) {
+            AppIcon(R.drawable.ic_progress,Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp));Text(stringResource(R.string.active_session))
         }
-
-        // QR uses the existing flow: choose files -> Selection -> Scan receiver QR.
-        Card(
-            onClick=openFiles,
-            colors=CardDefaults.cardColors(
-                containerColor=MaterialTheme.colorScheme.secondaryContainer.copy(alpha=.5f)),
-            shape=MaterialTheme.shapes.medium
-        ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=14.dp),
+        val qrPress=remember { MutableInteractionSource() }
+        Surface(onClick=openFiles,modifier=Modifier.then(Modifier.pressScale(qrPress)),
+            interactionSource=qrPress,shape=MaterialTheme.shapes.medium,
+            color=MaterialTheme.colorScheme.surface) {
+            Row(Modifier.fillMaxWidth().heightIn(min=68.dp).padding(12.dp),
                 verticalAlignment=Alignment.CenterVertically,
-                horizontalArrangement=Arrangement.spacedBy(12.dp)
-            ) {
-                AppIcon(R.drawable.ic_qr, Modifier.size(28.dp),
-                    tint=MaterialTheme.colorScheme.onSecondaryContainer)
-                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                    Text(stringResource(R.string.home_qr_title),
-                        style=MaterialTheme.typography.titleMedium,
-                        color=MaterialTheme.colorScheme.onSecondaryContainer)
-                    Text(stringResource(R.string.home_qr_hint),
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSecondaryContainer)
+                horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                IconBadge(R.drawable.ic_qr)
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                    Text(stringResource(R.string.home_qr_title),style=MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.home_qr_hint),style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                AppIcon(R.drawable.ic_chevron,Modifier.size(18.dp),
+                    tint=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-            Text(stringResource(R.string.home_your_files),Modifier.weight(1f),
-                style=MaterialTheme.typography.titleLarge)
-            TextButton(openFiles,Modifier.heightIn(min=48.dp)) {
-                Text(stringResource(R.string.home_browse_all))
-            }
-        }
-
-        // All five categories stay visible: no hidden fifth tile behind a horizontal swipe.
-        // Three columns normally; two columns on narrow screens or with large accessibility fonts.
+        SectionHeading(stringResource(R.string.home_your_files),
+            stringResource(R.string.home_browse_all),openFiles)
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val columns=if(maxWidth<305.dp || LocalDensity.current.fontScale>=1.35f) 2 else 3
+            val columns=if(maxWidth<300.dp || LocalDensity.current.fontScale>=1.5f) 2 else 3
             Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 categories.chunked(columns).forEach { group ->
-                    Row(Modifier.fillMaxWidth(),
-                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        group.forEach { category ->
-                            FileCategoryAction(category,Modifier.weight(1f))
-                        }
-                        repeat(columns-group.size) { Spacer(Modifier.weight(1f)) }
+                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        group.forEach { CategoryTile(it,Modifier.weight(1f)) }
                     }
                 }
             }
         }
-
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-            Text(stringResource(R.string.recent),Modifier.weight(1f),
-                style=MaterialTheme.typography.titleLarge)
-            TextButton(seeAll,Modifier.heightIn(min=48.dp)) {
-                Text(stringResource(R.string.see_all))
-            }
-        }
-
-        if (state.history.isEmpty()) {
-            Surface(shape=MaterialTheme.shapes.medium,
-                color=MaterialTheme.colorScheme.surface) {
-                Row(Modifier.fillMaxWidth().padding(14.dp),
-                    horizontalArrangement=Arrangement.spacedBy(12.dp),
-                    verticalAlignment=Alignment.CenterVertically) {
-                    IconBadge(R.drawable.ic_history)
-                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                        Text(stringResource(R.string.home_no_recent),
-                            style=MaterialTheme.typography.titleMedium)
-                        Text(stringResource(R.string.home_recent_hint),
-                            style=MaterialTheme.typography.bodySmall,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+        SectionHeading(stringResource(R.string.recent),stringResource(R.string.see_all),seeAll)
+        if(state.history.isEmpty()) Surface(shape=MaterialTheme.shapes.medium,
+            color=MaterialTheme.colorScheme.surface) {
+            Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                IconBadge(R.drawable.ic_history)
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                    Text(stringResource(R.string.home_no_recent),style=MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.home_recent_hint),style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        } else {
-            state.history.take(3).forEach { TransferHistoryItem(it) }
-        }
-
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),
-            verticalAlignment=Alignment.CenterVertically) {
-            AppIcon(R.drawable.ic_security,Modifier.size(18.dp))
-            Text(stringResource(R.string.private_caption),
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        } else state.history.take(3).forEach { TransferHistoryItem(it) }
     }
 }
 
 @Composable
-private fun CompactConnectionStatus(state: TransferUiState, errorText: String) {
-    val text = when {
-        state.hasError -> errorText
-        state.connectedName != null -> stringResource(R.string.home_connected_to, state.connectedName)
+private fun ConnectionStatus(state:TransferUiState,error:String,action:()->Unit) {
+    val text=when {
+        state.hasError -> error
+        state.progress?.outcome==TransferOutcome.Running -> stringResource(
+            if(state.progress.direction=="Sending") R.string.sending else R.string.receiving)
+        state.connectedName!=null -> stringResource(R.string.home_connected_to,state.connectedName)
+        state.connectingId!=null -> stringResource(R.string.connecting)
         state.isDiscovering -> stringResource(R.string.searching)
         state.isAdvertising -> stringResource(R.string.waiting_sender)
         else -> stringResource(R.string.home_ready_to_share)
     }
-    Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
-        Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=12.dp),
-            verticalAlignment=Alignment.CenterVertically,
-            horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            Surface(shape=RoundedCornerShape(12.dp),
-                color=if(state.hasError) MaterialTheme.colorScheme.errorContainer
-                else MaterialTheme.colorScheme.primaryContainer) {
-                Box(Modifier.size(42.dp),contentAlignment=Alignment.Center) {
-                    AppIcon(if(state.connectedName!=null) R.drawable.ic_security else R.drawable.ic_nearby,
-                        Modifier.size(21.dp),
-                        tint=if(state.hasError) MaterialTheme.colorScheme.onErrorContainer
-                             else MaterialTheme.colorScheme.onPrimaryContainer)
+    Surface(onClick=action,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+        Row(Modifier.fillMaxWidth().heightIn(min=68.dp).padding(12.dp),
+            verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            IconBadge(if(state.hasError) R.drawable.ic_error else R.drawable.ic_nearby)
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                Text(Build.MODEL,style=MaterialTheme.typography.titleSmall,
+                    maxLines=1,overflow=TextOverflow.Ellipsis)
+                Row(verticalAlignment=Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                    Surface(Modifier.size(6.dp),shape=CircleShape,color=if(state.hasError)
+                        MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) {}
+                    Text(text,style=MaterialTheme.typography.bodySmall,maxLines=2,
+                        color=if(state.hasError) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        overflow=TextOverflow.Ellipsis)
                 }
             }
-            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                Text(stringResource(R.string.connection_status_title),
-                    style=MaterialTheme.typography.titleMedium)
-                Text(text,style=MaterialTheme.typography.bodySmall,
-                    color=if(state.hasError) MaterialTheme.colorScheme.error
-                          else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines=2,overflow=TextOverflow.Ellipsis)
-            }
-            Text(Build.MODEL.take(18),style=MaterialTheme.typography.labelSmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines=1,overflow=TextOverflow.Ellipsis,
-                modifier=Modifier.widthIn(max=104.dp))
+            AppIcon(R.drawable.ic_chevron,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun MainTransferAction(@DrawableRes icon: Int,title: String,subtitle: String,
-    onClick: () -> Unit,modifier: Modifier,receiving: Boolean=false) {
-    val colors = if(receiving)
-        listOf(Color(0xFF09869D),Color(0xFF056D88))
-        else listOf(SwiftDropDesign.Blue,Color(0xFF0752D8))
-    Card(onClick=onClick,modifier=modifier,shape=MaterialTheme.shapes.medium,
-        colors=CardDefaults.cardColors(containerColor=Color.Transparent),
-        elevation=CardDefaults.cardElevation(defaultElevation=1.dp)) {
-        Column(Modifier.fillMaxSize().background(Brush.linearGradient(colors)).padding(16.dp),
-            verticalArrangement=Arrangement.SpaceBetween) {
-            AppIcon(icon,Modifier.size(30.dp),tint=Color.White)
-            Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                Text(title,style=MaterialTheme.typography.titleLarge,color=Color.White,
-                    maxLines=2,overflow=TextOverflow.Ellipsis)
-                Text(subtitle,style=MaterialTheme.typography.bodySmall,
-                    color=Color.White.copy(alpha=.94f),maxLines=2,
-                    overflow=TextOverflow.Ellipsis)
+private fun TransferAction(@DrawableRes icon:Int,@StringRes title:Int,@StringRes caption:Int,
+    action:()->Unit,modifier:Modifier,receiving:Boolean=false,compact:Boolean=false,busy:Boolean=false) {
+    val source=remember { MutableInteractionSource() }
+    val background=if(receiving) MaterialTheme.colorScheme.secondaryContainer else SwiftDropDesign.Blue
+    val ink=if(receiving) MaterialTheme.colorScheme.onSecondaryContainer else Color.White
+    Card(onClick=action,modifier=modifier.then(Modifier.pressScale(source)),interactionSource=source,
+        shape=MaterialTheme.shapes.medium,colors=CardDefaults.cardColors(containerColor=background)) {
+        Column(Modifier.fillMaxWidth().heightIn(min=if(compact) 124.dp else 152.dp).padding(16.dp),
+            verticalArrangement=Arrangement.spacedBy(14.dp)) {
+            Surface(shape=CircleShape,color=ink.copy(alpha=.10f)) {
+                Box(Modifier.size(40.dp),contentAlignment=Alignment.Center) {
+                    if(busy) CircularProgressIndicator(Modifier.size(22.dp),color=ink,strokeWidth=2.dp)
+                    else AppIcon(icon,Modifier.size(24.dp),tint=ink)
+                }
+            }
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                    Text(stringResource(title),style=MaterialTheme.typography.titleMedium,color=ink)
+                    Text(stringResource(caption),style=MaterialTheme.typography.bodySmall,
+                        color=ink.copy(alpha=.85f))
+                }
+                AppIcon(R.drawable.ic_chevron,Modifier.size(18.dp),tint=ink)
             }
         }
     }
 }
 
-private data class HomeCategory(
-    @DrawableRes val icon: Int,
-    @StringRes val title: Int,
-    val action: () -> Unit
-)
+private data class HomeCategory(val icon:Int,val title:Int,val action:()->Unit)
 
 @Composable
-private fun FileCategoryAction(category: HomeCategory,modifier: Modifier) {
-    Card(onClick=category.action,modifier=modifier.heightIn(min=92.dp),
-        colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),
-        shape=MaterialTheme.shapes.small) {
-        Column(Modifier.fillMaxWidth().padding(horizontal=3.dp,vertical=10.dp),
+private fun CategoryTile(category:HomeCategory,modifier:Modifier) {
+    val source=remember { MutableInteractionSource() }
+    Card(onClick=category.action,modifier=modifier.then(Modifier.pressScale(source)),interactionSource=source,
+        shape=MaterialTheme.shapes.small,
+        colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.fillMaxWidth().heightIn(min=88.dp).padding(horizontal=4.dp,vertical=12.dp),
             horizontalAlignment=Alignment.CenterHorizontally,
             verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            CategoryBadge(category.icon,Modifier.size(42.dp))
-            Text(stringResource(category.title),
-                style=MaterialTheme.typography.labelSmall,textAlign=TextAlign.Center,
-                maxLines=1,overflow=TextOverflow.Ellipsis)
+            CategoryBadge(category.icon,Modifier.size(36.dp))
+            Text(stringResource(category.title),style=MaterialTheme.typography.labelMedium,
+                textAlign=TextAlign.Center)
         }
     }
 }

@@ -104,17 +104,17 @@ internal fun VideoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MusicRow(item:LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit,onPlay:()->Unit) {
-    Surface(shape=RoundedCornerShape(10.dp),color=MaterialTheme.colorScheme.surface) {
+    Surface(shape=MaterialTheme.shapes.small,color=if(checked) MaterialTheme.colorScheme.primaryContainer else Color.Transparent) {
         Row(Modifier.fillMaxWidth().heightIn(min=66.dp).padding(horizontal=8.dp,vertical=7.dp),
             verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            IconButton(onClick=onPlay,modifier=Modifier.size(46.dp)) {
-                AppIcon(R.drawable.ic_music,modifier=Modifier.size(24.dp))
+            IconButton(onClick=onPlay,modifier=Modifier.size(48.dp).semantics { contentDescription=item.name }) {
+                app.swiftdrop.music.AlbumCover(item.uri,Modifier.size(44.dp))
             }
             Column(Modifier.weight(1f).combinedClickable(onClick=onOpen,onLongClick=onToggle),
                 verticalArrangement=Arrangement.spacedBy(3.dp)) {
                 Text(cleanMusicTitle(item.name),maxLines=1,overflow=TextOverflow.Ellipsis,
                     style=MaterialTheme.typography.titleSmall)
-                Text(formatMediaDuration(item.duration)+" · "+sizeLabel(item.size),
+                Text((item.artist?.let { "$it · " } ?: "")+formatMediaDuration(item.duration),
                     style=MaterialTheme.typography.labelSmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }

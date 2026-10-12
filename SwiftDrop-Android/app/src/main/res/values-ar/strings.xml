@@ -195,7 +195,7 @@
     <string name="home_your_files">ملفاتك</string>
     <string name="home_browse_all">تصفّح الكل</string>
     <string name="home_apps_short">تطبيقات</string>
-    <string name="home_docs_short">الذاكرة</string>
+    <string name="home_docs_short">المستندات</string>
     <string name="home_no_recent">لا توجد عمليات نقل حديثة</string>
     <string name="home_recent_hint">الملفات المكتملة خلال هالجلسة رح تظهر هون.</string>
     <string name="transfer_queue_position">الملف %1$d من %2$d</string>
@@ -267,4 +267,20 @@
     <string name="crash_report_copy">نسخ التقرير</string>
     <string name="crash_report_close">إغلاق</string>
     <string name="crash_report_copied">تم نسخ تقرير الكراش</string>
+    <string name="home_storage">الذاكرة</string>
+    <string name="document_pdf">PDF</string>
+    <string name="document_word">Word</string>
+    <string name="document_sheets">جداول</string>
+    <string name="document_slides">عروض</string>
+    <string name="document_text">نصوص</string>
+    <string name="doc_sort_type">نوع الملف</string>
+    <string name="share_files">مشاركة الملفات</string>
+    <string name="storage_used">المستخدم %1$s من %2$s</string>
+    <string name="music_songs">الأغاني</string>
+    <string name="media_albums">الألبومات</string>
+    <string name="media_folders">المجلدات</string>
+    <string name="music_artists">الفنانون</string>
+    <string name="music_queue">قائمة التشغيل</string>
+    <string name="music_queue_empty">قائمة التشغيل فارغة</string>
+    <string name="nearby_active">المشاركة القريبة نشطة</string>
 </resources>

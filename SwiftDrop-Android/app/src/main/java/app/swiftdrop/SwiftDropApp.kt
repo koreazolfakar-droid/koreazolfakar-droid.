@@ -55,14 +55,15 @@ fun galleryCategory(page:String):MediaKind?=when(page) {
 fun backDestination(page:String,appsParent:String="home"):String=when(page) {
     "apps" -> if(appsParent=="files") "files" else "home"
     "selection" -> "files"
-    "gallery_photos", "gallery_videos", "gallery_music", "documents" -> "home"
+    "gallery_photos", "gallery_videos", "gallery_music", "documents", "storage" -> "home"
     else -> "home"
 }
 
 @Composable
 fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: InstalledAppsController,send: (Array<String>) -> Unit,
                  receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,
-                 mediaPermissionRevision: Int = 0, requestMedia: (MediaKind) -> Unit = {}) {
+                 mediaPermissionRevision: Int = 0, requestMedia: (MediaKind) -> Unit = {},
+                 overlay: @Composable () -> Unit = {}) {
     val settings by preferences.state.collectAsState()
     val systemDark = isSystemInDarkTheme()
     val dark = when(settings.appearance) {
@@ -89,9 +90,12 @@ fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: I
             navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT) { dark })
     }
     SwiftDropLocalizedProviders(configuration) {
+        SwiftDropTheme(dark) {
         SwiftDropContent(manager,apps,settings,dark,preferences::setAppearance,preferences::setLanguage,
             {preferences.completeOnboarding();manager.setPage("home")},send,receive,discover,openSettings,openLocationSettings,scanQr,
             mediaPermissionRevision,requestMedia)
+        overlay()
+        }
     }
 }
 
@@ -171,14 +175,10 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
             manager.setPage(backDestination(state.page,appsParent))
         }) {
         Scaffold(modifier=Modifier.imePadding(),bottomBar = {
-            if(state.page in setOf("home","history","settings")) NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                listOf(Triple("home",R.string.home,R.drawable.ic_home),
-                    Triple("history",R.string.history,R.drawable.ic_history),
-                    Triple("settings",R.string.settings,R.drawable.ic_settings)).forEach { (page,label,icon) ->
-                    NavigationBarItem(selected=state.page==page,onClick={manager.setPage(page)},
-                        icon={AppIcon(icon,tint=if(state.page==page) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)},
-                        label={Text(stringResource(label))})
-                }
+            Column {
+                if(state.page!="welcome") app.swiftdrop.music.PersistentMusicPlayer()
+                if(state.page in setOf("home","history","settings")) SwiftNavigationBar(state.page,manager::setPage)
+                else Spacer(Modifier.navigationBarsPadding())
             }
         }) { padding ->
             Box(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.TopCenter) {
@@ -190,7 +190,8 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                                 else if(state.isAdvertising) "receive" else if(state.selectedFiles.isNotEmpty() && !state.isDiscovering) "selection" else "discover")
                         },messageText(state.status),openFiles={chosenFileTab=0;manager.setPage("files")},openApps={appsParent="home";apps.load();manager.setPage("apps")},onSettings={manager.setPage("settings")},
                             openMedia={kind->manager.setPage(galleryDestination(kind))},
-                            openDocuments={manager.setPage("documents")})
+                            openDocuments={manager.setPage("documents")},
+                            openStorage={manager.setPage("storage")})
                         "gallery_photos","gallery_videos","gallery_music" -> {
                             val kind=galleryCategory(state.page) ?: MediaKind.Photos
                             FileLibraryScreen(guardedSend,{
@@ -199,9 +200,9 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                                 mediaPermissionRevision,requestMedia,kind.ordinal,
                                 standaloneCategory=true)
                         }
-                        "documents" -> DocumentBrowserScreen(
+                        "documents","storage" -> DocumentBrowserScreen(
                             back={manager.setPage("home")},
-                            onSend=guardedMediaSelect)
+                            onSend=guardedMediaSelect,documentsOnly=state.page=="documents")
                         "files" -> FileLibraryScreen(guardedSend,{
                             appsParent="files";apps.load();manager.setPage("apps")
                         },

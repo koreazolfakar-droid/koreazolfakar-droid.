@@ -187,7 +187,7 @@
     <string name="home_your_files">Your files</string>
     <string name="home_browse_all">Browse all</string>
     <string name="home_apps_short">Apps</string>
-    <string name="home_docs_short">Storage</string>
+    <string name="home_docs_short">Documents</string>
     <string name="home_no_recent">No recent transfers</string>
     <string name="home_recent_hint">Completed files from this session appear here.</string>
     <string name="transfer_queue_position">File %1$d of %2$d</string>
@@ -255,4 +255,20 @@
     <string name="crash_report_copy">Copy report</string>
     <string name="crash_report_close">Dismiss</string>
     <string name="crash_report_copied">Crash report copied</string>
+    <string name="home_storage">Storage</string>
+    <string name="document_pdf">PDF</string>
+    <string name="document_word">Word</string>
+    <string name="document_sheets">Sheets</string>
+    <string name="document_slides">Slides</string>
+    <string name="document_text">Text</string>
+    <string name="doc_sort_type">File type</string>
+    <string name="share_files">Share files</string>
+    <string name="storage_used">%1$s of %2$s used</string>
+    <string name="music_songs">Songs</string>
+    <string name="media_albums">Albums</string>
+    <string name="media_folders">Folders</string>
+    <string name="music_artists">Artists</string>
+    <string name="music_queue">Queue</string>
+    <string name="music_queue_empty">The queue is empty</string>
+    <string name="nearby_active">Nearby sharing is active</string>
 </resources>

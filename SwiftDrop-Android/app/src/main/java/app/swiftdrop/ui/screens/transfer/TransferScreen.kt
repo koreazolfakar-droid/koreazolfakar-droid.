@@ -47,7 +47,7 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
         horizontalAlignment=Alignment.CenterHorizontally,
         verticalArrangement=Arrangement.spacedBy(16.dp)) {
         Box(Modifier.fillMaxWidth()) {
-            PageHeading(stringResource(R.string.file_transfer),state.connectedName ?: stringResource(R.string.nearby_device))
+            PageHeading(stringResource(if(p?.direction=="Sending") R.string.send_files else if(p?.direction=="Receiving") R.string.receive_files else R.string.file_transfer),state.connectedName ?: stringResource(R.string.nearby_device))
         }
 
         Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
@@ -67,16 +67,7 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
             }
         }
 
-        Box(Modifier.size(168.dp),contentAlignment=Alignment.Center) {
-            if(working) {
-                val transition=rememberInfiniteTransition(label="active file")
-                val rotation by transition.animateFloat(0f,360f,
-                    infiniteRepeatable(tween(2600,easing=LinearEasing)),label="rotation")
-                val color=MaterialTheme.colorScheme.secondary
-                Canvas(Modifier.fillMaxSize()) {
-                    drawArc(color.copy(alpha=.5f),rotation,44f,false,style=Stroke(2.dp.toPx()))
-                }
-            }
+        Box(Modifier.size(152.dp),contentAlignment=Alignment.Center) {
             if(p==null || (p.total <= 0 && !terminal)) {
                 CircularProgressIndicator(Modifier.fillMaxSize().padding(9.dp),strokeWidth=7.dp)
             } else {
@@ -149,6 +140,22 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
                 style=MaterialTheme.typography.titleMedium,
                 color=MaterialTheme.colorScheme.primary)
         }
+        if(state.selectedFiles.size>1 && p?.direction=="Sending") {
+            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+                Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    state.selectedFiles.forEachIndexed { index,file ->
+                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                            CategoryBadge(fileIcon(file.name),Modifier.size(36.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(file.name,style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                Text(sizeLabel(file.bytes),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if(index+1==p.fileIndex && working) AppIcon(R.drawable.ic_progress,Modifier.size(18.dp))
+                        }
+                    }
+                }
+            }
+        }
         if(state.selected.isNotEmpty() && p?.direction=="Sending") {
             Text(stringResource(R.string.selected_for_transfer,state.selected.size),
                 style=MaterialTheme.typography.bodySmall,
@@ -164,11 +171,9 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(stringResource(R.string.engine_value),style=MaterialTheme.typography.bodySmall,
-            color=MaterialTheme.colorScheme.onSurfaceVariant)
 
-        if(complete && sendMore!=null) Button(sendMore,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
-            Text(stringResource(R.string.send_more))
+        if((complete || failed) && sendMore!=null) Button(sendMore,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+            Text(stringResource(if(failed) R.string.retry_send else R.string.send_more))
         }
         if(complete && history!=null) OutlinedButton(history,Modifier.fillMaxWidth().heightIn(min=48.dp)) {
             Text(stringResource(R.string.view_history))
@@ -181,10 +186,10 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
 
 @Composable
 private fun DashboardMetric(icon: Int,label: String,value: String,modifier: Modifier) {
-    Surface(modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.primaryContainer.copy(alpha=.55f)) {
+    Surface(modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
         Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
             AppIcon(icon,Modifier.size(20.dp))
-            Text(value,style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(value,style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onSurface)
             Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

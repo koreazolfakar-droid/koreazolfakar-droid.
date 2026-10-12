@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
                 discover={withNearbyPermissions(PendingNearbyAction.Discover)},
                 openSettings={startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))},
                  openLocationSettings={startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))},
-                 scanQr={scanReceiverQr()})
+                 scanQr={scanReceiverQr()},overlay={
             previousCrash?.let { report ->
                 AlertDialog(
                     onDismissRequest = { previousCrash = null; CrashDiagnostics.clear(this@MainActivity) },
@@ -94,6 +94,7 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+            })
         }
     }
 

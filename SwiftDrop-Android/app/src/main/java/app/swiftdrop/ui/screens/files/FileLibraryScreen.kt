@@ -31,67 +31,86 @@ fun FileLibraryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
         mediaPermissionRevision, requestMedia,initialTab,standaloneCategory)
 }
 
+// SwiftDrop @tweak Codex 12/10/2026 Real app rows and a reachable persistent selection action.
 @Composable
-private fun FileTabs(appsSelected: Boolean,files: () -> Unit,apps: () -> Unit) {
-    Surface(shape=MaterialTheme.shapes.small,color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.6f)) {
-        Row(Modifier.fillMaxWidth().padding(4.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-            listOf(Triple(R.string.files,!appsSelected,files),Triple(R.string.applications,appsSelected,apps)).forEach { (label,selected,action) ->
-                TextButton(action,Modifier.weight(1f).heightIn(min=48.dp),shape=MaterialTheme.shapes.small,
-                    colors=ButtonDefaults.textButtonColors(containerColor=if(selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent)) {
-                    Text(stringResource(label),color=if(selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun InstalledAppsScreen(state: AppsState,refresh: () -> Unit,export: (List<ShareableApp>) -> Unit,chooseApk: () -> Unit,openFiles: () -> Unit = chooseApk, embedded: Boolean = false) {
+fun InstalledAppsScreen(state: AppsState,refresh: () -> Unit,export: (List<ShareableApp>) -> Unit,
+    chooseApk: () -> Unit,openFiles: () -> Unit = chooseApk,embedded: Boolean = false) {
     var selected by rememberSaveable { mutableStateOf(listOf<String>()) }
     var search by rememberSaveable { mutableStateOf("") }
-    val shown=remember(state.apps,search) {state.apps.filter {it.name.contains(search,true) || it.packageName.contains(search,true)}}
-    val selectedApps = state.apps.filter { it.packageName in selected }
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(if(embedded) 12.dp else 20.dp),
-        verticalArrangement=Arrangement.spacedBy(if(embedded) 8.dp else 12.dp)) {
-        if(!embedded) {
-            item { PageHeading(stringResource(R.string.applications),stringResource(R.string.apps_caption)) }
-            item {FileTabs(true,openFiles,{})}
+    var largest by rememberSaveable { mutableStateOf(false) }
+    val shown=remember(state.apps,search,largest) {
+        val found=state.apps.filter { it.name.contains(search,true) || it.packageName.contains(search,true) }
+        if(largest) found.sortedByDescending { it.bytes } else found.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+    }
+    val selectedApps=state.apps.filter { it.packageName in selected }
+    val accent=categoryColor(R.drawable.ic_applications)
+    Column(Modifier.fillMaxSize()) {
+        if(!embedded) Box(Modifier.padding(16.dp)) {
+            PageHeading(stringResource(R.string.applications),stringResource(R.string.apps_caption))
         }
-        item {OutlinedTextField(search,{search=it},Modifier.fillMaxWidth(),label={Text(stringResource(R.string.search_apps))},leadingIcon={AppIcon(R.drawable.ic_search)},singleLine=true)}
-        item { Text(stringResource(R.string.split_apk_notice),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant) }
-        item { OutlinedButton(chooseApk,Modifier.fillMaxWidth().heightIn(min=48.dp),enabled=!state.exporting) { Text(stringResource(R.string.choose_apk)) } }
-        if(state.loading || state.exporting) item {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text(stringResource(if(state.exporting) R.string.preparing_apps else R.string.loading_apps))
+        SwiftSearchField(search,{search=it},stringResource(R.string.search_apps),
+            Modifier.fillMaxWidth().padding(horizontal=16.dp))
+        FlowRow(Modifier.padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            TextButton(chooseApk,enabled=!state.exporting) { Text(stringResource(R.string.choose_apk)) }
+            if(!embedded) TextButton(openFiles) { Text(stringResource(R.string.home_browse_all)) }
         }
-        if(state.failed) item {
-            Text(stringResource(R.string.apps_failed),color=MaterialTheme.colorScheme.error)
-            TextButton(refresh,Modifier.heightIn(min=48.dp)) { Text(stringResource(R.string.retry)) }
-        }
-        if(!state.loading && state.apps.isEmpty()) item { Text(stringResource(R.string.no_apps)) }
-        if(search.isNotEmpty() && shown.isEmpty() && !state.loading) item {Text(stringResource(R.string.no_matches))}
-        if(selectedApps.isNotEmpty()) item {
-            Button({export(selectedApps)},Modifier.fillMaxWidth().heightIn(min=48.dp),enabled=!state.exporting) {
-                Text(stringResource(R.string.prepare_selected,selectedApps.size))
+        Text(stringResource(R.string.split_apk_notice),Modifier.padding(horizontal=16.dp),
+            style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
+            Text(stringResource(R.string.doc_item_count,shown.size),Modifier.weight(1f),
+                style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick={largest=!largest}) { Text(stringResource(
+                if(largest) R.string.media_sort_largest else R.string.media_sort_name)) }
+            IconButton(refresh,enabled=!state.loading && !state.exporting) {
+                AppIcon(R.drawable.ic_retry,description=stringResource(R.string.refresh_apps),tint=accent)
             }
         }
-        items(shown,key={it.packageName}) { app ->
-            val checked = app.packageName in selected
-            Card(onClick={selected=if(checked) selected-app.packageName else selected+app.packageName},enabled=!state.exporting,
-                colors=CardDefaults.cardColors(containerColor=if(checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)) {
-                Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    InstalledAppIcon(app.packageName)
-                    Column(Modifier.weight(1f)) {
-                        Text(app.name,style=MaterialTheme.typography.titleMedium)
-                        Text(app.packageName,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(sizeLabel(app.bytes),style=MaterialTheme.typography.bodyMedium)
-                        if(app.apkPaths.size>1) Text(stringResource(R.string.split_app),style=MaterialTheme.typography.labelSmall)
+        if(state.loading || state.exporting) {
+            LinearProgressIndicator(Modifier.fillMaxWidth(),color=accent)
+            Text(stringResource(if(state.exporting) R.string.preparing_apps else R.string.loading_apps),
+                Modifier.padding(horizontal=16.dp),style=MaterialTheme.typography.bodySmall)
+        }
+        if(state.failed) Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
+            Text(stringResource(R.string.apps_failed),Modifier.weight(1f),color=MaterialTheme.colorScheme.error)
+            TextButton(refresh) { Text(stringResource(R.string.retry)) }
+        }
+        LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(horizontal=16.dp,vertical=8.dp)) {
+            if(!state.loading && shown.isEmpty()) item {
+                Text(stringResource(if(search.isBlank()) R.string.no_apps else R.string.no_matches),
+                    Modifier.padding(vertical=24.dp),color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            items(shown,key={it.packageName}) { app ->
+                val checked=app.packageName in selected
+                Surface(onClick={selected=if(checked) selected-app.packageName else selected+app.packageName},
+                    enabled=!state.exporting,shape=MaterialTheme.shapes.small,
+                    color=if(checked) accent.copy(alpha=.12f) else androidx.compose.ui.graphics.Color.Transparent) {
+                    Row(Modifier.fillMaxWidth().heightIn(min=72.dp).padding(horizontal=4.dp,vertical=8.dp),
+                        verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        InstalledAppIcon(app.packageName)
+                        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                            Text(app.name,style=MaterialTheme.typography.titleSmall,maxLines=1,
+                                overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Text(sizeLabel(app.bytes)+(if(app.apkPaths.size>1) " · "+stringResource(R.string.split_app) else ""),
+                                style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(app.packageName,style=MaterialTheme.typography.labelSmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,
+                                overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        }
+                        Checkbox(checked,onCheckedChange=null,colors=CheckboxDefaults.colors(checkedColor=accent))
                     }
-                    Checkbox(checked,onCheckedChange=null)
                 }
+                HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=.5f))
             }
         }
-        item { TextButton(refresh,Modifier.heightIn(min=48.dp),enabled=!state.exporting && !state.loading) { Text(stringResource(R.string.refresh_apps)) } }
+        if(selectedApps.isNotEmpty()) Surface(color=MaterialTheme.colorScheme.surface) {
+            Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.doc_selected_count,selectedApps.size),Modifier.weight(1f),
+                    style=MaterialTheme.typography.labelMedium)
+                TextButton(onClick={selected=emptyList()},enabled=!state.exporting) { Text(stringResource(R.string.media_clear)) }
+                Button({export(selectedApps)},enabled=!state.exporting) { Text(stringResource(R.string.media_send_selected)) }
+            }
+        }
     }
 }
 

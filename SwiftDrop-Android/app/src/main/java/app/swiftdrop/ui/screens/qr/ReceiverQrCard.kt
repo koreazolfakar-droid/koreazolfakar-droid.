@@ -33,7 +33,7 @@ fun ReceiverQrCard(payload: String) {
         }
         Bitmap.createBitmap(pixels,matrix.width,matrix.height,Bitmap.Config.ARGB_8888).asImageBitmap()
     }
-    Surface(shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surface) {
+    Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
         Column(Modifier.fillMaxWidth().padding(18.dp),
             horizontalAlignment=Alignment.CenterHorizontally,
             verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -48,8 +48,6 @@ fun ReceiverQrCard(payload: String) {
             }
             Text(stringResource(R.string.qr_receiver_hint),textAlign=TextAlign.Center,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(stringResource(R.string.security_hint),textAlign=TextAlign.Center,style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.primary)
         }
     }
 }

@@ -11,6 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,15 +40,13 @@ import androidx.media3.session.SessionToken
 import app.swiftdrop.LocalMedia
 import app.swiftdrop.R
 import app.swiftdrop.ui.components.AppIcon
+import app.swiftdrop.ui.components.categoryColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-private val MusicInk = Color(0xFF0E192D)
-private val MusicBlue = Color(0xFF2577F5)
-private val SecondaryInk = Color(0xFFB5C7DF)
 
 /** The controller is short-lived; playback belongs to MediaSessionService. */
 @Composable
@@ -84,6 +84,7 @@ internal fun startLocalMusic(controller:MediaController,item:LocalMedia) {
             .setMediaId(id)
             .setMediaMetadata(MediaMetadata.Builder()
                 .setTitle(cleanMusicTitle(item.name))
+                .setArtist(item.artist).setAlbumTitle(item.album)
                 .setIsPlayable(true).build())
             .build()
     )
@@ -114,6 +115,7 @@ internal fun startLocalPlaylist(controller:MediaController,items:List<LocalMedia
             .setMediaId(file.uri.toString())
             .setMediaMetadata(MediaMetadata.Builder()
                 .setTitle(cleanMusicTitle(file.name))
+                .setArtist(file.artist).setAlbumTitle(file.album)
                 .setIsPlayable(true).build())
             .build()
     }
@@ -124,7 +126,11 @@ internal fun startLocalPlaylist(controller:MediaController,items:List<LocalMedia
 
 /** Real local file metadata only. Embedded art is decoded to a bounded size on IO. */
 internal data class SongArtwork(val artist:String?,val album:String?,val picture:Bitmap?)
+private val songArtCache=object:android.util.LruCache<String,SongArtwork>(8*1024*1024) {
+    override fun sizeOf(key:String,value:SongArtwork)=value.picture?.byteCount ?: 256
+}
 internal fun readSongArtwork(context:android.content.Context,uri:Uri):SongArtwork {
+    songArtCache.get(uri.toString())?.let { return it }
     val retriever=MediaMetadataRetriever()
     return try {
         retriever.setDataSource(context,uri)
@@ -141,7 +147,7 @@ internal fun readSongArtwork(context:android.content.Context,uri:Uri):SongArtwor
                 inSampleSize=sample
             })
         }
-        SongArtwork(artist,album,bitmap)
+        SongArtwork(artist,album,bitmap).also { songArtCache.put(uri.toString(),it) }
     } catch (_: Exception) {
         SongArtwork(null,null,null)
     } finally {
@@ -150,24 +156,20 @@ internal fun readSongArtwork(context:android.content.Context,uri:Uri):SongArtwor
 }
 
 @Composable
-private fun AlbumCover(uri:Uri?,modifier:Modifier=Modifier) {
+internal fun AlbumCover(uri:Uri?,modifier:Modifier=Modifier) {
     val context=LocalContext.current
     val info by produceState<SongArtwork?>(null,uri) {
         value=if(uri==null) null else withContext(Dispatchers.IO) {
             readSongArtwork(context,uri)
         }
     }
-    Box(modifier.clip(RoundedCornerShape(26.dp))
-        .background(Brush.linearGradient(listOf(Color(0xFF25487C),Color(0xFF182F55),Color(0xFF142642)))),
+    val accent=categoryColor(R.drawable.ic_music)
+    Box(modifier.clip(RoundedCornerShape(16.dp)).background(accent.copy(alpha=.10f)),
         contentAlignment=Alignment.Center) {
-        if(info?.picture!=null)
-            Image(info!!.picture!!.asImageBitmap(),contentDescription=stringResource(R.string.music_album_art),
-                modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
-        else {
-            Surface(shape=RoundedCornerShape(34.dp),color=Color.White.copy(alpha=.09f)) {
-                AppIcon(R.drawable.ic_music,Modifier.padding(42.dp).size(64.dp),tint=Color(0xFF9AC9FF))
-            }
-        }
+        if(info?.picture!=null) Image(info!!.picture!!.asImageBitmap(),
+            contentDescription=stringResource(R.string.music_album_art),
+            modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        else AppIcon(R.drawable.ic_music,Modifier.fillMaxSize(.26f),tint=accent)
     }
 }
 
@@ -184,6 +186,10 @@ internal fun BackgroundMusicControls(
     onClose:(()->Unit)?=null,autoStart:Boolean=true,onOpen:(()->Unit)?=null
 ) {
     val player=rememberMusicSessionController()
+    val MusicBlue=categoryColor(R.drawable.ic_music)
+    val SecondaryInk=MaterialTheme.colorScheme.onSurfaceVariant
+    val playerInk=MaterialTheme.colorScheme.onSurface
+    var showQueue by remember { mutableStateOf(false) }
     var playing by remember(player) { mutableStateOf(false) }
     var position by remember(player) { mutableLongStateOf(0L) }
     var duration by remember(player) { mutableLongStateOf(0L) }
@@ -226,8 +232,8 @@ internal fun BackgroundMusicControls(
     }
     if(compact) {
         Surface(onClick={onOpen?.invoke()},enabled=onOpen!=null,
-            color=MaterialTheme.colorScheme.secondaryContainer,
-            shape=RoundedCornerShape(18.dp),tonalElevation=2.dp) {
+            color=MaterialTheme.colorScheme.surface,
+            shape=MaterialTheme.shapes.medium) {
             Column(modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
                     verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -235,19 +241,19 @@ internal fun BackgroundMusicControls(
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)) {
                         Text(currentTitle,maxLines=1,overflow=TextOverflow.Ellipsis,
                             style=MaterialTheme.typography.titleSmall)
-                        Text(artwork?.artist ?: stringResource(R.string.music_local_audio),
+                        Text(artwork?.artist ?: player?.mediaMetadata?.artist?.toString() ?: stringResource(R.string.music_local_audio),
                             maxLines=1,overflow=TextOverflow.Ellipsis,
                             style=MaterialTheme.typography.labelSmall)
                     }
                     IconButton(onClick=toggle,enabled=player!=null) {
                         AppIcon(if(playing)R.drawable.ic_player_pause else R.drawable.ic_player_play,
-                            Modifier.size(24.dp))
+                            Modifier.size(24.dp),description=stringResource(if(playing) R.string.media_pause else R.string.media_play),tint=MusicBlue)
                     }
                     if(onClose!=null) IconButton(onClick={
                         player?.stop()
                         player?.clearMediaItems()
                         onClose()
-                    }) { AppIcon(R.drawable.ic_close,Modifier.size(20.dp)) }
+                    }) { AppIcon(R.drawable.ic_close,Modifier.size(20.dp),description=stringResource(R.string.media_close)) }
                 }
                 LinearProgressIndicator(progress={
                     if(duration>0)(position.toFloat()/duration).coerceIn(0f,1f) else 0f
@@ -257,14 +263,14 @@ internal fun BackgroundMusicControls(
     } else {
         Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                 .padding(horizontal=22.dp,vertical=14.dp),
-            verticalArrangement=Arrangement.spacedBy(20.dp),
+            verticalArrangement=Arrangement.spacedBy(12.dp),
             horizontalAlignment=Alignment.CenterHorizontally) {
-            AlbumCover(currentUri,Modifier.fillMaxWidth().widthIn(max=310.dp).aspectRatio(1f))
+            AlbumCover(currentUri,Modifier.widthIn(max=280.dp).fillMaxWidth().aspectRatio(1f))
             Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                Text(currentTitle,color=Color.White,
+                Text(currentTitle,color=playerInk,
                     style=MaterialTheme.typography.headlineMedium,maxLines=2,
                     overflow=TextOverflow.Ellipsis)
-                Text(artwork?.artist ?: stringResource(R.string.music_local_audio),
+                Text(artwork?.artist ?: player?.mediaMetadata?.artist?.toString() ?: stringResource(R.string.music_local_audio),
                     color=SecondaryInk,style=MaterialTheme.typography.bodyLarge)
                 if(!artwork?.album.isNullOrEmpty()) Text(artwork!!.album!!,
                     color=SecondaryInk,style=MaterialTheme.typography.bodySmall,maxLines=1)
@@ -277,7 +283,7 @@ internal fun BackgroundMusicControls(
                         seeking=-1f
                     },enabled=player!=null && duration>0,
                     colors=SliderDefaults.colors(activeTrackColor=MusicBlue,
-                        thumbColor=Color.White,inactiveTrackColor=Color(0xFF435875)))
+                        thumbColor=MusicBlue,inactiveTrackColor=MaterialTheme.colorScheme.surfaceVariant))
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                     Text(formatPosition(position),color=SecondaryInk,style=MaterialTheme.typography.labelMedium)
                     Text(formatPosition(duration),color=SecondaryInk,style=MaterialTheme.typography.labelMedium)
@@ -287,7 +293,7 @@ internal fun BackgroundMusicControls(
                 horizontalArrangement=Arrangement.Center, ) {
                 IconButton(onClick={player?.seekToPreviousMediaItem();Unit},enabled=hasPrevious,
                     modifier=Modifier.size(60.dp)) {
-                    AppIcon(R.drawable.ic_player_previous,Modifier.size(30.dp),tint=Color.White)
+                    AppIcon(R.drawable.ic_player_previous,Modifier.size(30.dp),description=stringResource(R.string.media_previous),tint=if(hasPrevious) playerInk else SecondaryInk.copy(alpha=.38f))
                 }
                 Spacer(Modifier.width(18.dp))
                 FilledIconButton(onClick=toggle,enabled=player!=null,
@@ -295,12 +301,12 @@ internal fun BackgroundMusicControls(
                     colors=IconButtonDefaults.filledIconButtonColors(
                         containerColor=MusicBlue,contentColor=Color.White)) {
                     AppIcon(if(playing)R.drawable.ic_player_pause else R.drawable.ic_player_play,
-                        Modifier.size(34.dp),tint=Color.White)
+                        Modifier.size(34.dp),description=stringResource(if(playing) R.string.media_pause else R.string.media_play),tint=Color.White)
                 }
                 Spacer(Modifier.width(18.dp))
                 IconButton(onClick={player?.seekToNextMediaItem();Unit},enabled=hasNext,
                     modifier=Modifier.size(60.dp)) {
-                    AppIcon(R.drawable.ic_player_next,Modifier.size(30.dp),tint=Color.White)
+                    AppIcon(R.drawable.ic_player_next,Modifier.size(30.dp),description=stringResource(R.string.media_next),tint=if(hasNext) playerInk else SecondaryInk.copy(alpha=.38f))
                 }
             }
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
@@ -308,10 +314,10 @@ internal fun BackgroundMusicControls(
                 TextButton(onClick={player?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }; Unit},
                     enabled=player!=null) {
                     AppIcon(R.drawable.ic_player_shuffle,Modifier.size(20.dp),
-                        tint=if(shuffleEnabled) Color(0xFF7AB7FF) else SecondaryInk)
+                        tint=if(shuffleEnabled) MusicBlue else SecondaryInk)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.music_shuffle),color=if(shuffleEnabled)
-                        Color(0xFF7AB7FF) else SecondaryInk)
+                        MusicBlue else SecondaryInk)
                 }
                 TextButton(onClick={
                     player?.let { it.repeatMode=when(it.repeatMode) {
@@ -321,77 +327,108 @@ internal fun BackgroundMusicControls(
                     } }
                 },enabled=player!=null) {
                     AppIcon(R.drawable.ic_player_repeat,Modifier.size(20.dp),
-                        tint=if(repeatMode!=Player.REPEAT_MODE_OFF) Color(0xFF7AB7FF) else SecondaryInk)
+                        tint=if(repeatMode!=Player.REPEAT_MODE_OFF) MusicBlue else SecondaryInk)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(when(repeatMode) {
                         Player.REPEAT_MODE_ONE -> R.string.music_repeat_one
                         Player.REPEAT_MODE_ALL -> R.string.music_repeat_all
                         else -> R.string.music_repeat
                     }),color=if(repeatMode!=Player.REPEAT_MODE_OFF)
-                        Color(0xFF7AB7FF) else SecondaryInk)
+                        MusicBlue else SecondaryInk)
                 }
             }
             if(playbackError) Text(stringResource(R.string.media_playback_failed),
-                color=Color(0xFFFFA4A4),style=MaterialTheme.typography.bodySmall)
-            Text(stringResource(R.string.music_background_hint),color=SecondaryInk,
-                style=MaterialTheme.typography.bodySmall,textAlign=TextAlign.Center,maxLines=2)
+                color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
+            TextButton(onClick={showQueue=true},enabled=player!=null) {
+                AppIcon(R.drawable.ic_queue,tint=MusicBlue)
+                Spacer(Modifier.width(8.dp));Text(stringResource(R.string.music_queue),color=MusicBlue)
+            }
+        }
+    }
+    if(showQueue) Dialog(onDismissRequest={showQueue=false}) {
+        Surface(shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxWidth().heightIn(max=520.dp).padding(16.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Text(stringResource(R.string.music_queue),Modifier.weight(1f),
+                        style=MaterialTheme.typography.titleLarge)
+                    IconButton(onClick={showQueue=false}) {
+                        AppIcon(R.drawable.ic_close,description=stringResource(R.string.media_close))
+                    }
+                }
+                val queue=player?.let { controller -> (0 until controller.mediaItemCount).map(controller::getMediaItemAt) }.orEmpty()
+                if(queue.isEmpty()) Text(stringResource(R.string.music_queue_empty))
+                LazyColumn {
+                    itemsIndexed(queue,key={index,media -> "$index:${media.mediaId}"}) { index,media ->
+                        Surface(onClick={player?.seekToDefaultPosition(index);player?.play();showQueue=false},
+                            color=if(player?.currentMediaItemIndex==index) MaterialTheme.colorScheme.primaryContainer
+                                else Color.Transparent,shape=MaterialTheme.shapes.small) {
+                            Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(8.dp),
+                                verticalAlignment=Alignment.CenterVertically,
+                                horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                                Text("${index+1}",style=MaterialTheme.typography.labelMedium)
+                                Column(Modifier.weight(1f)) {
+                                    Text(media.mediaMetadata.title?.toString().orEmpty(),maxLines=1,
+                                        overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.titleSmall)
+                                    media.mediaMetadata.artist?.toString()?.let {
+                                        Text(it,style=MaterialTheme.typography.bodySmall,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
-/** Uses current session state on the Home screen; never restarts the audio on mount. */
+/** Activity-wide mini player reads the service; mounting never starts or pauses audio. */
 @Composable
 fun HomeMusicMiniPlayer(onOpen:()->Unit) {
     val player=rememberMusicSessionController()
-    var title by remember { mutableStateOf<String?>(null) }
-    var playing by remember { mutableStateOf(false) }
+    var item by remember { mutableStateOf<LocalMedia?>(null) }
     LaunchedEffect(player) {
         while(isActive) {
-            title=player?.currentMediaItem?.mediaMetadata?.title?.toString()
-            playing=player?.isPlaying == true
+            val media=player?.currentMediaItem
+            val uri=media?.localConfiguration?.uri
+            item=if(uri==null) null else LocalMedia(uri,
+                media.mediaMetadata.title?.toString().orEmpty(),0,0,
+                artist=media.mediaMetadata.artist?.toString(),album=media.mediaMetadata.albumTitle?.toString())
             delay(500L)
         }
     }
-    if(!title.isNullOrBlank()) {
-        Surface(onClick=onOpen,color=MaterialTheme.colorScheme.secondaryContainer,
-            shape=RoundedCornerShape(18.dp)) {
-            Row(Modifier.fillMaxWidth().padding(12.dp),
-                verticalAlignment=Alignment.CenterVertically,
-                horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                AppIcon(R.drawable.ic_music,Modifier.size(28.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.music_now_playing),
-                        style=MaterialTheme.typography.labelSmall)
-                    Text(title!!,style=MaterialTheme.typography.titleMedium,
-                        maxLines=1,overflow=TextOverflow.Ellipsis)
-                }
-                IconButton(onClick={player?.let{if(it.isPlaying)it.pause() else it.play()};Unit},
-                    enabled=player!=null) {
-                    AppIcon(if(playing)R.drawable.ic_player_pause else R.drawable.ic_player_play,
-                        Modifier.size(24.dp))
-                }
-            }
-        }
-    }
+    item?.let { BackgroundMusicControls(it,compact=true,autoStart=false,onOpen=onOpen) }
+}
+
+/** Stable activity-level host survives all navigation destinations. */
+@Composable
+fun PersistentMusicPlayer() {
+    val controller=rememberMusicSessionController()
+    var show by remember { mutableStateOf(false) }
+    HomeMusicMiniPlayer(onOpen={show=true})
+    val media=controller?.currentMediaItem
+    val uri=media?.localConfiguration?.uri
+    if(show && uri!=null) MusicPlayerDialog(LocalMedia(uri,
+        media.mediaMetadata.title?.toString().orEmpty(),0,0),close={show=false})
 }
 
 /** Standalone modal with modern top bar; closes the UI without stopping background playback. */
 @Composable
 fun MusicPlayerDialog(item:LocalMedia,close:()->Unit,select:(()->Unit)?=null) {
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
-        Column(Modifier.fillMaxSize().background(Brush.verticalGradient(
-            listOf(MusicInk,Color(0xFF142441),Color(0xFF172F4D))))) {
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
+        Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp),
                 verticalAlignment=Alignment.CenterVertically,
                 horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick=close) {
-                    Text(stringResource(R.string.media_close),color=Color.White)
+                    Text(stringResource(R.string.media_close),color=MaterialTheme.colorScheme.onSurface)
                 }
                 Text(stringResource(R.string.music_now_playing),
                     modifier=Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,
-                    color=Color.White,textAlign=TextAlign.Center)
+                    color=MaterialTheme.colorScheme.onSurface,textAlign=TextAlign.Center)
                 if(select!=null) TextButton(onClick=select) {
-                    Text(stringResource(R.string.media_select),color=Color.White)
+                    Text(stringResource(R.string.media_select),color=MaterialTheme.colorScheme.onSurface)
                 } else Spacer(Modifier.width(60.dp))
             }
             BackgroundMusicControls(item,Modifier.weight(1f),autoStart=false)

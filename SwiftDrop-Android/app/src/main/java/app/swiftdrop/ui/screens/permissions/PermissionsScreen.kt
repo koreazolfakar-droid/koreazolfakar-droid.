@@ -13,7 +13,7 @@ import app.swiftdrop.ui.components.*
 
 @Composable
 fun PermissionsScreen(send: () -> Unit,receive: () -> Unit,openSettings: () -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         IconBadge(R.drawable.ic_security)
         PageHeading(stringResource(R.string.permissions_title),stringResource(R.string.permissions_caption))
         Button(send,Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(stringResource(R.string.retry_send)) }

@@ -39,7 +39,8 @@ fun mediaAccess(kind: MediaKind, sdk: Int, granted: (String) -> Boolean): MediaA
 
 data class LocalMedia(
     val uri: Uri, val name: String, val size: Long, val duration: Long,
-    val addedAtSeconds: Long = 0L
+    val addedAtSeconds: Long = 0L,
+    val artist: String? = null, val album: String? = null
 )
 
 /** Use the device's local calendar day to group media, never UTC date strings. */
@@ -63,6 +64,21 @@ fun mediaSortOrder(sort: MediaSort): String {
     }
 }
 
+// SwiftDrop @feature Codex 12/10/2026 Real provider-backed album, folder and artist navigation.
+enum class MediaGrouping { Folder, Album, Artist }
+data class MediaGroup(val id:String,val title:String,val count:Int,val cover:Uri)
+
+private fun groupColumn(grouping:MediaGrouping):String = when(grouping) {
+    MediaGrouping.Folder -> "bucket_id"
+    MediaGrouping.Album -> MediaStore.Audio.Media.ALBUM_ID
+    MediaGrouping.Artist -> MediaStore.Audio.Media.ARTIST_ID
+}
+private fun groupNameColumn(grouping:MediaGrouping):String = when(grouping) {
+    MediaGrouping.Folder -> "bucket_display_name"
+    MediaGrouping.Album -> MediaStore.Audio.Media.ALBUM
+    MediaGrouping.Artist -> MediaStore.Audio.Media.ARTIST
+}
+
 /** Pages on the provider side; no media rows or file paths are loaded into memory up front. */
 class MediaLibrary(private val resolver: ContentResolver) {
     fun changes() = callbackFlow {
@@ -74,7 +90,7 @@ class MediaLibrary(private val resolver: ContentResolver) {
     }
 
     suspend fun page(kind: MediaKind, search: String, offset: Int, limit: Int = 48,
-        sort: MediaSort = MediaSort.Newest): List<LocalMedia> = withContext(Dispatchers.IO) {
+        sort: MediaSort = MediaSort.Newest, grouping: MediaGrouping? = null, groupId:String? = null): List<LocalMedia> = withContext(Dispatchers.IO) {
         val collection = when (kind) {
             MediaKind.Photos -> MediaStore.Images.Media.getContentUri("external")
             MediaKind.Videos -> MediaStore.Video.Media.getContentUri("external")
@@ -83,14 +99,19 @@ class MediaLibrary(private val resolver: ContentResolver) {
         val columns = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME,
             MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.DATE_ADDED) +
             if (kind == MediaKind.Photos) emptyArray() else arrayOf(
-                if (kind == MediaKind.Videos) MediaStore.Video.Media.DURATION else MediaStore.Audio.Media.DURATION)
+                if (kind == MediaKind.Videos) MediaStore.Video.Media.DURATION else MediaStore.Audio.Media.DURATION) +
+            if(kind==MediaKind.Music) arrayOf(MediaStore.Audio.Media.ARTIST,MediaStore.Audio.Media.ALBUM) else emptyArray()
+        val filtered=grouping!=null && groupId!=null
         val args = Bundle().apply {
             putString(ContentResolver.QUERY_ARG_SQL_SELECTION,
                 (if (kind == MediaKind.Music) "${MediaStore.Audio.Media.IS_MUSIC} = 1" else "1 = 1") +
                     (if (Build.VERSION.SDK_INT >= 29) " AND ${MediaStore.MediaColumns.IS_PENDING} = 0" else "") +
+                    (if(filtered) " AND ${groupColumn(requireNotNull(grouping))} = ?" else "") +
                     (if (search.isBlank()) "" else " AND ${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ? ESCAPE '\\'"))
-            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS,
-                if (search.isBlank()) emptyArray() else arrayOf("%${search.trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")}%"))
+            val selectionArgs=ArrayList<String>()
+            if(filtered) selectionArgs.add(requireNotNull(groupId))
+            if(search.isNotBlank()) selectionArgs.add("%${search.trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")}%")
+            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS,selectionArgs.toTypedArray())
             putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, mediaSortOrder(sort))
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
             putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
@@ -107,9 +128,34 @@ class MediaLibrary(private val resolver: ContentResolver) {
                 val itemUri = ContentUris.withAppendedId(collection, cursor.getLong(id))
                 rows += LocalMedia(itemUri, cursor.getString(name) ?: "", cursor.getLong(size),
                     if (duration < 0 || cursor.isNull(duration)) 0L else cursor.getLong(duration),
-                    if (cursor.isNull(added)) 0L else cursor.getLong(added))
+                    if (cursor.isNull(added)) 0L else cursor.getLong(added),
+                    if(kind==MediaKind.Music) cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST))?.takeIf { it!="<unknown>" } else null,
+                    if(kind==MediaKind.Music) cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM))?.takeIf { it!="<unknown>" } else null)
             }
         }
         rows
     }
+    suspend fun groups(kind:MediaKind,grouping:MediaGrouping):List<MediaGroup> = withContext(Dispatchers.IO) {
+        val collection=when(kind) {
+            MediaKind.Photos -> MediaStore.Images.Media.getContentUri("external")
+            MediaKind.Videos -> MediaStore.Video.Media.getContentUri("external")
+            MediaKind.Music -> MediaStore.Audio.Media.getContentUri("external")
+        }
+        val idColumn=groupColumn(grouping)
+        val nameColumn=groupNameColumn(grouping)
+        val groups=linkedMapOf<String,MediaGroup>()
+        val selection=(if(kind==MediaKind.Music) "is_music = 1" else "1 = 1")+
+            (if(Build.VERSION.SDK_INT>=29) " AND is_pending = 0" else "")
+        resolver.query(collection,arrayOf("_id",idColumn,nameColumn),selection,null,"date_added DESC")?.use { cursor ->
+            while(cursor.moveToNext()) {
+                val id=cursor.getString(1) ?: continue
+                val title=cursor.getString(2)?.takeIf { it.isNotBlank() && it!="<unknown>" } ?: continue
+                val old=groups[id]
+                groups[id]=if(old!=null) old.copy(count=old.count+1) else MediaGroup(id,title,1,
+                    ContentUris.withAppendedId(collection,cursor.getLong(0)))
+            }
+        }
+        groups.values.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+    }
+
 }

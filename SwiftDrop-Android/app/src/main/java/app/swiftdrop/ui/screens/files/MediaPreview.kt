@@ -44,14 +44,29 @@ fun MediaPreview(item: LocalMedia, kind: MediaKind, close: () -> Unit, select: (
         MusicPlayerDialog(item,close,select)
         return
     }
-    Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.fillMaxSize().background(Color(0xFF101A2A))) {
+    Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false,decorFitsSystemWindows = false)) {
+        Column(Modifier.fillMaxSize().background(Color(0xFF101216)).safeDrawingPadding()) {
             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(close) { Text(stringResource(R.string.media_close), color = Color.White) }
                 Text(item.name, Modifier.weight(1f), maxLines = 1, color = Color.White,
-                    style = MaterialTheme.typography.titleMedium)
+                    style = MaterialTheme.typography.titleSmall,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 TextButton(select) { Text(stringResource(R.string.media_select), color = Color.White) }
+            }
+            val context=LocalContext.current
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
+                IconButton(onClick={
+                    val share=android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type=if(kind==MediaKind.Photos) "image/*" else "video/*"
+                        putExtra(android.content.Intent.EXTRA_STREAM,item.uri)
+                        clipData=android.content.ClipData.newUri(context.contentResolver,item.name,item.uri)
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    runCatching { context.startActivity(android.content.Intent.createChooser(share,null)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        .onFailure { android.widget.Toast.makeText(context,R.string.doc_no_viewer,android.widget.Toast.LENGTH_SHORT).show() }
+                }) { app.swiftdrop.ui.components.AppIcon(R.drawable.ic_share,
+                    description=stringResource(R.string.share_files),tint=Color.White) }
             }
             when (kind) {
                 MediaKind.Photos -> Crossfade(targetState=item,label="photo transition",
