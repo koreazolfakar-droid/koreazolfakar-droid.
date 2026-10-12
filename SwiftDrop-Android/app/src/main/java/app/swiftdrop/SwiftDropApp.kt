@@ -142,11 +142,13 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
     receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,
     mediaPermissionRevision: Int,requestMedia: (MediaKind) -> Unit) {
     val state by manager.state.collectAsState()
+    val ultra by manager.ultraHotspot.state.collectAsState()
     val appsState by apps.state.collectAsState()
     var chosenFileTab by rememberSaveable { mutableIntStateOf(0) }
     var appsParent by rememberSaveable { mutableStateOf("home") }
     var leaveAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering || state.connectingId != null
+    val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering ||
+        state.connectingId != null || ultra.phase == UltraHotspotPhase.Starting || ultra.phase == UltraHotspotPhase.Active
     val guardedSend: (Array<String>) -> Unit = { mime ->
         if(sessionActive) leaveAction = { manager.disconnect();send(mime) } else send(mime)
     }
@@ -212,7 +214,8 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                             {guardedSend(arrayOf("application/vnd.android.package-archive"))},{manager.setPage("files")})
                         "selection" -> SelectionScreen(state,{manager.armQrTarget(null);discover()},{guardedSend(arrayOf("*/*"))},scanQr)
                         "discover" -> DiscoveryScreen(state,manager::connect,discover,manager::disconnect,openRecoverySettings)
-                        "receive" -> ReceiveScreen(state,receive,manager::disconnect,openRecoverySettings)
+                        "receive" -> ReceiveScreen(state,receive,manager::disconnect,openRecoverySettings,
+                            ultra,manager::startUltraHotspot,manager::stopUltraHotspot)
                         "transfer" -> TransferScreen(state,{
                             if(state.progress?.outcome==TransferOutcome.Running) manager.cancelTransfer() else manager.disconnect()
                         },sendMore={
