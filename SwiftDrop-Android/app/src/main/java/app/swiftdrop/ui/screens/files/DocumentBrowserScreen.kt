@@ -123,7 +123,7 @@ fun DocumentBrowserScreen(back:()->Unit,onSend:(List<Uri>)->Unit) {
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
             verticalAlignment=Alignment.CenterVertically) {
-            IconButton(onClick={goBack}) {
+            IconButton(onClick={goBack()}) {
                 AppIcon(R.drawable.ic_back,description=stringResource(R.string.back))
             }
             Column(Modifier.weight(1f)) {
