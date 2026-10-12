@@ -1,5 +1,8 @@
 package app.swiftdrop
 
+import android.os.Build
+import android.os.ParcelFileDescriptor
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onAllNodesWithText
@@ -24,4 +27,26 @@ class DocumentBrowserUiTest {
         compose.onNodeWithText("Choose files").assertExists()
         compose.onAllNodesWithText("Choose folder").onFirst().assertExists()
     }
+    @Test fun browserWithAllFilesAccessOpensInternalStorage() {
+        if (Build.VERSION.SDK_INT < 30) return
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        fun appOp(action: String) {
+            val descriptor = automation.executeShellCommand(
+                "appops set app.swiftdrop MANAGE_EXTERNAL_STORAGE $action")
+            ParcelFileDescriptor.AutoCloseInputStream(descriptor)
+                .bufferedReader().use { it.readText() }
+        }
+        appOp("allow")
+        try {
+            compose.setContent {
+                SwiftDropTheme(false) {
+                    DocumentBrowserScreen(back = {}, onSend = {})
+                }
+            }
+            compose.onNodeWithText("Internal storage").assertExists()
+        } finally {
+            appOp("default")
+        }
+    }
+
 }
