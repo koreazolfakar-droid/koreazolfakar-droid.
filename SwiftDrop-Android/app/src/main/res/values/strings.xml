@@ -164,6 +164,6 @@
     <string name="qr_receiver_title">Scan to pair with this phone</string>
     <string name="qr_receiver_hint">On the sending phone, choose files and scan this QR. This code expires when receiving stops.</string>
     <string name="qr_searching">Finding the scanned receiver…</string>
-    <string name="qr_invalid">Not a SwiftDrop pairing QR. Scan the code in the receiver's SwiftDrop app.</string>
+    <string name="qr_invalid">Not a SwiftDrop pairing QR. Scan the code in the receiver\'s SwiftDrop app.</string>
     <string name="qr_scan_unavailable">QR scanner unavailable. Ensure Google Play services is updated and try again. First use may need an internet connection to install the scanner module.</string>
 </resources>
