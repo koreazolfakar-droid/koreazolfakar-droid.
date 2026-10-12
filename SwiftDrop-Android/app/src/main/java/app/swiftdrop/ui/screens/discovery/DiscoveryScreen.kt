@@ -91,10 +91,20 @@ fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -
 }
 
 @Composable
-fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit, openRecoverySettings: () -> Unit) {
+fun ReceiveScreen(
+    state: TransferUiState,
+    retry: () -> Unit,
+    cancel: () -> Unit,
+    openRecoverySettings: () -> Unit,
+    hotspot: UltraHotspotState = UltraHotspotState(),
+    startUltra: () -> Unit = {},
+    stopUltra: () -> Unit = {}
+) {
     val report = state.diagnostics
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item { PageHeading(stringResource(R.string.receive_files),stringResource(R.string.receive_caption)) }
+        item { UltraHotspotPanel(hotspot, startUltra, stopUltra) }
+        if (hotspot.phase == UltraHotspotPhase.Idle) {
         item { DiscoveryRadar(state.isAdvertising) }
         item { Text(stringResource(when {state.hasError -> R.string.receive_unavailable;state.isAdvertising -> R.string.waiting_sender;else -> R.string.making_visible}),style=MaterialTheme.typography.titleLarge) }
         if(state.isAdvertising) item {Text(stringResource(R.string.device_visible,android.os.Build.MODEL),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)}
@@ -123,6 +133,7 @@ fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit,
                 }
                 OutlinedButton(cancel,Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(stringResource(R.string.stop_receiving)) }
             }
+        }
         }
     }
 }
