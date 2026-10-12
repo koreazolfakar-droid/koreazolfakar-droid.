@@ -1,6 +1,8 @@
 package app.swiftdrop.ui.screens.files
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -34,7 +36,8 @@ import kotlinx.coroutines.isActive
 
 // SwiftDrop @feature Codex 12/10/2026 Full-screen local preview with gesture zoom and lifecycle-safe Media3.
 @Composable
-fun MediaPreview(item: LocalMedia, kind: MediaKind, close: () -> Unit, select: () -> Unit) {
+fun MediaPreview(item: LocalMedia, kind: MediaKind, close: () -> Unit, select: () -> Unit,
+    previous: (() -> Unit)? = null, next: (() -> Unit)? = null) {
     Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(Color(0xFF101A2A))) {
             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically,
@@ -45,9 +48,23 @@ fun MediaPreview(item: LocalMedia, kind: MediaKind, close: () -> Unit, select: (
                 TextButton(select) { Text(stringResource(R.string.media_select), color = Color.White) }
             }
             when (kind) {
-                MediaKind.Photos -> ZoomPhoto(item, Modifier.weight(1f))
+                MediaKind.Photos -> Crossfade(targetState=item,label="photo transition",
+                    animationSpec=tween(170),modifier=Modifier.weight(1f)) { shown ->
+                    ZoomPhoto(shown,Modifier.fillMaxSize())
+                }
                 MediaKind.Videos -> LocalPlayer(item, video = true, Modifier.weight(1f))
                 MediaKind.Music -> LocalPlayer(item, video = false, Modifier.weight(1f))
+            }
+            if(kind==MediaKind.Photos && (previous!=null || next!=null)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),
+                    horizontalArrangement=Arrangement.SpaceBetween) {
+                    TextButton(onClick={previous?.invoke()},enabled=previous!=null) {
+                        Text(stringResource(R.string.media_previous),color=Color.White)
+                    }
+                    TextButton(onClick={next?.invoke()},enabled=next!=null) {
+                        Text(stringResource(R.string.media_next),color=Color.White)
+                    }
+                }
             }
         }
     }

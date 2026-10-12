@@ -231,4 +231,7 @@
     <string name="media_sort_oldest">الأقدم أولاً</string>
     <string name="media_sort_name">الاسم (أ إلى ي)</string>
     <string name="media_sort_largest">الأكبر حجماً</string>
+    <string name="media_unknown_date">تاريخ غير معروف</string>
+    <string name="media_previous">السابق</string>
+    <string name="media_next">التالي</string>
 </resources>

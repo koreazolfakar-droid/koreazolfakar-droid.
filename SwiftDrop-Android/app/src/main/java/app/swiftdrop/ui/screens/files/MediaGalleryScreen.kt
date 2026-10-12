@@ -7,7 +7,10 @@ import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.provider.Settings
+import java.text.DateFormat
+import java.util.Date
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,12 +42,34 @@ import kotlinx.coroutines.isActive
 
 private data class PickedMedia(val kind:MediaKind,val bytes:Long)
 
+private sealed interface GalleryDisplay {
+    data class DateHeading(val day: String,val addedAtSeconds: Long) : GalleryDisplay
+    data class Media(val file: LocalMedia) : GalleryDisplay
+}
+
+/** Stable, paged grouping: a day gets one header, even across page boundaries. */
+private fun galleryDisplay(rows: List<LocalMedia>,sort: MediaSort): List<GalleryDisplay> {
+    val grouped=groupedByDay(sort)
+    val result=ArrayList<GalleryDisplay>(rows.size + rows.size/12)
+    var previousDay: String? = null
+    for(file in rows) {
+        val day=if(grouped) mediaDayKey(file.addedAtSeconds) else null
+        if(grouped && day!=previousDay) {
+            result.add(GalleryDisplay.DateHeading(requireNotNull(day),file.addedAtSeconds))
+            previousDay=day
+        }
+        result.add(GalleryDisplay.Media(file))
+    }
+    return result
+}
+
 /** Unified, horizontally scrollable categories and compact layouts for each media type. */
 @Composable
 fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
     appsState: AppsState, refreshApps: () -> Unit, exportApps: (List<ShareableApp>) -> Unit,
     sendSelected: (List<Uri>) -> Unit, permissionRevision: Int, requestMedia: (MediaKind) -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    val galleryStates = rememberSaveableStateHolder()
     val selected = remember { mutableStateMapOf<Uri,PickedMedia>() }
     val context = LocalContext.current
     // Returning from the player or another Activity must not discard every thumbnail.
@@ -127,7 +152,10 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
                     {choose(arrayOf("application/vnd.android.package-archive"))},
                     apps,embedded=true)
             } else {
-                MediaGrid(MediaKind.entries[tab],selected,permissionRevision,requestMedia)
+                val kind=MediaKind.entries[tab]
+                galleryStates.SaveableStateProvider(kind.name) {
+                    MediaGrid(kind,selected,permissionRevision,requestMedia)
+                }
             }
         }
         if(selected.isNotEmpty()) {
@@ -176,6 +204,8 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
     var miniPlayer by remember(kind) { mutableStateOf<LocalMedia?>(null) }
     val grid=rememberLazyGridState()
     val list=rememberLazyListState()
+    var lastFilter by rememberSaveable(kind) { mutableStateOf("") }
+    val entries=remember(rows,sort) { galleryDisplay(rows,sort) }
 
     fun toggle(item:LocalMedia) {
         if(item.uri in selected) selected.remove(item.uri)
@@ -190,7 +220,11 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
     LaunchedEffect(kind,query,sort,permissionRevision,revision,access.allowed) {
         rows=emptyList();failed=false
         if(!access.allowed) { preview=null;miniPlayer=null;return@LaunchedEffect }
-        if(kind==MediaKind.Music) list.scrollToItem(0) else grid.scrollToItem(0)
+        val filterId=kind.name+"|"+query+"|"+sort.name
+        if(lastFilter != filterId) {
+            if(kind==MediaKind.Music) list.scrollToItem(0) else grid.scrollToItem(0)
+            lastFilter=filterId
+        }
         var offset=0
         while(isActive) {
             loading=true
@@ -281,11 +315,36 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
                         Text(stringResource(if(query.isBlank())R.string.media_empty else R.string.no_matches),
                             modifier=Modifier.padding(12.dp))
                     }
-                    items(rows,key={it.uri.toString()}) { item ->
-                        val checked=item.uri in selected
-                        if(kind==MediaKind.Photos)
-                            PhotoTile(item,checked,onOpen={open(item)},onToggle={toggle(item)})
-                        else VideoTile(item,checked,onOpen={open(item)},onToggle={toggle(item)})
+                    items(entries,key={entry ->
+                        when(entry) {
+                            is GalleryDisplay.DateHeading -> "day_${entry.day}"
+                            is GalleryDisplay.Media -> entry.file.uri.toString()
+                        }
+                    },span={entry ->
+                        if(entry is GalleryDisplay.DateHeading) GridItemSpan(maxLineSpan)
+                        else GridItemSpan(1)
+                    }) { entry ->
+                        when(entry) {
+                            is GalleryDisplay.DateHeading -> {
+                                val heading = if(entry.addedAtSeconds <= 0) {
+                                    stringResource(R.string.media_unknown_date)
+                                } else {
+                                    DateFormat.getDateInstance(DateFormat.MEDIUM).format(
+                                        Date(entry.addedAtSeconds * 1000L))
+                                }
+                                Text(heading,modifier=Modifier.fillMaxWidth().padding(
+                                    start=6.dp,top=10.dp,bottom=4.dp),
+                                    style=MaterialTheme.typography.titleSmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            is GalleryDisplay.Media -> {
+                                val item=entry.file
+                                val checked=item.uri in selected
+                                if(kind==MediaKind.Photos)
+                                    PhotoTile(item,checked,onOpen={open(item)},onToggle={toggle(item)})
+                                else VideoTile(item,checked,onOpen={open(item)},onToggle={toggle(item)})
+                            }
+                        }
                     }
                     if(loading) item(span={GridItemSpan(maxLineSpan)}) {
                         LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -295,10 +354,16 @@ private fun MediaGrid(kind:MediaKind,selected:SnapshotStateMap<Uri,PickedMedia>,
         }
     }
     preview?.let { item ->
-        if(access.allowed) MediaPreview(item,kind,{preview=null},{
-            if(item.uri !in selected)selected[item.uri]=PickedMedia(kind,item.size)
-            preview=null
-        })
+        if(access.allowed) {
+            val idx=rows.indexOfFirst { it.uri==item.uri }
+            MediaPreview(item,kind,{preview=null},{
+                if(item.uri !in selected) selected[item.uri]=PickedMedia(kind,item.size)
+                preview=null
+            },
+            previous=if(kind==MediaKind.Photos && idx>0) ({ preview=rows[idx-1] }) else null,
+            next=if(kind==MediaKind.Photos && idx>=0 && idx<rows.lastIndex)
+                ({ preview=rows[idx+1] }) else null)
+        }
     }
 }
 
