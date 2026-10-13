@@ -55,7 +55,8 @@ import java.util.Date
  * Direct browsing is only enabled after the user explicitly grants access in Android Settings. */
 private data class BrowserEntry(
     val key: String, val name: String, val isFolder: Boolean, val uri: Uri?,
-    val size: Long = -1L, val modified: Long = 0L, val children: Int = -1
+    val size: Long = -1L, val modified: Long = 0L, val children: Int = -1,
+    val mimeType: String? = null
 )
 private data class TreeFolder(val id: String, val name: String)
 private sealed interface FolderResult {
@@ -66,14 +67,10 @@ private sealed interface FolderResult {
 private enum class FileSort { Name, Newest, Largest, Type }
 
 // SwiftDrop @feature Codex 12/10/2026 Functional document types shared by filtering and SAF.
-internal fun documentGroup(name: String): String? = when(name.substringAfterLast('.', "").lowercase(java.util.Locale.ROOT)) {
-    "pdf" -> "PDF"
-    "doc", "docx", "odt", "rtf" -> "Word"
-    "xls", "xlsx", "ods", "csv" -> "Sheets"
-    "ppt", "pptx", "odp" -> "Slides"
-    "txt", "md", "log", "json", "xml", "html", "epub" -> "Text"
-    else -> null
-}
+internal fun documentGroup(name: String, mimeType: String? = null): String? =
+    app.swiftdrop.ui.components.fileCategory(name, mimeType).let { category ->
+        category.filterKey.takeIf { app.swiftdrop.ui.components.isDocumentCategory(category) }
+    }
 
 /** Block traversal outside the selected public-storage root, including symbolic links. */
 internal fun withinStorageRoot(root: File, candidate: File): Boolean {
@@ -130,7 +127,8 @@ private fun listTreeDirectory(context: Context, tree: Uri, folderId: String): Li
                 isFolder = folder,
                 uri = if (folder) null else DocumentsContract.buildDocumentUriUsingTree(tree, id),
                 size = if (sizeIndex < 0 || cursor.isNull(sizeIndex)) -1L else cursor.getLong(sizeIndex),
-                modified = if (timeIndex < 0 || cursor.isNull(timeIndex)) 0L else cursor.getLong(timeIndex)
+                modified = if (timeIndex < 0 || cursor.isNull(timeIndex)) 0L else cursor.getLong(timeIndex),
+                mimeType = type
             )
         }
     } ?: throw IOException("Document provider returned no folder contents")
@@ -285,8 +283,7 @@ fun DocumentBrowserScreen(back: () -> Unit, onSend: (List<Uri>) -> Unit, documen
         val byName = compareBy<BrowserEntry> { !it.isFolder }.thenBy(
             String.CASE_INSENSITIVE_ORDER) { it.name }
         entries.filter { (search.isBlank() || it.name.contains(search.trim(), true)) &&
-            (!documentsOnly || it.isFolder || documentGroup(it.name)!=null) &&
-            (typeFilter=="All" || it.isFolder || documentGroup(it.name)==typeFilter) }
+            (it.isFolder || fileFilterMatches(it.name,it.mimeType,typeFilter,documentsOnly)) }
             .sortedWith(when (sort) {
                 FileSort.Name -> byName
                 FileSort.Newest -> compareBy<BrowserEntry> { !it.isFolder }
@@ -306,8 +303,9 @@ fun DocumentBrowserScreen(back: () -> Unit, onSend: (List<Uri>) -> Unit, documen
             search = ""
         } else {
             val uri = entry.uri ?: return
-            val type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(
-                entry.name.substringAfterLast('.', "").lowercase()) ?: "*/*"
+            val type = entry.mimeType?.takeUnless { it == "application/octet-stream" } ?:
+                MimeTypeMap.getSingleton().getMimeTypeFromExtension(
+                    entry.name.substringAfterLast('.', "").lowercase()) ?: "*/*"
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, type)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -349,12 +347,23 @@ fun DocumentBrowserScreen(back: () -> Unit, onSend: (List<Uri>) -> Unit, documen
         }
 
         StorageCapacity(root,permissionRefresh)
-        if(documentsOnly) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
             .padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            listOf("All" to R.string.all,"PDF" to R.string.document_pdf,"Word" to R.string.document_word,
-                "Sheets" to R.string.document_sheets,"Slides" to R.string.document_slides,
-                "Text" to R.string.document_text).forEach { (value,label) ->
-                FilterChip(selected=typeFilter==value,onClick={typeFilter=value},
+            val categories = listOf("All" to R.string.all,
+                "PDF" to R.string.document_pdf,
+                "Word" to R.string.document_word,
+                "Sheets" to R.string.document_sheets,
+                "Slides" to R.string.document_slides,
+                "Text" to R.string.document_text) +
+                if(documentsOnly) emptyList() else listOf(
+                    "Images" to R.string.photos,
+                    "Videos" to R.string.videos,
+                    "Audio" to R.string.music,
+                    "Apps" to R.string.applications,
+                    "Archives" to R.string.file_archives,
+                    "Other" to R.string.file_other)
+            categories.forEach { (value,label) ->
+                FilterChip(selected=typeFilter==value,onClick={typeFilter=value;search=""},
                     label={Text(stringResource(label))})
             }
         }
@@ -363,7 +372,9 @@ fun DocumentBrowserScreen(back: () -> Unit, onSend: (List<Uri>) -> Unit, documen
             OutlinedButton(onClick = { chooseTree.launch(null) }, modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.doc_choose_folder))
             }
-            OutlinedButton(onClick = { chooseFiles.launch(if(documentsOnly) arrayOf("application/pdf","text/*","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-powerpoint","application/vnd.openxmlformats-officedocument.presentationml.presentation","application/epub+zip") else arrayOf("*/*")) },
+            OutlinedButton(onClick = {
+                chooseFiles.launch(mimeTypesForFileFilter(typeFilter,documentsOnly))
+            },
                 modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.doc_choose_files))
             }
@@ -468,9 +479,8 @@ fun DocumentBrowserScreen(back: () -> Unit, onSend: (List<Uri>) -> Unit, documen
                                 Row(Modifier.fillMaxWidth().heightIn(min = 68.dp).padding(horizontal=4.dp,vertical=8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    AppIcon(if (entry.isFolder) R.drawable.ic_folder
-                                        else fileIcon(entry.name), Modifier.size(32.dp),
-                                        tint=categoryColor(if(entry.isFolder) R.drawable.ic_folder else fileIcon(entry.name)))
+                                    FileTypeBadge(entry.name, mimeType=entry.mimeType,
+                                        folder=entry.isFolder)
                                     Column(Modifier.weight(1f),
                                         verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                         Text(entry.name, style = MaterialTheme.typography.titleSmall,
