@@ -29,6 +29,7 @@ import java.security.SecureRandom
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 enum class UltraLanPhase { Idle, Waiting, Joining, Connecting, Sending, Receiving, Complete, Failed }
@@ -213,9 +214,10 @@ class UltraLanTransferManager(
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                 .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .setNetworkSpecifier(specifier).build()
+            val launched = AtomicBoolean(false)
             val cb=object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
-                    if (version.get() == session) io.execute {
+                    if (version.get() == session && launched.compareAndSet(false,true)) io.execute {
                         transferFiles(session,network,invite,files)
                     }
                 }
