@@ -149,7 +149,8 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
                     verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     itemsIndexed(state.selectedFiles,key={_,file -> file.uri.toString()}) { index,file ->
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                            FileTypeBadge(file.name,Modifier.size(36.dp))
+                            app.swiftdrop.ui.screens.files.FilePreviewBadge(
+                                file.uri,file.name,Modifier.size(44.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(file.name,style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
                                 Text(sizeLabel(file.bytes),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
