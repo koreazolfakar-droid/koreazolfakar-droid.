@@ -311,4 +311,6 @@
     <string name="ultra_status_receiving">جارٍ الاستلام عبر Ultra Wi-Fi</string>
     <string name="ultra_status_complete">اكتمل النقل</string>
     <string name="ultra_status_failed">فشل النقل عبر Ultra</string>
+    <string name="file_archives">الملفات المضغوطة</string>
+    <string name="file_other">أخرى</string>
 </resources>
