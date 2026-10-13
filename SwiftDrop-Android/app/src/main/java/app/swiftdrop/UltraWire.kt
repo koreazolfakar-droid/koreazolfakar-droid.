@@ -26,6 +26,12 @@ internal object UltraWire {
     private val secureRandom = SecureRandom()
 
     fun newSecret(): ByteArray = ByteArray(32).also(secureRandom::nextBytes)
+    fun discoveryProof(secret: ByteArray, label: String, nonce: ByteArray): ByteArray {
+        checkedSecret(secret)
+        require(nonce.size == 16 && label in setOf("probe","reply"))
+        return mac(secret, "discovery-"+label, nonce, ByteArray(0))
+    }
+
 
     private fun mac(secret: ByteArray, label: String, first: ByteArray, second: ByteArray): ByteArray {
         val h = Mac.getInstance("HmacSHA256")
