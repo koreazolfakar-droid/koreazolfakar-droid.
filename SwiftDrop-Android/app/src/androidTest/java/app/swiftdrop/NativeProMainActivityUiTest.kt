@@ -109,6 +109,23 @@ class NativeProMainActivityUiTest {
         }
     }
 
+    @Test fun filesCategoryButtonsOpenTheInternalBrowserAndFilterChips() {
+        home()
+        compose.onNodeWithText("Browse all").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("files",model.manager.state.value.page) }
+        compose.onNodeWithText("Documents").performClick()
+        compose.runOnIdle { assertEquals("documents",model.manager.state.value.page) }
+        compose.onNodeWithText("PDF").performClick()
+        compose.onNodeWithText("Choose files").assertExists()
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
+        compose.runOnIdle { assertEquals("files",model.manager.state.value.page) }
+        compose.onNodeWithText("All files").performClick()
+        compose.runOnIdle { assertEquals("storage",model.manager.state.value.page) }
+        compose.onNodeWithText("PDF").performClick()
+        compose.onNodeWithText("Choose files").assertExists()
+    }
+
     @android.annotation.TargetApi(30)
     @Test fun fileFoldersSelectionAlbumsAndMediaPlaybackUseActualStorage() {
         val granted=android.os.Environment.isExternalStorageManager() &&
