@@ -80,7 +80,23 @@ private fun videoFrame(context: Context, uri: Uri): Bitmap? = runCatching {
     try {
         retriever.setDataSource(context, uri)
         // Scaled frame extraction prevents giant uncompressed video frames in the grid.
-        retriever.getScaledFrameAtTime(0,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,240,240)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            retriever.getScaledFrameAtTime(0,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,240,240)
+        } else {
+            // Android 8.0 (API 26) does not expose getScaledFrameAtTime.
+            // Decode only when needed and recycle the full frame after scaling.
+            retriever.getFrameAtTime(0,MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let { source ->
+                val largest = maxOf(source.width,source.height).coerceAtLeast(1)
+                if (largest <= 320) source else {
+                    val ratio = 320f / largest
+                    val scaled = Bitmap.createScaledBitmap(source,
+                        (source.width * ratio).toInt().coerceAtLeast(1),
+                        (source.height * ratio).toInt().coerceAtLeast(1),true)
+                    if (scaled !== source) source.recycle()
+                    scaled
+                }
+            }
+        }
     } finally { retriever.release() }
 }.getOrNull()
 
