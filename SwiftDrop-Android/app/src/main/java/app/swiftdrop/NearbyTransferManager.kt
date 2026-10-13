@@ -39,6 +39,9 @@ import java.util.concurrent.atomic.AtomicLong
 class NearbyTransferManager(private val context: Context) {
     val state = MutableStateFlow(TransferUiState())
     val ultraHotspot = UltraHotspotController(context)
+    val ultraLan = UltraLanTransferManager(context, ultraHotspot) { entry ->
+        state.update { it.copy(history = listOf(entry) + it.history) }
+    }
     @Volatile private var closed = false
     private val client = Nearby.getConnectionsClient(context)
     private val serviceId = "app.swiftdrop.nearby"
@@ -133,7 +136,7 @@ class NearbyTransferManager(private val context: Context) {
 
     fun setPage(page: String) {
         // No hotspot should keep running invisibly after leaving its receive screen.
-        if (page != "receive") ultraHotspot.stop()
+        if (page != "receive" && page != "ultra_transfer") ultraLan.stop()
         state.update { it.copy(page = page) }
     }
 
@@ -142,14 +145,22 @@ class NearbyTransferManager(private val context: Context) {
         // Nearby and the user-owned AP are mutually exclusive radio modes here.
         resetSearching()
         client.stopAllEndpoints()
-        ultraHotspot.start()
+        ultraLan.host()
         state.update { it.copy(page = "receive", hasError = false, diagnostics = null,
             receiverQrPayload = null, isAdvertising = false) }
     }
 
     fun stopUltraHotspot() {
-        ultraHotspot.stop()
+        ultraLan.stop()
         if (!closed) advertise() // restore the existing compatible Nearby receive path
+    }
+
+    fun beginUltraSend(invitation: UltraInvitation) {
+        if (closed || state.value.selectedFiles.isEmpty() || state.value.loadingSelection) return
+        resetSearching()
+        client.stopAllEndpoints()
+        state.update { it.copy(page = "ultra_transfer") }
+        ultraLan.send(invitation,state.value.selectedFiles)
     }
 
     fun armQrTarget(token: String?) {
@@ -290,7 +301,7 @@ class NearbyTransferManager(private val context: Context) {
     }
 
     fun advertise() {
-        ultraHotspot.stop()
+        ultraLan.stop()
         resetSearching()
         qrTarget = null
         client.stopAllEndpoints()
@@ -544,7 +555,7 @@ class NearbyTransferManager(private val context: Context) {
     }
 
     fun disconnect() {
-        ultraHotspot.stop()
+        ultraLan.stop()
         resetSearching()
         qrTarget = null
         client.stopAllEndpoints()
@@ -612,6 +623,7 @@ class NearbyTransferManager(private val context: Context) {
     fun close() {
         closed = true
         disconnect()
+        ultraLan.close()
         io.shutdown()
     }
 }
