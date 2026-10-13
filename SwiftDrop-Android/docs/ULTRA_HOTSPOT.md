@@ -1,29 +1,43 @@
-# SwiftDrop Ultra — Local-only Hotspot foundation (not a release)
+# SwiftDrop Ultra — experimental offline Wi-Fi transfer
 
-## Phase 1 implemented in this branch
+**Branch**: `feature/swiftdrop-ultra-hotspot`. **Do not ship or merge until physical-device QA passes.**
 
-- Separate user-initiated Android LocalOnlyHotspot lifecycle (Android 8 / API 26+).
-- Actual OS-generated SSID and passphrase are shown only while the local hotspot reservation is active.
-- Cancel and stop release the reservation and clear credentials; late callbacks are ignored.
-- Starting Ultra stops Nearby advertising to avoid pretending the two paths are linked.
-- Returning to Nearby stops the hotspot and restores the existing encrypted Nearby receive mode.
-- Arabic/English preview UI, no GPS coordinate collection, no connectivity setting changes.
-- No APK version change or changes to the existing transfer protocol.
+## Implemented in this draft branch
 
-**Not completed:** this phase creates a local Wi-Fi access point only. The app cannot send files over that access point yet. Do not label it completed, fast, encrypted end-to-end, 5/6 GHz, or release it to end users.
+- Receiver explicitly creates an Android `LocalOnlyHotspot`, with OS-generated network credentials. No internet tethering, no forced 5 GHz / 6 GHz / Wi-Fi 7.
+- On receiver's screen, a temporary QR invitation contains SSID, password, ephemeral 256-bit transfer secret and randomly bound TCP/UDP port. Keep it private.
+- Sender selects files, scans Ultra QR, and Android 10+ asks the user to join the receiver's Wi-Fi using `WifiNetworkSpecifier`. On Android 8–9 the user must join in Wi-Fi Settings first.
+- UDP broadcast discovery runs only on the joined network and answers valid keyed HMAC probes. It does **not** guess the hotspot gateway.
+- Local TCP session authenticates both sides with independent HMAC challenges, derives direction-specific AES-256-GCM keys, and encrypts framed file metadata and blocks.
+- Receiver explicitly accepts/declines each offered file, with a timeout.
+- 64-KiB bounded streaming chunks, declared-length bounds and verified SHA-256. Downloads stay hidden/pending until verification; partial data is deleted on errors.
+- App displays measured byte progress and MB/s; no claimed transfer speed without benchmarking.
+- Nearby Connections remains intact and serves as manual fallback. Existing file picker, music, media library, package name and signing are preserved.
+- Extra `INTERNET` permission is required by Android for local TCP/UDP sockets, **not** for a cloud backend.
 
-## Phase 2 — required before release
+## Automated tests
 
-1. Add `android.permission.INTERNET` (Android LAN sockets also require it); retain offline-only architecture.
-2. Implement authenticated encrypted socket transport over Wi-Fi LAN, with per-session key agreement, peer confirmation and explicit file acceptance.
-3. Android 10+ joining flow: `WifiNetworkSpecifier` + `ConnectivityManager.requestNetwork` with user consent; bind the transfer sockets to the granted `Network`, not the global internet network.
-4. Receiver supplies the actual endpoint address, ephemeral session QR and port. Do not hardcode gateway IPs or build unauthenticated open servers.
-5. Bounded streaming memory, verified SHA-256 per file, atomic rename/publish, cancellation, timeouts, connection loss, cleanup, safe filename and disk quota guards.
-6. Expose actual throughput and ETA; avoid unsupported 5/6 GHz promises or simulated progress.
-7. Test on **two physical Android phones** under normal Wi-Fi, hotspot, no-internet, battery saver, screen-off, API 26–36 and interruptions. Compare checksums and measured MB/s.
+- Android Gradle unit, manifest, Lint and build checks in PR-only `SwiftDrop Ultra Preview QA`. This is not a signed public release.
+- Loopback socket-level tests for mutual authentication, key rejection, encrypted frames, exact-size streaming, offer rejection, corrupted SHA-256 rollback, and QR validation.
+- CI emulators do **not** certify Android physical Wi-Fi radios or LocalOnlyHotspot networking.
 
-## Risk and lifecycle
+## Physical device checks REQUIRED before release
 
-`LocalOnlyHotspot` may fail on an OEM phone if internet tethering is already enabled, the radio is busy, location/Wi-Fi permissions are missing, or the OS blocks access. Android can revoke a reservation asynchronously. The interface keeps Nearby as a fallback, never assumes the AP is available, and never publishes this as working Ultra transfer.
+1. Install this development build on two real phones (test Android 10–16; separately Android 8/9 manual join) without internet access.
+2. Receiver: Receive → Create local hotspot. Confirm network SSID and QR appear.
+3. Sender: pick 1 file → Ultra QR → scan the receiver code → approve Android's local Wi-Fi association dialog.
+4. Check verified UDP discovery, mutual authentication, receiver file confirmation, actual byte progress, completion and SHA-256 comparison.
+5. Transfer a 0-byte file, Unicode filename, many files, 2+ GiB file and large video. Include duplicate names, low disk space and source-URI revocation.
+6. Disconnect in mid-transfer, deny receiving, turn off Wi-Fi/hotspot, rotate device, lock screen, revoke permissions and enable battery saver.
+7. Test WPA2/WPA3-only/transition hotspot differences, client isolation, aggressive OEM background lifecycle policies, VPN/mobile-data interplay and QR expiry (hotspot reset).
+8. Measure throughput on repeatable files under known hardware/radio conditions. Do not report speed claims without measurements.
+9. If native LAN discovery fails, confirm stopping Ultra restores the original Nearby flow.
 
-See Android's official Local-only Hotspot guidance for permission and lifecycle rules.
+## Known current limitations
+
+- Android 10+ OS network dialog is mandatory; the application may not silently connect to the hotspot.
+- `WifiNetworkSpecifier` currently requests WPA2; WPA3-only hotspot association can fail on some devices.
+- UDP broadcast can be blocked by OEM implementations/client isolation. No mDNS/manual-IP recovery has been shipped yet.
+- Native transfer runs while the app process is alive; a dedicated foreground service for reliable screen-off/long transfers is still future work.
+- Ultra has no resume or multiple parallel file streams; cancellation restarts a file.
+- Physical cross-device validation is pending. Do not mistake successful CI for tested over-the-air transfer.
