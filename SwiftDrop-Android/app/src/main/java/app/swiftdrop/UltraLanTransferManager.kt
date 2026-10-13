@@ -158,8 +158,7 @@ class UltraLanTransferManager(
                             commit = { file ->
                                 requireNotNull(sink).commit()
                                 diagnostics.record("STORAGE", "FILE_COMMITTED", "bytes=${file.bytes}")
-                                diagnostics.record("TRANSFER", "BATCH_COMPLETED", "count=${files.size}")
-            state.update { it.copy(phase=UltraLanPhase.Complete,
+                                state.update { it.copy(phase=UltraLanPhase.Complete,
                                     progress=TransferProgress(file.name,"Received",file.bytes,file.bytes,true)) }
                                 onHistory(HistoryEntry(file.name,"Ultra Wi-Fi","Received",file.bytes,
                                     System.currentTimeMillis()))
