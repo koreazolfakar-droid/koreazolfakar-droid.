@@ -52,6 +52,27 @@ jobs:
         env:
           SWIFTDROP_DEBUG_KEYSTORE: ${{ runner.temp }}/swiftdrop-debug.keystore
         run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Prepare Android 16 emulator image with retry
+        run: |
+          set -euo pipefail
+          SDKMGR="$(command -v sdkmanager || find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f -print -quit)"
+          test -n "$SDKMGR"
+          IMAGE="system-images;android-36;google_apis;x86_64"
+          DIR="$ANDROID_HOME/system-images/android-36/google_apis/x86_64"
+          for attempt in 1 2 3; do
+            echo "Android system image installation attempt $attempt/3"
+            if "$SDKMGR" --install "$IMAGE" && test -s "$DIR/system.img"; then
+              echo "Android 16 emulator image verified."
+              break
+            fi
+            echo "::warning::Android system image download incomplete; retrying."
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Failed to install a valid Android 16 image."
+              exit 1
+            fi
+            rm -rf "$DIR" "$ANDROID_HOME/.temp"
+            sleep 15
+          done
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Android 16 Compose UI regression tests
