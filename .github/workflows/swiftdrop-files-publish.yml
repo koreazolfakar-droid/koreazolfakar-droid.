@@ -4,6 +4,8 @@ on:
   push:
     branches: [feature/swiftdrop-file-types-thumbnails]
     paths:
+      - 'SwiftDrop-Android/**'
+      - '.github/workflows/swiftdrop-files-qa.yml'
       - '.github/workflows/swiftdrop-files-publish.yml'
 
 permissions:
