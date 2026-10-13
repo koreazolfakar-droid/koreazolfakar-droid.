@@ -293,7 +293,7 @@
     <string name="ultra_measured_speed">Measured speed: %1$.1f MB/s</string>
     <string name="ultra_status_idle">Ready</string>
     <string name="ultra_status_waiting">Waiting for a connected device</string>
-    <string name="ultra_status_joining">Joining receiver's local Wi-Fi</string>
+    <string name="ultra_status_joining">Joining receiver\'s local Wi-Fi</string>
     <string name="ultra_status_connecting">Finding and authenticating the receiver</string>
     <string name="ultra_status_sending">Sending over Ultra Wi-Fi</string>
     <string name="ultra_status_receiving">Receiving over Ultra Wi-Fi</string>
