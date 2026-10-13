@@ -299,4 +299,6 @@
     <string name="ultra_status_receiving">Receiving over Ultra Wi-Fi</string>
     <string name="ultra_status_complete">Transfer complete</string>
     <string name="ultra_status_failed">Ultra transfer failed</string>
+    <string name="file_archives">Archives</string>
+    <string name="file_other">Other</string>
 </resources>
