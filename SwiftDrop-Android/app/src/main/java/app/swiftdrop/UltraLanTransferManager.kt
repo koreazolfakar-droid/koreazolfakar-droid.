@@ -54,6 +54,7 @@ class UltraLanTransferManager(
     private val onHistory: (HistoryEntry) -> Unit
 ) {
     val state = MutableStateFlow(UltraLanState())
+    private val diagnostics = DeveloperDiagnostics.get(context)
     private val io = Executors.newCachedThreadPool()
     private val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private val version = AtomicLong()
@@ -74,6 +75,7 @@ class UltraLanTransferManager(
     }
 
     fun host() {
+        diagnostics.record("NETWORK", "HOST_START")
         stop()
         val session = version.incrementAndGet()
         try {
@@ -87,8 +89,10 @@ class UltraLanTransferManager(
             io.execute { discoveryLoop(session,discovery,key) }
             io.execute { receiveLoop(session,socket,key) }
             hotspot.start()
+            diagnostics.record("NETWORK", "HOST_LISTENING", "port=${socket.localPort}")
         } catch (e: Exception) {
             stop()
+            diagnostics.record("NETWORK", "HOST_FAILED", "type=${e.javaClass.simpleName}")
             state.value = UltraLanState(UltraLanPhase.Failed,error=e.javaClass.simpleName)
         }
     }
@@ -129,9 +133,11 @@ class UltraLanTransferManager(
                     try {
                         val channel=UltraWire.host(remote.getInputStream(),remote.getOutputStream(),key)
                         var sink: PendingSink? = null
+                        diagnostics.record("NETWORK", "RECEIVER_CONNECTED")
                         val accepted = UltraFileWire.receive(
                             channel,
                             allow = { file ->
+                                diagnostics.record("PROTOCOL", "OFFER_RECEIVED", "bytes=${file.bytes}")
                                 val future = CompletableFuture<Boolean>()
                                 pendingApproval = future
                                 state.update { it.copy(pending = UltraPendingFile(file.name,file.bytes)) }
@@ -143,6 +149,7 @@ class UltraLanTransferManager(
                                 }
                             },
                             createOutput = { file ->
+                                diagnostics.record("STORAGE", "SINK_CREATED", "bytes=${file.bytes}")
                                 sink = createSink(file)
                                 state.update { it.copy(phase = UltraLanPhase.Receiving,
                                     progress = TransferProgress(file.name,"Receiving",0,file.bytes)) }
@@ -150,18 +157,21 @@ class UltraLanTransferManager(
                             },
                             commit = { file ->
                                 requireNotNull(sink).commit()
-                                state.update { it.copy(phase=UltraLanPhase.Complete,
+                                diagnostics.record("STORAGE", "FILE_COMMITTED", "bytes=${file.bytes}")
+                                diagnostics.record("TRANSFER", "BATCH_COMPLETED", "count=${files.size}")
+            state.update { it.copy(phase=UltraLanPhase.Complete,
                                     progress=TransferProgress(file.name,"Received",file.bytes,file.bytes,true)) }
                                 onHistory(HistoryEntry(file.name,"Ultra Wi-Fi","Received",file.bytes,
                                     System.currentTimeMillis()))
                             },
-                            rollback = { _ -> sink?.rollback() },
+                            rollback = { _ -> diagnostics.record("STORAGE", "ROLLBACK"); sink?.rollback() },
                             onProgress = { bytes,total ->
                                 updateProgress(session,bytes,total,"Receiving")
                             }
                         )
                         if (!accepted) state.update { it.copy(phase = UltraLanPhase.Waiting) }
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        diagnostics.record("PROTOCOL", "RECEIVE_FAILED", "type=${e.javaClass.simpleName}")
                         if (version.get() == session) state.update {
                             it.copy(phase = UltraLanPhase.Waiting,pending=null)
                         }
@@ -193,6 +203,7 @@ class UltraLanTransferManager(
 
     fun send(invite: UltraInvitation, files: List<SelectedFile>) {
         if (files.isEmpty() || files.size > 200) return
+        diagnostics.record("TRANSFER", "SEND_REQUEST", "count=${files.size}")
         stop()
         val session=version.incrementAndGet()
         state.value=UltraLanState(UltraLanPhase.Joining)
@@ -217,12 +228,14 @@ class UltraLanTransferManager(
             val launched = AtomicBoolean(false)
             val cb=object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
+                    diagnostics.record("NETWORK", "WIFI_AVAILABLE")
                     if (version.get() == session && launched.compareAndSet(false,true)) io.execute {
                         transferFiles(session,network,invite,files)
                     }
                 }
-                override fun onUnavailable() { fail(session,"Wi-Fi connection not approved or unavailable") }
+                override fun onUnavailable() { diagnostics.record("NETWORK", "WIFI_UNAVAILABLE"); fail(session,"Wi-Fi connection not approved or unavailable") }
                 override fun onLost(network:Network) {
+                    diagnostics.record("NETWORK", "WIFI_LOST")
                     if (version.get() == session && state.value.phase in setOf(
                             UltraLanPhase.Joining,UltraLanPhase.Connecting,
                             UltraLanPhase.Sending)) {
@@ -245,7 +258,9 @@ class UltraLanTransferManager(
         try {
             state.update { it.copy(phase=UltraLanPhase.Connecting) }
             val host=findHost(session,network,invite)
+            diagnostics.record("NETWORK", "RECEIVER_DISCOVERED")
             for (file in files) {
+                diagnostics.record("TRANSFER", "FILE_SEND_START", "bytes=${file.bytes}")
                 if (session != version.get()) return
                 require(file.bytes in 0..UltraFileWire.MAX_FILE_BYTES) { "Unsupported file size" }
                 network.socketFactory.createSocket(host,invite.port).use { socket ->
@@ -260,7 +275,11 @@ class UltraLanTransferManager(
                             requireNotNull(source) { "Cannot read selected file" }) { done ->
                             updateProgress(session,done,file.bytes,"Sending")
                         }
-                        if (!accepted) throw IllegalStateException("File declined or not saved")
+                        if (!accepted) {
+                            diagnostics.record("PROTOCOL", "FILE_NOT_ACKNOWLEDGED")
+                            throw IllegalStateException("File declined or not saved")
+                        }
+                        diagnostics.record("PROTOCOL", "COMPLETE_ACK_RECEIVED")
                     }
                     onHistory(HistoryEntry(file.name,"Ultra Wi-Fi","Sent",file.bytes,System.currentTimeMillis()))
                     transfer=null
@@ -269,6 +288,7 @@ class UltraLanTransferManager(
             state.update { it.copy(phase=UltraLanPhase.Complete,
                 progress=it.progress?.copy(finished=true,outcome=TransferOutcome.Complete)) }
         } catch (e: Exception) {
+            diagnostics.record("TRANSFER", "SEND_FAILED", "type=${e.javaClass.simpleName}")
             fail(session,e.localizedMessage ?: e.javaClass.simpleName)
         } finally {
             transfer=null
@@ -377,6 +397,7 @@ class UltraLanTransferManager(
     }
 
     private fun fail(session: Long, text: String) {
+        diagnostics.record("TRANSFER", "SESSION_FAILED")
         if (session==version.get()) state.update {
             it.copy(phase=UltraLanPhase.Failed,error=text,pending=null,
                 progress=it.progress?.copy(outcome=TransferOutcome.Failed))
@@ -384,6 +405,7 @@ class UltraLanTransferManager(
     }
 
     fun stop() {
+        diagnostics.record("TRANSFER", "SESSION_STOP")
         version.incrementAndGet()
         pendingApproval?.complete(false)
         pendingApproval=null
