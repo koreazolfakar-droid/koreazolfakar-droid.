@@ -3,6 +3,7 @@ package app.swiftdrop.ui.screens.files
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
@@ -41,22 +42,51 @@ fun clearMediaThumbnails() = ArtCache.clear()
 
 private fun decodeScaled(context: Context, uri: Uri, maxPixels: Int): Bitmap? {
     val resolver = context.contentResolver
+    // Decode the bounds first to prevent loading a multi-megapixel photo into UI memory.
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-    var sample = 1
-    while (bounds.outWidth / sample > maxPixels || bounds.outHeight / sample > maxPixels) sample *= 2
-    val options = BitmapFactory.Options().apply { inSampleSize = sample.coerceAtLeast(1) }
-    return resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+    runCatching { resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } }
+    if (bounds.outWidth > 0 && bounds.outHeight > 0) {
+        var sample = 1
+        while (bounds.outWidth / sample > maxPixels || bounds.outHeight / sample > maxPixels)
+            sample *= 2
+        val options = BitmapFactory.Options().apply { inSampleSize = sample }
+        val bitmap = runCatching {
+            resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+        }.getOrNull()
+        if (bitmap != null) return bitmap
+    }
+    // Some HEIC/AVIF and provider-backed photos fail BitmapFactory or loadThumbnail.
+    // ImageDecoder offers a second bounded path on Android 9+; no full-res fallback.
+    if (Build.VERSION.SDK_INT >= 28) return runCatching {
+        ImageDecoder.decodeBitmap(ImageDecoder.createSource(resolver, uri)) { decoder, info, _ ->
+            val largest = maxOf(info.size.width, info.size.height).coerceAtLeast(1)
+            val divisor = ((largest + maxPixels - 1L) / maxPixels).toInt().coerceAtLeast(1)
+            decoder.setTargetSampleSize(divisor)
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+        }
+    }.getOrNull()
+    return null
 }
 
-private fun loadArt(context: Context, uri: Uri, kind: MediaKind, fullSize: Boolean): Bitmap? = runCatching {
-    if (fullSize) return@runCatching decodeScaled(context, uri, 2048)
-    if (Build.VERSION.SDK_INT >= 29) return@runCatching context.contentResolver.loadThumbnail(uri, Size(240, 240), null)
-    if (kind == MediaKind.Videos) {
-        val retriever = MediaMetadataRetriever()
-        try { retriever.setDataSource(context, uri); retriever.frameAtTime } finally { retriever.release() }
-    } else decodeScaled(context, uri, 320)
+private fun videoFrame(context: Context, uri: Uri): Bitmap? = runCatching {
+    val retriever = MediaMetadataRetriever()
+    try {
+        retriever.setDataSource(context, uri)
+        // Scaled frame extraction prevents giant uncompressed video frames in the grid.
+        retriever.getScaledFrameAtTime(0,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,240,240)
+    } finally { retriever.release() }
 }.getOrNull()
+
+private fun loadArt(context: Context, uri: Uri, kind: MediaKind, fullSize: Boolean): Bitmap? {
+    if (fullSize) return if(kind == MediaKind.Videos) videoFrame(context,uri)
+        else decodeScaled(context,uri,2048)
+    // Many OEM/SAF providers throw or return null for loadThumbnail; decode the URI.
+    val thumbnail = if (Build.VERSION.SDK_INT >= 29) runCatching {
+        context.contentResolver.loadThumbnail(uri, Size(240,240), null)
+    }.getOrNull() else null
+    return thumbnail ?: if (kind == MediaKind.Videos) videoFrame(context,uri)
+        else decodeScaled(context,uri,320)
+}
 
 /** No full-sized images in the thumbnail cache; only the visible grid items request decoding. */
 fun thumbnailCacheBytes(): Int = ArtCache.thumbnails.size()
