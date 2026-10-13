@@ -13,13 +13,19 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import app.swiftdrop.R
 import app.swiftdrop.ui.components.AppIcon
+import app.swiftdrop.ui.components.FileCategory
+import app.swiftdrop.ui.components.FileTypeBadge
+import app.swiftdrop.ui.components.fileCategory
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -111,4 +117,16 @@ fun MediaArt(uri: Uri, kind: MediaKind, modifier: Modifier = Modifier, fullSize:
                 contentScale=if(fullSize) ContentScale.Fit else ContentScale.Crop)
         }
     }
+}
+
+/** Actual image thumbnails in the sender selection/transfer queue, not generic image glyphs. */
+@Composable
+fun FilePreviewBadge(uri: Uri, name: String, modifier: Modifier = Modifier.size(48.dp)) {
+    val context = LocalContext.current
+    val mime = remember(uri) { runCatching { context.contentResolver.getType(uri) }.getOrNull() }
+    if (fileCategory(name,mime) == FileCategory.Photo) {
+        Surface(modifier,shape=MaterialTheme.shapes.small) {
+            MediaArt(uri,MediaKind.Photos,Modifier.fillMaxSize())
+        }
+    } else FileTypeBadge(name,modifier,mimeType=mime)
 }
