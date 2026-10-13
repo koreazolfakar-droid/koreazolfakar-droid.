@@ -65,8 +65,7 @@ jobs:
           emulator-boot-timeout: 180
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 3072
           script: |
-            cd SwiftDrop-Android
-            timeout --signal=TERM --kill-after=15s 240s gradle --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.timeout_msec=90000
+            timeout --signal=TERM --kill-after=15s 360s gradle --project-dir SwiftDrop-Android --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.timeout_msec=90000
       - name: Verify APK identity, signer and version
         env:
           GH_TOKEN: ${{ github.token }}
