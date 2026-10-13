@@ -33,6 +33,7 @@ import app.swiftdrop.ui.components.*
 import app.swiftdrop.ui.screens.home.HomeScreen
 import app.swiftdrop.ui.screens.discovery.*
 import app.swiftdrop.ui.screens.transfer.TransferScreen
+import app.swiftdrop.ui.screens.transfer.UltraTransferScreen
 import app.swiftdrop.ui.screens.permissions.PermissionsScreen
 import app.swiftdrop.ui.screens.history.HistoryScreen
 import app.swiftdrop.ui.theme.*
@@ -61,7 +62,7 @@ fun backDestination(page:String,appsParent:String="home"):String=when(page) {
 
 @Composable
 fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: InstalledAppsController,send: (Array<String>) -> Unit,
-                 receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,
+                 receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,scanUltra: () -> Unit = {},
                  mediaPermissionRevision: Int = 0, requestMedia: (MediaKind) -> Unit = {},
                  overlay: @Composable () -> Unit = {}) {
     val settings by preferences.state.collectAsState()
@@ -92,7 +93,7 @@ fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: I
     SwiftDropLocalizedProviders(configuration) {
         SwiftDropTheme(dark) {
         SwiftDropContent(manager,apps,settings,dark,preferences::setAppearance,preferences::setLanguage,
-            {preferences.completeOnboarding();manager.setPage("home")},send,receive,discover,openSettings,openLocationSettings,scanQr,
+            {preferences.completeOnboarding();manager.setPage("home")},send,receive,discover,openSettings,openLocationSettings,scanQr,scanUltra,
             mediaPermissionRevision,requestMedia)
         overlay()
         }
@@ -140,13 +141,16 @@ internal fun SwiftDropLocalizedProviders(
 private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsController,settings: SettingsState,dark: Boolean,
     appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit,welcomeDone: () -> Unit,send: (Array<String>) -> Unit,
     receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,
-    mediaPermissionRevision: Int,requestMedia: (MediaKind) -> Unit) {
+    scanUltra: () -> Unit,mediaPermissionRevision: Int,requestMedia: (MediaKind) -> Unit) {
     val state by manager.state.collectAsState()
+    val ultra by manager.ultraHotspot.state.collectAsState()
+    val lan by manager.ultraLan.state.collectAsState()
     val appsState by apps.state.collectAsState()
     var chosenFileTab by rememberSaveable { mutableIntStateOf(0) }
     var appsParent by rememberSaveable { mutableStateOf("home") }
     var leaveAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering || state.connectingId != null
+    val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering ||
+        state.connectingId != null || ultra.phase == UltraHotspotPhase.Starting || ultra.phase == UltraHotspotPhase.Active
     val guardedSend: (Array<String>) -> Unit = { mime ->
         if(sessionActive) leaveAction = { manager.disconnect();send(mime) } else send(mime)
     }
@@ -210,9 +214,13 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                             mediaPermissionRevision,requestMedia,chosenFileTab)
                         "apps" -> InstalledAppsScreen(appsState,{apps.load(true)},guardedAppExport,
                             {guardedSend(arrayOf("application/vnd.android.package-archive"))},{manager.setPage("files")})
-                        "selection" -> SelectionScreen(state,{manager.armQrTarget(null);discover()},{guardedSend(arrayOf("*/*"))},scanQr)
+                        "selection" -> SelectionScreen(state,{manager.armQrTarget(null);discover()},{guardedSend(arrayOf("*/*"))},scanQr,scanUltra)
                         "discover" -> DiscoveryScreen(state,manager::connect,discover,manager::disconnect,openRecoverySettings)
-                        "receive" -> ReceiveScreen(state,receive,manager::disconnect,openRecoverySettings)
+                        "receive" -> ReceiveScreen(state,receive,manager::disconnect,openRecoverySettings,
+                            ultra,manager::startUltraHotspot,manager::stopUltraHotspot,
+                            lan,if(ultra.phase==UltraHotspotPhase.Active)
+                                manager.ultraLan.invitation(ultra.ssid,ultra.passphrase) else null)
+                        "ultra_transfer" -> UltraTransferScreen(lan,manager::disconnect)
                         "transfer" -> TransferScreen(state,{
                             if(state.progress?.outcome==TransferOutcome.Running) manager.cancelTransfer() else manager.disconnect()
                         },sendMore={
@@ -224,6 +232,19 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                     }
                 }
             }
+        }
+        lan.pending?.let { offer ->
+            AlertDialog(
+                onDismissRequest={manager.ultraLan.decide(false)},
+                title={Text(stringResource(R.string.ultra_incoming_title))},
+                text={Text(stringResource(R.string.ultra_incoming_message,offer.name,offer.bytes))},
+                confirmButton={Button({manager.ultraLan.decide(true)}) {
+                    Text(stringResource(R.string.accept_codes))
+                }},
+                dismissButton={TextButton({manager.ultraLan.decide(false)}) {
+                    Text(stringResource(R.string.decline))
+                }}
+            )
         }
         state.pending?.let { request ->
             AlertDialog(onDismissRequest={manager.answerConnection(false)},icon={AppIcon(R.drawable.ic_security)},
