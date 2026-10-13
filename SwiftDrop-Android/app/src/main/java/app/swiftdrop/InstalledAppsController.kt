@@ -16,7 +16,7 @@ data class AppsState(val apps: List<ShareableApp> = emptyList(),val loading: Boo
     val exporting: Boolean = false,val failed: Boolean = false)
 
 /** Queries launcher apps only. No QUERY_ALL_PACKAGES or storage-wide permission. */
-class InstalledAppsController(private val context: Context,private val manager: NearbyTransferManager) {
+class InstalledAppsController(private val context: Context,private val manager: TransferController) {
     private val io = Executors.newSingleThreadExecutor()
     private val mutable = MutableStateFlow(AppsState())
     val state = mutable.asStateFlow()

@@ -7,6 +7,11 @@ on:
       - '!SwiftDrop-Android/docs/**'
       - '.github/workflows/swiftdrop-android-ci.yml'
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish the validated alpha APK (requires completed device/release review)'
+        type: boolean
+        default: false
 permissions:
   contents: write
   actions: write
@@ -132,7 +137,9 @@ jobs:
           sha256sum "$APK" > app/build/reports/apk-sha256.txt
           cp "$RUNNER_TEMP/current-certificate.txt" app/build/reports/apk-certificate.txt
       # Publish only after unit, Lint, both emulator configurations, and identity checks pass.
+      # SwiftDrop @build Codex 13/10/2026 Validation pushes never publish or overwrite a release.
       - name: Publish SwiftDrop Native Pro alpha APK
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

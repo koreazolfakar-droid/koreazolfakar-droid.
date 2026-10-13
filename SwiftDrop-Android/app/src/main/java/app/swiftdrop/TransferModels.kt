@@ -42,5 +42,8 @@ data class TransferUiState(
     val isDiscovering: Boolean = false,
     val recoveryAction: NearbyRecoveryAction = NearbyRecoveryAction.None,
     val diagnostics: String? = null,
-    val hasError: Boolean = false
+    val hasError: Boolean = false,
+    // SwiftDrop @feature Codex 13/10/2026 Report lifecycle independently of asynchronous radio flags.
+    val sessionState: SessionState = SessionState.Idle,
+    val transport: TransportType = TransportType.Nearby
 )
