@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class NearbyTransferManager(private val context: Context) {
     val state = MutableStateFlow(TransferUiState())
+    private val diagnostics = DeveloperDiagnostics.get(context)
     val ultraHotspot = UltraHotspotController(context)
     val ultraLan = UltraLanTransferManager(context, ultraHotspot) { entry ->
         state.update { it.copy(history = listOf(entry) + it.history) }
@@ -156,6 +157,7 @@ class NearbyTransferManager(private val context: Context) {
     }
 
     fun beginUltraSend(invitation: UltraInvitation) {
+        diagnostics.record("TRANSFER", "ULTRA_BEGIN_REQUEST")
         if (closed || state.value.selectedFiles.isEmpty() || state.value.loadingSelection) return
         resetSearching()
         client.stopAllEndpoints()
@@ -301,6 +303,7 @@ class NearbyTransferManager(private val context: Context) {
     }
 
     fun advertise() {
+        diagnostics.record("NEARBY", "ADVERTISE_START")
         ultraLan.stop()
         resetSearching()
         qrTarget = null
@@ -330,6 +333,7 @@ class NearbyTransferManager(private val context: Context) {
     }
 
     fun discover(uris: List<Uri>) {
+        diagnostics.record("NEARBY", "DISCOVERY_START", "count=${uris.size}")
         if (uris.isEmpty()) return
         resetSearching()
         client.stopAllEndpoints()
@@ -555,6 +559,7 @@ class NearbyTransferManager(private val context: Context) {
     }
 
     fun disconnect() {
+        diagnostics.record("NEARBY", "DISCONNECT")
         ultraLan.stop()
         resetSearching()
         qrTarget = null
@@ -597,11 +602,13 @@ class NearbyTransferManager(private val context: Context) {
     }
 
     private fun failTransfer(resource: Int, exception: Exception) {
+        diagnostics.record("NEARBY", "TRANSFER_FAILED", "type=${exception.javaClass.simpleName}")
         state.update { it.copy(progress = it.progress?.copy(outcome = TransferOutcome.Failed, finished = false)) }
         info(resource, exception.localizedMessage ?: exception.javaClass.simpleName, error = true)
     }
 
     fun cancelTransfer() {
+        diagnostics.record("TRANSFER", "USER_CANCEL")
         val progress = state.value.progress ?: return disconnect()
         activeOutboundId?.let { client.cancelPayload(it) }
         incomingPayloads.keys.forEach { client.cancelPayload(it) }
