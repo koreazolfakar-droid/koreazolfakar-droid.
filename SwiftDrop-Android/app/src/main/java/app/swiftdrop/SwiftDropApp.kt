@@ -148,6 +148,7 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
     val appsState by apps.state.collectAsState()
     var chosenFileTab by rememberSaveable { mutableIntStateOf(0) }
     var appsParent by rememberSaveable { mutableStateOf("home") }
+    var docsParent by rememberSaveable { mutableStateOf("home") }
     var leaveAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering ||
         state.connectingId != null || ultra.phase == UltraHotspotPhase.Starting || ultra.phase == UltraHotspotPhase.Active
@@ -171,12 +172,14 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
     BackHandler(state.page != "home" && state.pending == null && leaveAction == null) {
         when(state.page) {
             "welcome" -> welcomeDone()
+            "documents","storage" -> manager.setPage(docsParent)
             else -> manager.setPage(backDestination(state.page,appsParent))
         }
     }
     SwiftDropTheme(dark) {
         CompositionLocalProvider(LocalPageBack provides {
-            manager.setPage(backDestination(state.page,appsParent))
+            manager.setPage(if(state.page=="documents" || state.page=="storage")
+                docsParent else backDestination(state.page,appsParent))
         }) {
         Scaffold(modifier=Modifier.imePadding(),bottomBar = {
             Column {
@@ -194,24 +197,28 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                                 else if(state.isAdvertising) "receive" else if(state.selectedFiles.isNotEmpty() && !state.isDiscovering) "selection" else "discover")
                         },messageText(state.status),openFiles={chosenFileTab=0;manager.setPage("files")},openApps={appsParent="home";apps.load();manager.setPage("apps")},onSettings={manager.setPage("settings")},
                             openMedia={kind->manager.setPage(galleryDestination(kind))},
-                            openDocuments={manager.setPage("documents")},
-                            openStorage={manager.setPage("storage")})
+                            openDocuments={docsParent="home";manager.setPage("documents")},
+                            openStorage={docsParent="home";manager.setPage("storage")})
                         "gallery_photos","gallery_videos","gallery_music" -> {
                             val kind=galleryCategory(state.page) ?: MediaKind.Photos
                             FileLibraryScreen(guardedSend,{
                                 appsParent="files";apps.load();manager.setPage("apps")
                             },appsState,{apps.load(true)},guardedAppExport,guardedMediaSelect,
                                 mediaPermissionRevision,requestMedia,kind.ordinal,
-                                standaloneCategory=true)
+                                standaloneCategory=true,
+                                openDocuments={docsParent="files";manager.setPage("documents")},
+                                openStorage={docsParent="files";manager.setPage("storage")})
                         }
                         "documents","storage" -> DocumentBrowserScreen(
-                            back={manager.setPage("home")},
+                            back={manager.setPage(docsParent)},
                             onSend=guardedMediaSelect,documentsOnly=state.page=="documents")
                         "files" -> FileLibraryScreen(guardedSend,{
                             appsParent="files";apps.load();manager.setPage("apps")
                         },
                             appsState,{apps.load(true)},guardedAppExport,guardedMediaSelect,
-                            mediaPermissionRevision,requestMedia,chosenFileTab)
+                            mediaPermissionRevision,requestMedia,chosenFileTab,
+                            openDocuments={docsParent="files";manager.setPage("documents")},
+                            openStorage={docsParent="files";manager.setPage("storage")})
                         "apps" -> InstalledAppsScreen(appsState,{apps.load(true)},guardedAppExport,
                             {guardedSend(arrayOf("application/vnd.android.package-archive"))},{manager.setPage("files")})
                         "selection" -> SelectionScreen(state,{manager.armQrTarget(null);discover()},{guardedSend(arrayOf("*/*"))},scanQr,scanUltra)
