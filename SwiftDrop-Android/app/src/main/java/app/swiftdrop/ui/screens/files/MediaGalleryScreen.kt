@@ -162,12 +162,15 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
                     if(index==3)refreshApps()
                 },label={Text(stringResource(label))})
             }
-            AssistChip(onClick={openDocuments?.invoke() ?:
-                choose(arrayOf("application/pdf","text/*","application/msword",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))},
-                label={Text(stringResource(R.string.documents))})
-            AssistChip(onClick={openStorage?.invoke() ?: choose(arrayOf("*/*"))},
-                label={Text(stringResource(R.string.all_files))})
+            AssistChip(onClick={
+                if (openDocuments != null) openDocuments()
+                else choose(arrayOf("application/pdf","text/*","application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+            }, label={Text(stringResource(R.string.documents))})
+            AssistChip(onClick={
+                if (openStorage != null) openStorage()
+                else choose(arrayOf("*/*"))
+            }, label={Text(stringResource(R.string.all_files))})
         }
         Box(Modifier.weight(1f)) {
             if(tab==3) {

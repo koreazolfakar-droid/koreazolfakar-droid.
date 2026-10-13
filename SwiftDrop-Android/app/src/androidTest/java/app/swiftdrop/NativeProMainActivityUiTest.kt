@@ -114,6 +114,7 @@ class NativeProMainActivityUiTest {
         compose.onNodeWithText("Browse all").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("files",model.manager.state.value.page) }
         compose.onNodeWithText("Documents").performClick()
+        compose.waitUntil(8_000) { model.manager.state.value.page == "documents" }
         compose.runOnIdle { assertEquals("documents",model.manager.state.value.page) }
         compose.onNodeWithText("PDF").performClick()
         compose.onNodeWithText("Choose files").assertExists()
@@ -121,6 +122,7 @@ class NativeProMainActivityUiTest {
         compose.waitForIdle()
         compose.runOnIdle { assertEquals("files",model.manager.state.value.page) }
         compose.onNodeWithText("All files").performClick()
+        compose.waitUntil(8_000) { model.manager.state.value.page == "storage" }
         compose.runOnIdle { assertEquals("storage",model.manager.state.value.page) }
         compose.onNodeWithText("PDF").performClick()
         compose.onNodeWithText("Choose files").assertExists()
