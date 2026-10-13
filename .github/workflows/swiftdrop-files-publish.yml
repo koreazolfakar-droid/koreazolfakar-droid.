@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: swiftdrop-files-preview-publish
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   prerelease:
@@ -20,25 +20,31 @@ jobs:
     timeout-minutes: 22
     env:
       GH_TOKEN: ${{ github.token }}
-      VERIFIED_RUN_ID: "38329770608"
-      VERIFIED_HEAD: "8585b644a755523379a1ff965e6f4bffbec09592"
       RELEASE_TAG: "swiftdrop-v0.5.0-alpha-files-preview-20261013"
     steps:
-      - name: Wait for pinned file-browser QA and enforce success
+      - name: Wait for exact commit's file-browser QA and enforce success
         run: |
           set -euo pipefail
           for attempt in $(seq 1 36); do
-            HEAD="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFIED_RUN_ID" --jq '.head_sha')"
-            test "$HEAD" = "$VERIFIED_HEAD" || { echo "::error::Source revision mismatch"; exit 1; }
-            STATUS="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFIED_RUN_ID" --jq '.status')"
-            RESULT="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFIED_RUN_ID" --jq '.conclusion // ""')"
-            echo "QA run: status=$STATUS conclusion=$RESULT"
-            if [ "$STATUS" = completed ]; then
-              test "$RESULT" = success || { echo "::error::QA did not pass. No release published."; exit 1; }
-              break
+            RUN_ID="$(gh run list --repo "$GITHUB_REPOSITORY" \
+              --workflow '.github/workflows/swiftdrop-files-qa.yml' \
+              --branch "$GITHUB_REF_NAME" --limit 30 \
+              --json databaseId,headSha \
+              --jq ".[] | select(.headSha == \"$GITHUB_SHA\") | .databaseId" | head -1)"
+            if [ -z "$RUN_ID" ]; then
+              echo "Waiting for files QA run for $GITHUB_SHA..."
+            else
+              STATUS="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq '.status')"
+              RESULT="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq '.conclusion // ""')"
+              echo "Files QA run $RUN_ID: status=$STATUS conclusion=$RESULT"
+              if [ "$STATUS" = completed ]; then
+                test "$RESULT" = success || { echo "::error::Files QA failed; no release published."; exit 1; }
+                echo "VERIFIED_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+                break
+              fi
             fi
             if [ "$attempt" -eq 36 ]; then
-              echo "::error::QA did not complete within the safe publish window."
+              echo "::error::Matching files QA did not complete in time."
               exit 1
             fi
             sleep 30
@@ -73,6 +79,6 @@ jobs:
           EOF
           gh release create "$RELEASE_TAG" \
             SwiftDrop-0.5.0-alpha-Files-Preview.apk SHA256SUMS.txt \
-            --repo "$GITHUB_REPOSITORY" --target "$VERIFIED_HEAD" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "SwiftDrop Files & Thumbnails — 0.5.0-alpha Preview" \
             --notes-file "$RUNNER_TEMP/preview-notes.md" --prerelease
