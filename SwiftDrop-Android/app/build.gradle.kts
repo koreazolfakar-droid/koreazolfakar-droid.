@@ -35,6 +35,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true; buildConfig = true }
+    // SwiftDrop @build Codex 13/10/2026 Test real lifecycle callbacks with an injected Nearby client.
+    testOptions { unitTests.isIncludeAndroidResources = true }
     bundle { language { enableSplit = false } }
     // SwiftDrop @build Codex 12/10/2026 CI supplies a retained development-only key.
     System.getenv("SWIFTDROP_DEBUG_KEYSTORE")?.let { retainedKey ->
@@ -71,6 +73,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
+    // SwiftDrop @build Codex 13/10/2026 Exercise the unchanged JSON wire codec on the JVM.
+    testImplementation("org.json:json:20250517")
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("org.mockito:mockito-core:5.18.0")
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.06.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

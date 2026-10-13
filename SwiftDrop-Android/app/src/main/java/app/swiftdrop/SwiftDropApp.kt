@@ -60,7 +60,7 @@ fun backDestination(page:String,appsParent:String="home"):String=when(page) {
 }
 
 @Composable
-fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: InstalledAppsController,send: (Array<String>) -> Unit,
+fun SwiftDropApp(manager: TransferController,preferences: AppSettings,apps: InstalledAppsController,send: (Array<String>) -> Unit,
                  receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,
                  mediaPermissionRevision: Int = 0, requestMedia: (MediaKind) -> Unit = {},
                  overlay: @Composable () -> Unit = {}) {
@@ -137,7 +137,7 @@ internal fun SwiftDropLocalizedProviders(
 }
 
 @Composable
-private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsController,settings: SettingsState,dark: Boolean,
+private fun SwiftDropContent(manager: TransferController,apps: InstalledAppsController,settings: SettingsState,dark: Boolean,
     appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit,welcomeDone: () -> Unit,send: (Array<String>) -> Unit,
     receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,
     mediaPermissionRevision: Int,requestMedia: (MediaKind) -> Unit) {
@@ -146,7 +146,11 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
     var chosenFileTab by rememberSaveable { mutableIntStateOf(0) }
     var appsParent by rememberSaveable { mutableStateOf("home") }
     var leaveAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val sessionActive = state.connectedName != null || state.isAdvertising || state.isDiscovering || state.connectingId != null
+    // SwiftDrop @bugfix Codex 13/10/2026 Guard navigation while radios are starting or a receive is saving.
+    val sessionActive = state.sessionState in setOf(SessionState.Advertising, SessionState.Discovering,
+        SessionState.AwaitingApproval, SessionState.Connecting, SessionState.Connected) ||
+        state.progress?.outcome == TransferOutcome.Saving || state.connectedName != null ||
+        state.isAdvertising || state.isDiscovering || state.connectingId != null
     val guardedSend: (Array<String>) -> Unit = { mime ->
         if(sessionActive) leaveAction = { manager.disconnect();send(mime) } else send(mime)
     }
@@ -214,7 +218,7 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                         "discover" -> DiscoveryScreen(state,manager::connect,discover,manager::disconnect,openRecoverySettings)
                         "receive" -> ReceiveScreen(state,receive,manager::disconnect,openRecoverySettings)
                         "transfer" -> TransferScreen(state,{
-                            if(state.progress?.outcome==TransferOutcome.Running) manager.cancelTransfer() else manager.disconnect()
+                            if(state.progress?.outcome in setOf(TransferOutcome.Running, TransferOutcome.Saving)) manager.cancelTransfer() else manager.disconnect()
                         },sendMore={
                             if(sessionActive) leaveAction={manager.disconnect();manager.setPage("files")} else manager.setPage("files")
                         },history={manager.setPage("history")})
