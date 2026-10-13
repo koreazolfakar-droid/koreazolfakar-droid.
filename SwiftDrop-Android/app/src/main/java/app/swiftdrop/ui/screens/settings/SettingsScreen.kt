@@ -1,6 +1,10 @@
 package app.swiftdrop.ui.screens.settings
 
 import android.os.Build
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
@@ -24,6 +28,10 @@ import app.swiftdrop.ui.components.*
 
 @Composable
 fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit) {
+    val context = LocalContext.current
+    val diagnostics = remember(context) { DeveloperDiagnostics.get(context) }
+    var logsEnabled by remember { mutableStateOf(diagnostics.enabled) }
+    var showLogs by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         PageHeading(stringResource(R.string.settings),stringResource(R.string.settings_caption))
         Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
@@ -52,6 +60,35 @@ fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,languag
                 Information(R.drawable.ic_folder,R.string.download_folder,stringResource(if(Build.VERSION.SDK_INT>=29) R.string.storage_modern else R.string.storage_legacy))
                 HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
                 Information(R.drawable.ic_nearby,R.string.engine,stringResource(R.string.engine_value))
+            }
+        }
+        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                Text("Developer Diagnostics", style=MaterialTheme.typography.titleMedium)
+                Text("Local logs only. Keys, passwords and file contents are never recorded.",
+                    style=MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Text("Enable detailed logging", Modifier.weight(1f))
+                    Switch(checked=logsEnabled,onCheckedChange={
+                        logsEnabled=it
+                        diagnostics.setEnabled(it)
+                    })
+                }
+                Button(onClick={showLogs=!showLogs}) { Text(if(showLogs) "Hide logs" else "View logs") }
+                if(showLogs) {
+                    var refresh by remember { mutableIntStateOf(0) }
+                    Text(diagnostics.readText().takeLast(12000).ifBlank { "No events recorded" },
+                        style=MaterialTheme.typography.bodySmall)
+                    OutlinedButton(onClick={refresh++; showLogs=false; showLogs=true}) { Text("Refresh") }
+                }
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick={
+                        val clipboard=context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("SwiftDrop diagnostics",diagnostics.readText()))
+                    }) { Text("Copy logs") }
+                    Button(onClick={runCatching { diagnostics.shareZip() }}) { Text("Share ZIP") }
+                }
+                OutlinedButton(onClick={diagnostics.clear(); showLogs=false}) { Text("Clear logs") }
             }
         }
         Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
