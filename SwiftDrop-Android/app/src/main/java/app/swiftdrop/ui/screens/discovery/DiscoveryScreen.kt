@@ -155,16 +155,8 @@ fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: (
         items(state.selectedFiles,key={it.uri.toString()}) { file ->
             Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
                 Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
-                    val resolver = androidx.compose.ui.platform.LocalContext.current.contentResolver
-                    val mimeType = remember(file.uri) {
-                        runCatching { resolver.getType(file.uri) }.getOrNull()
-                    }
-                    val photo = fileCategory(file.name,mimeType)==FileCategory.Photo
-                    if(photo) Surface(Modifier.size(48.dp),
-                        shape=MaterialTheme.shapes.small) {
-                        app.swiftdrop.ui.screens.files.MediaArt(
-                            file.uri,app.swiftdrop.MediaKind.Photos,Modifier.fillMaxSize())
-                    } else FileTypeBadge(file.name,mimeType=mimeType)
+                    app.swiftdrop.ui.screens.files.FilePreviewBadge(
+                        file.uri,file.name,Modifier.size(48.dp))
                     Column(Modifier.weight(1f)) {
                         Text(file.name,style=MaterialTheme.typography.titleSmall,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         Text(sizeLabel(file.bytes),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
