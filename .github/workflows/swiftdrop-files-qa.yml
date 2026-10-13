@@ -1,13 +1,8 @@
 name: SwiftDrop Files and Thumbnails QA
 
 on:
-  push:
-    branches: [feature/swiftdrop-file-types-thumbnails]
-    paths:
-      - 'SwiftDrop-Android/**'
-      - '.github/workflows/swiftdrop-files-qa.yml'
   pull_request:
-    branches: [feature/swiftdrop-ultra-hotspot]
+    branches: [swiftdrop-android-v0.1-alpha]
     paths:
       - 'SwiftDrop-Android/**'
       - '.github/workflows/swiftdrop-files-qa.yml'
