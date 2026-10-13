@@ -26,9 +26,11 @@ fun FileLibraryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
     appsState: AppsState, refreshApps: () -> Unit, exportApps: (List<ShareableApp>) -> Unit,
     sendSelected: (List<android.net.Uri>) -> Unit, mediaPermissionRevision: Int,
     requestMedia: (app.swiftdrop.MediaKind) -> Unit,initialTab:Int=0,
-    standaloneCategory:Boolean=false) {
+    standaloneCategory:Boolean=false,
+    openDocuments: (() -> Unit)? = null, openStorage: (() -> Unit)? = null) {
     MediaGalleryScreen(choose, apps, appsState, refreshApps, exportApps, sendSelected,
-        mediaPermissionRevision, requestMedia,initialTab,standaloneCategory)
+        mediaPermissionRevision, requestMedia,initialTab,standaloneCategory,
+        openDocuments,openStorage)
 }
 
 // SwiftDrop @tweak Codex 12/10/2026 Real app rows and a reachable persistent selection action.

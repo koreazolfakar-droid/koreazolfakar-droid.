@@ -81,7 +81,8 @@ private fun galleryDisplay(rows: List<LocalMedia>,sort: MediaSort): List<Gallery
 fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
     appsState: AppsState, refreshApps: () -> Unit, exportApps: (List<ShareableApp>) -> Unit,
     sendSelected: (List<Uri>) -> Unit, permissionRevision: Int, requestMedia: (MediaKind) -> Unit,
-    initialTab:Int=0,standaloneCategory:Boolean=false) {
+    initialTab:Int=0,standaloneCategory:Boolean=false,
+    openDocuments: (() -> Unit)? = null, openStorage: (() -> Unit)? = null) {
     var tab by rememberSaveable { mutableIntStateOf(initialTab.coerceIn(0,3)) }
     LaunchedEffect(initialTab) { tab=initialTab.coerceIn(0,3) }
     val galleryStates = rememberSaveableStateHolder()
@@ -161,11 +162,15 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
                     if(index==3)refreshApps()
                 },label={Text(stringResource(label))})
             }
-            AssistChip(onClick={choose(arrayOf("application/pdf","text/*","application/msword",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))},
-                label={Text(stringResource(R.string.documents))})
-            AssistChip(onClick={choose(arrayOf("*/*"))},
-                label={Text(stringResource(R.string.all_files))})
+            AssistChip(onClick={
+                if (openDocuments != null) openDocuments()
+                else choose(arrayOf("application/pdf","text/*","application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+            }, label={Text(stringResource(R.string.documents))})
+            AssistChip(onClick={
+                if (openStorage != null) openStorage()
+                else choose(arrayOf("*/*"))
+            }, label={Text(stringResource(R.string.all_files))})
         }
         Box(Modifier.weight(1f)) {
             if(tab==3) {

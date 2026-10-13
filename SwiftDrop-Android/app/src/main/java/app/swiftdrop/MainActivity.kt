@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
                 discover={withNearbyPermissions(PendingNearbyAction.Discover)},
                 openSettings={startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))},
                  openLocationSettings={startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))},
-                 scanQr={scanReceiverQr()},overlay={
+                 scanQr={scanReceiverQr()},scanUltra={scanUltraQr()},overlay={
             previousCrash?.let { report ->
                 AlertDialog(
                     onDismissRequest = { previousCrash = null; CrashDiagnostics.clear(this@MainActivity) },
@@ -127,15 +127,44 @@ class MainActivity : ComponentActivity() {
             }
     }
 
+    private fun scanUltraQr() {
+        if (manager.state.value.selectedFiles.isEmpty()) {
+            manager.setPage("files")
+            return
+        }
+        val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE).enableAutoZoom().build()
+        GmsBarcodeScanning.getClient(this,options).startScan()
+            .addOnSuccessListener { barcode ->
+                val invite = UltraInvitation.parse(barcode.rawValue)
+                if (invite == null) {
+                    Toast.makeText(this,R.string.ultra_invalid_qr,Toast.LENGTH_LONG).show()
+                } else {
+                    model.pendingUltraInvite = invite
+                    withNearbyPermissions(PendingNearbyAction.UltraSend)
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this,R.string.qr_scan_unavailable,Toast.LENGTH_LONG).show()
+            }
+    }
+
     private fun perform(action: PendingNearbyAction) {
         when(action) {
             PendingNearbyAction.Receive -> manager.advertise()
             PendingNearbyAction.Discover -> manager.discover(manager.state.value.selected)
+            PendingNearbyAction.UltraSend -> model.pendingUltraInvite?.let { manager.beginUltraSend(it) }.also { model.pendingUltraInvite = null }
         }
     }
 
     private fun withNearbyPermissions(action: PendingNearbyAction) {
-        val names = requiredNearbyPermissions(Build.VERSION.SDK_INT)
+        val names = if (action == PendingNearbyAction.UltraSend) {
+            when {
+                Build.VERSION.SDK_INT >= 33 -> listOf(Manifest.permission.NEARBY_WIFI_DEVICES)
+                Build.VERSION.SDK_INT >= 29 -> listOf(Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION)
+                else -> emptyList()
+            }
+        } else requiredNearbyPermissions(Build.VERSION.SDK_INT)
         val missing = names.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty()) {
             perform(action)

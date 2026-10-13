@@ -86,7 +86,7 @@ fun TransferHistoryItem(entry: HistoryEntry) {
         Row(Modifier.fillMaxWidth().heightIn(min=72.dp).padding(12.dp),
             verticalAlignment=Alignment.CenterVertically,
             horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            CategoryBadge(fileIcon(entry.name))
+            FileTypeBadge(entry.name)
             Column(Modifier.weight(1f), verticalArrangement=Arrangement.spacedBy(3.dp)) {
                 Text(entry.name, style=MaterialTheme.typography.titleSmall,
                     maxLines=1, overflow=TextOverflow.Ellipsis)

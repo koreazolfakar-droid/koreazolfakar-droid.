@@ -21,7 +21,11 @@ import com.google.zxing.MultiFormatWriter
 
 /** Session-only QR; the complete barcode remains local and is never uploaded. */
 @Composable
-fun ReceiverQrCard(payload: String) {
+fun ReceiverQrCard(
+    payload: String,
+    title: Int = R.string.qr_receiver_title,
+    hint: Int = R.string.qr_receiver_hint
+) {
     val bitmap = remember(payload) {
         val matrix = MultiFormatWriter().encode(
             payload,BarcodeFormat.QR_CODE,480,480,mapOf(EncodeHintType.MARGIN to 2)
@@ -37,16 +41,16 @@ fun ReceiverQrCard(payload: String) {
         Column(Modifier.fillMaxWidth().padding(18.dp),
             horizontalAlignment=Alignment.CenterHorizontally,
             verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.qr_receiver_title),style=MaterialTheme.typography.titleMedium)
+            Text(stringResource(title),style=MaterialTheme.typography.titleMedium)
             BoxWithConstraints(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
                 val qrSize = (maxWidth - 24.dp).coerceAtMost(240.dp).coerceAtLeast(120.dp)
                 Box(Modifier.background(androidx.compose.ui.graphics.Color.White, RoundedCornerShape(16.dp))
                     .padding(12.dp),contentAlignment=Alignment.Center) {
-                    Image(bitmap,contentDescription=stringResource(R.string.qr_receiver_title),
+                    Image(bitmap,contentDescription=stringResource(title),
                         modifier=Modifier.size(qrSize))
                 }
             }
-            Text(stringResource(R.string.qr_receiver_hint),textAlign=TextAlign.Center,style=MaterialTheme.typography.bodySmall,
+            Text(stringResource(hint),textAlign=TextAlign.Center,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
