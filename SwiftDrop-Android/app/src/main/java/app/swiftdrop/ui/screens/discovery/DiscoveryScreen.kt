@@ -98,12 +98,14 @@ fun ReceiveScreen(
     openRecoverySettings: () -> Unit,
     hotspot: UltraHotspotState = UltraHotspotState(),
     startUltra: () -> Unit = {},
-    stopUltra: () -> Unit = {}
+    stopUltra: () -> Unit = {},
+    transport: UltraLanState = UltraLanState(),
+    inviteQr: String? = null
 ) {
     val report = state.diagnostics
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item { PageHeading(stringResource(R.string.receive_files),stringResource(R.string.receive_caption)) }
-        item { UltraHotspotPanel(hotspot, startUltra, stopUltra) }
+        item { UltraHotspotPanel(hotspot, startUltra, stopUltra, transport, inviteQr) }
         if (hotspot.phase == UltraHotspotPhase.Idle) {
         item { DiscoveryRadar(state.isAdvertising) }
         item { Text(stringResource(when {state.hasError -> R.string.receive_unavailable;state.isAdvertising -> R.string.waiting_sender;else -> R.string.making_visible}),style=MaterialTheme.typography.titleLarge) }
@@ -139,7 +141,8 @@ fun ReceiveScreen(
 }
 
 @Composable
-fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: () -> Unit, scanQr: () -> Unit) {
+fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: () -> Unit,
+    scanQr: () -> Unit, scanUltra: () -> Unit = {}) {
     val known = !state.loadingSelection && state.selectedFiles.size==state.selected.size && state.selectedFiles.all { it.bytes >= 0 }
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item { PageHeading(stringResource(R.string.selection_title),stringResource(R.string.selection_caption)) }
@@ -169,6 +172,10 @@ fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: (
                     AppIcon(R.drawable.ic_qr,tint=LocalContentColor.current)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.qr_scan))
+                }
+                OutlinedButton(scanUltra,Modifier.fillMaxWidth().heightIn(min=48.dp),
+                    enabled=!state.loadingSelection && !state.hasError && state.selectedFiles.isNotEmpty()) {
+                    Text(stringResource(R.string.ultra_scan_qr))
                 }
                 OutlinedButton(chooseAgain,Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(stringResource(R.string.change_selection)) }
             }
