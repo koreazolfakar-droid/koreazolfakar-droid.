@@ -1,0 +1,78 @@
+name: Publish SwiftDrop Files Preview
+
+on:
+  push:
+    branches: [feature/swiftdrop-file-types-thumbnails]
+    paths:
+      - '.github/workflows/swiftdrop-files-publish.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: swiftdrop-files-preview-publish
+  cancel-in-progress: false
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERIFIED_RUN_ID: "38329770608"
+      VERIFIED_HEAD: "8585b644a755523379a1ff965e6f4bffbec09592"
+      RELEASE_TAG: "swiftdrop-v0.5.0-alpha-files-preview-20261013"
+    steps:
+      - name: Wait for pinned file-browser QA and enforce success
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            HEAD="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFIED_RUN_ID" --jq '.head_sha')"
+            test "$HEAD" = "$VERIFIED_HEAD" || { echo "::error::Source revision mismatch"; exit 1; }
+            STATUS="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFIED_RUN_ID" --jq '.status')"
+            RESULT="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFIED_RUN_ID" --jq '.conclusion // ""')"
+            echo "QA run: status=$STATUS conclusion=$RESULT"
+            if [ "$STATUS" = completed ]; then
+              test "$RESULT" = success || { echo "::error::QA did not pass. No release published."; exit 1; }
+              break
+            fi
+            if [ "$attempt" -eq 36 ]; then
+              echo "::error::QA did not complete within the safe publish window."
+              exit 1
+            fi
+            sleep 30
+          done
+      - name: Download exact validated APK artifact
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/files-apk"
+          gh run download "$VERIFIED_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name SwiftDrop-Files-Thumbnails-PREVIEW-APK --dir "$RUNNER_TEMP/files-apk"
+          test -s "$RUNNER_TEMP/files-apk/app-debug.apk"
+          cp "$RUNNER_TEMP/files-apk/app-debug.apk" SwiftDrop-0.5.0-alpha-Files-Preview.apk
+          sha256sum SwiftDrop-0.5.0-alpha-Files-Preview.apk | tee SHA256SUMS.txt
+      - name: Publish permanent pre-release only after CI success
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release tag already exists, refusing to silently overwrite."
+            exit 1
+          fi
+          cat > "$RUNNER_TEMP/preview-notes.md" <<'EOF'
+          SwiftDrop Files & Thumbnails — DEVELOPMENT PREVIEW (not a stable release).
+
+          - Green Excel/Sheets, red PDF, blue Word, orange PowerPoint, plus typed badges for archives, media and APK.
+          - Functional native Documents and All Files categories, file-type filters, and correct back navigation.
+          - Safer fallback thumbnails for photos, HEIC/AVIF and unsupported provider thumbnails.
+          - Existing Ultra local hotspot and encrypted LAN preview are preserved.
+          - CI-gated build: unit tests, lint, Android 16 Compose UI tests, and same-signing-key comparison against official 0.5.0-alpha.
+          - Requires two real phones for Ultra Wi-Fi transfer QA. Test with noncritical files.
+
+          Package app.swiftdrop; versionCode 23, versionName 0.5.0-alpha; original development signing identity. This prerelease can install over the same-signature earlier build but retains its version number.
+          EOF
+          gh release create "$RELEASE_TAG" \
+            SwiftDrop-0.5.0-alpha-Files-Preview.apk SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$VERIFIED_HEAD" \
+            --title "SwiftDrop Files & Thumbnails — 0.5.0-alpha Preview" \
+            --notes-file "$RUNNER_TEMP/preview-notes.md" --prerelease
