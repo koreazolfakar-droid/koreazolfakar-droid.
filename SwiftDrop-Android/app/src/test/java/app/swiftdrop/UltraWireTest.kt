@@ -109,4 +109,36 @@ class UltraWireTest {
             c.send(18,byteArrayOf(1,2,3))
         })
     }
+
+    @Test fun corruptedChecksumRollsBackAndNeverCommits() {
+        val key = UltraWire.newSecret()
+        val rolledBack = java.util.concurrent.atomic.AtomicBoolean()
+        val finished = socketPair(key,host={ channel ->
+            try {
+                UltraFileWire.receive(channel,
+                    allow={true},
+                    createOutput={ByteArrayOutputStream()},
+                    commit={fail("Corrupt data must never be published")},
+                    rollback={rolledBack.set(true)})
+                false
+            } catch (_: IllegalArgumentException) {
+                true
+            }
+        },sender={ channel ->
+            val offer = java.io.ByteArrayOutputStream().also { buffer ->
+                java.io.DataOutputStream(buffer).use { stream ->
+                    stream.writeShort(5)
+                    stream.write("a.txt".toByteArray())
+                    stream.writeLong(5)
+                }
+            }.toByteArray()
+            channel.send(UltraFileWire.OFFER,offer)
+            assertEquals(UltraFileWire.ACCEPT,channel.read().type)
+            channel.send(UltraFileWire.BLOCK,"hello".toByteArray())
+            channel.send(UltraFileWire.END,ByteArray(32)) // deliberate bad SHA-256
+            assertEquals(UltraFileWire.FAILURE,channel.read().type)
+        })
+        assertTrue(finished)
+        assertTrue(rolledBack.get())
+    }
 }
