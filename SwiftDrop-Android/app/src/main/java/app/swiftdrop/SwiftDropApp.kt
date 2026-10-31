@@ -227,7 +227,7 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                         "receive" -> ReceiveScreen(state,receive,manager::disconnect,openRecoverySettings,
                             ultra,startUltraHost,manager::stopUltraHotspot,
                             lan,if(ultra.phase==UltraHotspotPhase.Active)
-                                manager.ultraLan.invitation(ultra.ssid,ultra.passphrase) else null)
+                                manager.ultraLan.invitation(ultra.ssid,ultra.passphrase,ultra.security) else null)
                         "ultra_transfer" -> UltraTransferScreen(lan,manager::disconnect)
                         "transfer" -> TransferScreen(state,{
                             if(state.progress?.outcome==TransferOutcome.Running) manager.cancelTransfer() else manager.disconnect()
