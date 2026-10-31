@@ -129,7 +129,7 @@ private fun ConnectionStatus(state:TransferUiState,error:String,action:()->Unit)
         state.isAdvertising -> stringResource(R.string.waiting_sender)
         else -> stringResource(R.string.home_ready_to_share)
     }
-    Surface(onClick=action,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+    Surface(onClick=action,shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surface) {
         Row(Modifier.fillMaxWidth().heightIn(min=68.dp).padding(12.dp),
             verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             IconBadge(if(state.hasError) R.drawable.ic_error else R.drawable.ic_nearby)
@@ -156,11 +156,11 @@ private fun ConnectionStatus(state:TransferUiState,error:String,action:()->Unit)
 private fun TransferAction(@DrawableRes icon:Int,@StringRes title:Int,@StringRes caption:Int,
     action:()->Unit,modifier:Modifier,receiving:Boolean=false,compact:Boolean=false,busy:Boolean=false) {
     val source=remember { MutableInteractionSource() }
-    val background=if(receiving) MaterialTheme.colorScheme.secondaryContainer else SwiftDropDesign.Blue
-    val ink=if(receiving) MaterialTheme.colorScheme.onSecondaryContainer else Color.White
+    val background=if(receiving) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+    val ink=if(receiving) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
     Card(onClick=action,modifier=modifier.then(Modifier.pressScale(source)),interactionSource=source,
-        shape=MaterialTheme.shapes.medium,colors=CardDefaults.cardColors(containerColor=background)) {
-        Column(Modifier.fillMaxWidth().heightIn(min=if(compact) 124.dp else 152.dp).padding(16.dp),
+        shape=MaterialTheme.shapes.extraLarge,colors=CardDefaults.cardColors(containerColor=background)) {
+        Column(Modifier.fillMaxWidth().heightIn(min=if(compact) 132.dp else 164.dp).padding(18.dp),
             verticalArrangement=Arrangement.spacedBy(14.dp)) {
             Surface(shape=CircleShape,color=ink.copy(alpha=.10f)) {
                 Box(Modifier.size(40.dp),contentAlignment=Alignment.Center) {
