@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -89,11 +90,34 @@ fun Modifier.pressScale(source: MutableInteractionSource): Modifier {
 
 @Composable
 fun SectionHeading(title: String, actionLabel: String? = null, action: (() -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth().heightIn(min=48.dp), verticalAlignment=Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f), style=MaterialTheme.typography.titleLarge)
-        if(action!=null && actionLabel!=null) TextButton(action) {
-            Text(actionLabel)
-            AppIcon(R.drawable.ic_chevron, Modifier.size(16.dp))
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val compact = maxWidth < 300.dp || LocalDensity.current.fontScale >= 1.45f
+        if (compact) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge)
+                if (action != null && actionLabel != null) {
+                    TextButton(action, modifier = Modifier.align(Alignment.End)) {
+                        Text(actionLabel)
+                        Spacer(Modifier.width(4.dp))
+                        AppIcon(R.drawable.ic_chevron, Modifier.size(16.dp))
+                    }
+                }
+            }
+        } else {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                if (action != null && actionLabel != null) {
+                    TextButton(action) {
+                        Text(actionLabel)
+                        Spacer(Modifier.width(4.dp))
+                        AppIcon(R.drawable.ic_chevron, Modifier.size(16.dp))
+                    }
+                }
+            }
         }
     }
 }
