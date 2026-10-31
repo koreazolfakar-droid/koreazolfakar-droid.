@@ -129,10 +129,12 @@ class UltraLanTransferManager(
                     remote.soTimeout = 75_000
                     remote.sendBufferSize = 512 * 1024
                     remote.receiveBufferSize = 512 * 1024
+                    // Must outlive the receive try/catch: ACK may fail *after*
+                    // MediaStore has already published the verified file.
+                    var committed = false
                     try {
                         val channel=UltraWire.host(remote.getInputStream(),remote.getOutputStream(),key)
                         var sink: PendingSink? = null
-                        var committed = false
                         val accepted = UltraFileWire.receive(
                             channel,
                             allow = { file ->
