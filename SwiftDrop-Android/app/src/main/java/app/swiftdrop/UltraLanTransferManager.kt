@@ -127,6 +127,8 @@ class UltraLanTransferManager(
                 listener.accept().use { remote ->
                     transfer = remote
                     remote.soTimeout = 75_000
+                    remote.sendBufferSize = 512 * 1024
+                    remote.receiveBufferSize = 512 * 1024
                     try {
                         val channel=UltraWire.host(remote.getInputStream(),remote.getOutputStream(),key)
                         var sink: PendingSink? = null
@@ -135,7 +137,9 @@ class UltraLanTransferManager(
                             allow = { file ->
                                 val future = CompletableFuture<Boolean>()
                                 pendingApproval = future
-                                state.update { it.copy(pending = UltraPendingFile(file.name,file.bytes)) }
+                                state.update { it.copy(
+                                    pending = UltraPendingFile(file.name,file.bytes), error = null
+                                ) }
                                 try { future.get(60,TimeUnit.SECONDS) }
                                 catch (_: Exception) { false }
                                 finally {
@@ -162,9 +166,17 @@ class UltraLanTransferManager(
                             }
                         )
                         if (!accepted) state.update { it.copy(phase = UltraLanPhase.Waiting) }
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        // Surface the actual receive failure without stopping the
+                        // hotspot listener. Failed partial sinks are rolled back
+                        // inside UltraFileWire.receive; a new peer may retry.
                         if (version.get() == session) state.update {
-                            it.copy(phase = UltraLanPhase.Waiting,pending=null)
+                            it.copy(
+                                phase = UltraLanPhase.Waiting,
+                                pending = null,
+                                error = "Ultra receive failed: " + e.javaClass.simpleName,
+                                progress = it.progress?.copy(outcome = TransferOutcome.Failed)
+                            )
                         }
                     } finally { if (transfer === remote) transfer = null }
                 }
@@ -255,6 +267,8 @@ class UltraLanTransferManager(
                 network.socketFactory.createSocket(host,invite.port).use { socket ->
                     transfer=socket
                     socket.soTimeout=75_000
+                    socket.sendBufferSize = 512 * 1024
+                    socket.receiveBufferSize = 512 * 1024
                     val channel=UltraWire.client(socket.getInputStream(),socket.getOutputStream(),invite.secret)
                     state.update { it.copy(phase=UltraLanPhase.Sending,
                         progress=TransferProgress(file.name,"Sending",0,file.bytes)) }
@@ -285,22 +299,20 @@ class UltraLanTransferManager(
         val nonce=ByteArray(16).also(SecureRandom()::nextBytes)
         val request="SDUP1".toByteArray()+nonce+
             UltraWire.discoveryProof(invite.secret,"probe",nonce)
-        val destinations=mutableSetOf<InetAddress>()
-        destinations.add(InetAddress.getByName("255.255.255.255"))
-        cm.getLinkProperties(net)?.linkAddresses?.forEach { link ->
-            val ip=link.address as? Inet4Address ?: return@forEach
-            val prefix=link.prefixLength
-            if (prefix !in 1..30) return@forEach
-            val bytes=ip.address
-            val mask=-1 shl (32-prefix)
-            val n=((bytes[0].toInt() and 255) shl 24) or
-                ((bytes[1].toInt() and 255) shl 16) or
-                ((bytes[2].toInt() and 255) shl 8) or (bytes[3].toInt() and 255)
-            val broadcast=n or mask.inv()
-            destinations.add(InetAddress.getByAddress(ByteArray(4) { i ->
-                (broadcast ushr (24-8*i)).toByte()
-            }))
+        // Android may deliver onAvailable before DHCP routes/link addresses.
+        // Wait briefly on the worker thread so the hotspot gateway can be
+        // contacted directly; broadcast-only discovery fails on some phones.
+        var link = cm.getLinkProperties(net)
+        for (attempt in 0 until 12) {
+            if (link?.routes?.any { it.gateway is Inet4Address } == true) break
+            if (session != version.get()) throw IllegalStateException("Transfer cancelled")
+            Thread.sleep(150)
+            link = cm.getLinkProperties(net)
         }
+        val destinations = UltraDiscoveryTargets.candidates(
+            link?.routes?.mapNotNull { it.gateway as? Inet4Address } ?: emptyList(),
+            link?.linkAddresses?.map { it.address to it.prefixLength } ?: emptyList()
+        )
         DatagramSocket().use { udpClient ->
             net.bindSocket(udpClient)
             udpClient.broadcast=true
@@ -337,7 +349,12 @@ class UltraLanTransferManager(
 
     private fun createSink(file: UltraFileWire.Offer): PendingSink {
         // Reserve disk capacity before creating an output and never expose partial downloads.
-        val space=android.os.StatFs(context.filesDir.absolutePath).availableBytes
+        // MediaStore Downloads is on shared storage, which may not have the
+        // same free space as app-private internal storage on every device.
+        val external = context.getExternalFilesDir(null)
+        val space = android.os.StatFs(
+            (external ?: context.filesDir).absolutePath
+        ).availableBytes
         require(file.bytes <= space - minOf(64L*1024*1024,space/10)) { "Insufficient storage" }
         val name=SafeFileName.normalize(file.name)
         if (Build.VERSION.SDK_INT>=29) {
