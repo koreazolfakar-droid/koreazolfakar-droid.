@@ -14,7 +14,7 @@ internal object UltraDiscoveryTargets {
         addresses: List<Pair<InetAddress, Int>>
     ): List<InetAddress> {
         val result = LinkedHashSet<InetAddress>()
-        gateways.filterIsInstance<Inet4Address>().forEach(result::add)
+        gateways.filterIsInstance<Inet4Address>().forEach { result.add(it) }
         addresses.forEach { (address, prefix) ->
             val ipv4 = address as? Inet4Address ?: return@forEach
             if (prefix !in 1..30) return@forEach
