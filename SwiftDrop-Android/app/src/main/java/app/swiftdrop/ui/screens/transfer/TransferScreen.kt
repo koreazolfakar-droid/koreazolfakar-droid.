@@ -70,34 +70,59 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
             }
         }
 
-        Box(Modifier.size(152.dp),contentAlignment=Alignment.Center) {
-            if(p==null || (p.total <= 0 && !terminal)) {
-                CircularProgressIndicator(Modifier.fillMaxSize().padding(9.dp),strokeWidth=7.dp)
-            } else {
-                CircularProgressIndicator(progress={progress},modifier=Modifier.fillMaxSize().padding(9.dp),
-                    strokeWidth=7.dp,
-                    color=if(failed) MaterialTheme.colorScheme.error else if(complete) success else MaterialTheme.colorScheme.primary,
-                    trackColor=MaterialTheme.colorScheme.primaryContainer)
-            }
-            if(complete) {
-                Surface(shape=androidx.compose.foundation.shape.CircleShape,
-                    color=MaterialTheme.colorScheme.tertiaryContainer) {
-                    AppIcon(R.drawable.ic_check,Modifier.padding(16.dp).size(44.dp),
-                        description=stringResource(R.string.complete),tint=success)
-                }
-            } else {
-                Column(horizontalAlignment=Alignment.CenterHorizontally) {
-                    Text(if(p!=null && p.total>0) "${p.percent}%" else "—",
-                        style=MaterialTheme.typography.headlineLarge)
-                    Text(stringResource(if(p!=null && p.total>0) R.string.per_file else R.string.measuring),
-                        style=MaterialTheme.typography.labelSmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+        // SwiftMotion: the orbit reads the transfer state; only an indeterminate wait animates.
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    stringResource(status),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = if (failed) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                SignalOrbit(
+                    fraction = if (complete) 1f else if (p != null && p.total > 0) progress else null,
+                    active = !terminal,
+                    complete = complete,
+                    failed = failed,
+                    modifier = Modifier.size(172.dp)
+                ) {
+                    if (complete) {
+                        Surface(
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            AppIcon(
+                                R.drawable.ic_check,
+                                Modifier.padding(14.dp).size(42.dp),
+                                description = stringResource(R.string.complete),
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                if (p != null && p.total > 0) "${p.percent}%" else "—",
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                stringResource(if (p != null && p.total > 0) R.string.per_file else R.string.measuring),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
                 }
             }
         }
-
-        Text(stringResource(status),style=MaterialTheme.typography.titleLarge,
-            color=if(failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
 
         Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
