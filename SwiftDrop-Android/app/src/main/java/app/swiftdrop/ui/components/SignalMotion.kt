@@ -16,6 +16,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import app.swiftdrop.ui.theme.swiftMotionDurationMillis
 
 /**
@@ -52,7 +55,16 @@ fun SignalOrbit(
     val trace = colors.secondary
     val track = colors.outlineVariant
     val knownProgress = fraction?.coerceIn(0f, 1f)
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    val accessibleProgress = if (knownProgress != null || active) {
+        Modifier.semantics {
+            progressBarRangeInfo = if (knownProgress != null) {
+                ProgressBarRangeInfo(knownProgress, 0f..1f)
+            } else {
+                ProgressBarRangeInfo.Indeterminate
+            }
+        }
+    } else Modifier
+    Box(modifier = modifier.then(accessibleProgress), contentAlignment = Alignment.Center) {
         Canvas(Modifier.matchParentSize()) {
             val width = 9.dp.toPx()
             val radius = (size.minDimension - width) / 2f - 6.dp.toPx()
