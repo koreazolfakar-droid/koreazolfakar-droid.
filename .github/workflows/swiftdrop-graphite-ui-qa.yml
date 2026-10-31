@@ -1,0 +1,62 @@
+name: SwiftDrop Graphite v2 UI QA
+
+on:
+  push:
+    branches: [design/swiftdrop-graphite-v2]
+    paths:
+      - 'SwiftDrop-Android/**'
+      - '.github/workflows/swiftdrop-graphite-ui-qa.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: swiftdrop-graphite-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: SwiftDrop-Android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK packages
+        run: |
+          SDKMGR="$(command -v sdkmanager || find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f -print -quit)"
+          test -n "$SDKMGR"
+          "$SDKMGR" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Validate Kotlin, Compose and UI code
+        run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Verify app package identity
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -1 |
+            grep -F "package: name='app.swiftdrop' versionCode='23' versionName='0.5.0-alpha'"
+      - name: Save internal visual review build only
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftDrop-Graphite-V2-UNTRUSTED-SIGNATURE-PREVIEW
+          path: SwiftDrop-Android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+      - name: Keep failure reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftDrop-Graphite-V2-Reports
+          path: |
+            SwiftDrop-Android/app/build/reports
+            SwiftDrop-Android/app/build/test-results
+          if-no-files-found: warn
+          retention-days: 7
