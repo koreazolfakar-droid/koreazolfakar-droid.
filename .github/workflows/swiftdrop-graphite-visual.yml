@@ -43,7 +43,7 @@ jobs:
           emulator-boot-timeout: 180
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 3072
           script: |
-            set -euo pipefail
+            set -eu
             APK=SwiftDrop-Android/app/build/outputs/apk/debug/app-debug.apk
             adb install -r "$APK"
             adb shell run-as app.swiftdrop mkdir -p shared_prefs
