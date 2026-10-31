@@ -1,0 +1,111 @@
+name: Publish SwiftDrop Ultra Reliability TEST-ONLY APK
+
+on:
+  push:
+    branches:
+      - feature/swiftdrop-file-types-thumbnails
+    paths:
+      - '.github/workflows/swiftdrop-ultra-test-preview-publish.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: swiftdrop-ultra-test-preview-20261031
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/feature/swiftdrop-file-types-thumbnails'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+      QA_RUN: "41231204028"
+      QA_SOURCE: "c8c6db73fd76bfa70f99837392472d764966dd6f"
+      RELEASE_TAG: "swiftdrop-ultra-reliability-test-20261031"
+    steps:
+      - name: Verify exact previously tested source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_tree() {
+            local root
+            root="$(gh api "repos/$GITHUB_REPOSITORY/commits/$1" --jq '.commit.tree.sha')"
+            gh api "repos/$GITHUB_REPOSITORY/git/trees/$root" \
+              --jq '.tree[] | select(.path == "SwiftDrop-Android") | .sha'
+          }
+          TESTED="$(source_tree "$QA_SOURCE")"
+          CURRENT="$(source_tree "$GITHUB_SHA")"
+          test -n "$TESTED"
+          test "$TESTED" = "$CURRENT"
+          echo "Android source tree exactly equals tested source: $TESTED"
+
+      - name: Confirm SHA of successful Unit Test / Lint / APK build
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QA_RUN" --jq .head_sha)"
+          CONCLUSION="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QA_RUN" --jq .conclusion)"
+          test "$SOURCE" = "$QA_SOURCE"
+          test "$CONCLUSION" = success
+
+      - name: Download QA artifact without rebuilding or changing its signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ultra-tested"
+          gh run download "$QA_RUN" --repo "$GITHUB_REPOSITORY" \
+            --name SwiftDrop-Ultra-UNTRUSTED-SIGNER-QA-ONLY \
+            --dir "$RUNNER_TEMP/ultra-tested"
+          test -s "$RUNNER_TEMP/ultra-tested/app-debug.apk"
+          cp "$RUNNER_TEMP/ultra-tested/app-debug.apk" SwiftDrop-Ultra-Reliability-TEST-ONLY.apk
+          sha256sum SwiftDrop-Ultra-Reliability-TEST-ONLY.apk > SHA256SUMS.txt
+
+      - name: Publish separate prerelease (never replace production)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Prerelease tag already exists; refusing overwrite"
+            exit 1
+          fi
+          cat > "$RUNNER_TEMP/ultra-release-notes.md" <<'EOF'
+          # SwiftDrop Ultra Wi-Fi reliability — TEST-ONLY build
+
+          **Development preview, not an in-place upgrade.**
+          This APK uses the GitHub Actions test signing identity, NOT the missing
+          original developer keystore used by SwiftDrop 0.5.0-alpha. Android may
+          reject installing it over the previous APK. Do not uninstall your
+          current SwiftDrop just to try this version; uninstalling may delete
+          app-private data. Prefer a spare phone for testing.
+
+          Changes:
+          - Ultra Hotspot runtime permission path for Android 8–16.
+          - Read hotspot WPA2/WPA3 security type and transmit it in the QR,
+            retaining compatibility with existing WPA2 QR invitations.
+          - Prefer Wi-Fi gateway discovery before limited broadcast fallback,
+            and include normal ACCESS_NETWORK_STATE permission.
+          - Faster encrypted transport code path through fewer buffer copies,
+            reusable AES-GCM instances, and larger socket buffers.
+          - Preserve a verified committed file when the sender does not receive
+            the final acknowledgement. Do not automatically retry duplicates.
+          - Clearer receive errors and storage-capacity handling.
+
+          Tests: matching source passed Android JUnit unit tests, Android Lint,
+          debug APK compilation and androidTest compilation on GitHub Actions.
+          JVM loopback test uses encrypted 8MiB data, but cannot certify Wi-Fi
+          transfer speed. Two-physical-phone Ultra interoperability tests are
+          still outstanding; exact-once retransmission deduplication is not
+          claimed.
+
+          Package identity remains app.swiftdrop, versionCode 23,
+          versionName 0.5.0-alpha; signing differs from the installed release.
+          EOF
+          gh release create "$RELEASE_TAG" \
+            SwiftDrop-Ultra-Reliability-TEST-ONLY.apk SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "SwiftDrop Ultra Reliability — TEST ONLY (different signature)" \
+            --notes-file "$RUNNER_TEMP/ultra-release-notes.md" --prerelease
