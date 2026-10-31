@@ -110,6 +110,42 @@ class UltraWireTest {
         assertArrayEquals(original,received.toByteArray())
     }
 
+    @Test fun lostFinalAcknowledgementNeverRollsBackCommittedFile() {
+        val key = UltraWire.newSecret()
+        val commits = java.util.concurrent.atomic.AtomicInteger(0)
+        val rollbacks = java.util.concurrent.atomic.AtomicInteger(0)
+        val payload = "verified bytes".toByteArray()
+        val received = ByteArrayOutputStream()
+        val receiverDetectedLostAck = socketPair(key,host={ channel ->
+            try {
+                UltraFileWire.receive(channel,
+                    allow={true},
+                    createOutput={received},
+                    commit={commits.incrementAndGet()},
+                    rollback={rollbacks.incrementAndGet()},
+                    acknowledge={throw IOException("Simulated lost final ACK")}
+                )
+                false
+            } catch (expected: IOException) {
+                true
+            }
+        },sender={ channel ->
+            try {
+                UltraFileWire.send(
+                    channel,UltraFileWire.Offer("verified.txt",payload.size.toLong()),
+                    payload.inputStream()
+                )
+            } catch (_: IOException) {
+                // Receiver has saved the file; the sender must not treat
+                // the missing ACK as proof that the file was rolled back.
+            }
+        })
+        assertTrue(receiverDetectedLostAck)
+        assertArrayEquals(payload, received.toByteArray())
+        assertEquals(1, commits.get())
+        assertEquals(0, rollbacks.get())
+    }
+
     @Test fun denialReturnsFalseAndNeverCreatesFile() {
         val key = UltraWire.newSecret()
         val result = socketPair(key,host={ c ->
