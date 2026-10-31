@@ -32,6 +32,7 @@ import app.swiftdrop.R
 import app.swiftdrop.ui.components.AppIcon
 import app.swiftdrop.ui.components.CategoryBadge
 import app.swiftdrop.ui.components.sizeLabel
+import app.swiftdrop.ui.theme.swiftMotionDurationMillis
 import app.swiftdrop.music.cleanMusicTitle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -50,7 +51,8 @@ fun formatMediaDuration(durationMs: Long): String {
 @Composable
 internal fun PhotoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit,
     selectionMode:Boolean=false) {
-    val scale by animateFloatAsState(if(checked) .96f else 1f,tween(210),label="SwiftMotion photo selection")
+    val duration = swiftMotionDurationMillis(210)
+    val scale by animateFloatAsState(if(checked) .96f else 1f,tween(duration),label="SwiftMotion photo selection")
     Card(Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer(scaleX=scale,scaleY=scale)
         .semantics { contentDescription=item.name }
         .combinedClickable(onClick=onOpen,onLongClick=onToggle),
@@ -71,7 +73,8 @@ internal fun PhotoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle
 @Composable
 internal fun VideoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit,
     selectionMode:Boolean=false) {
-    val scale by animateFloatAsState(if(checked) .97f else 1f,tween(210),label="SwiftMotion video selection")
+    val duration = swiftMotionDurationMillis(210)
+    val scale by animateFloatAsState(if(checked) .97f else 1f,tween(duration),label="SwiftMotion video selection")
     Card(Modifier.fillMaxWidth().graphicsLayer(scaleX=scale,scaleY=scale)
         .semantics { contentDescription=item.name }
         .combinedClickable(onClick=onOpen,onLongClick=onToggle),
@@ -105,9 +108,10 @@ internal fun VideoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MusicRow(item:LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit,onPlay:()->Unit) {
+    val duration = swiftMotionDurationMillis(210)
     val tone by animateColorAsState(
         if(checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        animationSpec=tween(210),label="SwiftMotion music selection"
+        animationSpec=tween(duration),label="SwiftMotion music selection"
     )
     Surface(shape=MaterialTheme.shapes.medium,color=tone) {
         Row(Modifier.fillMaxWidth().heightIn(min=66.dp).padding(horizontal=8.dp,vertical=7.dp),
