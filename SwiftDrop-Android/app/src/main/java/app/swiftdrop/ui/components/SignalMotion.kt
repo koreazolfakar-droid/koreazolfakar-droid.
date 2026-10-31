@@ -1,6 +1,5 @@
 package app.swiftdrop.ui.components
 
-import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -11,14 +10,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import app.swiftdrop.ui.theme.swiftMotionDurationMillis
 
 /**
  * SwiftMotion's signal-path motif: orbit for discovery and measured ring for transfer.
@@ -34,14 +32,7 @@ fun SignalOrbit(
     failed: Boolean = false,
     content: @Composable BoxScope.() -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val motionEnabled = remember(context) {
-        runCatching {
-            Settings.Global.getFloat(
-                context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f
-            ) > 0f
-        }.getOrDefault(true)
-    }
+    val motionEnabled = swiftMotionDurationMillis() > 0
     val turn = if (active && fraction == null && motionEnabled) {
         val transition = rememberInfiniteTransition(label = "SwiftMotion search")
         val angle by transition.animateFloat(
