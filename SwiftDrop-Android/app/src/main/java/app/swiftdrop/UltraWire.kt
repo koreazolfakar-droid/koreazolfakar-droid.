@@ -99,6 +99,12 @@ internal object UltraWire {
     ) {
         private var readSequence = 0L
         private var writeSequence = 0L
+        // Re-use the crypto engines and immutable keys between bounded frames.
+        // Re-initialise GCM with a unique sequence IV for each frame as before.
+        private val encryptCipher = Cipher.getInstance("AES/GCM/NoPadding")
+        private val decryptCipher = Cipher.getInstance("AES/GCM/NoPadding")
+        private val encryptKey = SecretKeySpec(writeKey, "AES")
+        private val decryptKey = SecretKeySpec(readKey, "AES")
 
         private fun iv(sequence: Long): ByteArray {
             require(sequence >= 0)
@@ -108,17 +114,16 @@ internal object UltraWire {
         }
 
         @Synchronized
-        fun send(type: Int, payload: ByteArray = ByteArray(0)) {
+        fun send(type: Int, payload: ByteArray = ByteArray(0), length: Int = payload.size) {
             require(type in 1..255)
-            require(payload.size <= CHUNK) { "Frame too large" }
+            require(length in 0..payload.size && length <= CHUNK) { "Frame too large" }
             check(writeSequence != Long.MAX_VALUE) { "Sequence exhausted" }
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.ENCRYPT_MODE,SecretKeySpec(writeKey,"AES"),
+            encryptCipher.init(Cipher.ENCRYPT_MODE,encryptKey,
                 GCMParameterSpec(128,iv(writeSequence++)))
-            val plain = ByteArray(payload.size+1)
+            val plain = ByteArray(length+1)
             plain[0] = type.toByte()
-            payload.copyInto(plain,1)
-            val encrypted = cipher.doFinal(plain)
+            payload.copyInto(plain,1,0,length)
+            val encrypted = encryptCipher.doFinal(plain)
             output.writeInt(encrypted.size)
             output.write(encrypted)
             output.flush()
@@ -131,10 +136,9 @@ internal object UltraWire {
             require(size in 17..MAX_FRAME) { "Invalid encrypted frame size" }
             val sealed = ByteArray(size)
             input.readFully(sealed)
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.DECRYPT_MODE,SecretKeySpec(readKey,"AES"),
+            decryptCipher.init(Cipher.DECRYPT_MODE,decryptKey,
                 GCMParameterSpec(128,iv(readSequence++)))
-            val plain = cipher.doFinal(sealed)
+            val plain = decryptCipher.doFinal(sealed)
             require(plain.isNotEmpty())
             return Frame(plain[0].toInt() and 255, plain.copyOfRange(1,plain.size))
         }
@@ -202,7 +206,7 @@ internal object UltraFileWire {
             val read = input.read(buffer,0,minOf(buffer.size.toLong(),remaining).toInt())
             require(read > 0) { "Source file ended before its declared size" }
             digest.update(buffer,0,read)
-            channel.send(BLOCK,buffer.copyOf(read))
+            channel.send(BLOCK,buffer,read)
             remaining -= read
             done += read
             onProgress(done)
@@ -226,7 +230,9 @@ internal object UltraFileWire {
         createOutput: (Offer) -> OutputStream,
         commit: (Offer) -> Unit,
         rollback: (Offer) -> Unit,
-        onProgress: (Long, Long) -> Unit = { _,_ -> }
+        onProgress: (Long, Long) -> Unit = { _,_ -> },
+        // Injectable only for deterministic ACK-loss tests; production sends COMPLETE.
+        acknowledge: (UltraWire.Channel) -> Unit = { it.send(COMPLETE) }
     ): Boolean {
         val first = channel.read()
         requireType(first,OFFER)
@@ -236,6 +242,7 @@ internal object UltraFileWire {
             return false
         }
         var created = false
+        var committed = false
         try {
             val target = createOutput(offer)
             created = true
@@ -268,11 +275,16 @@ internal object UltraFileWire {
                 output.flush()
             }
             commit(offer)
-            channel.send(COMPLETE)
+            committed = true
+            // Once MediaStore has published the verified file, a lost final
+            // acknowledgement must NEVER delete it or signal a false rollback.
+            acknowledge(channel)
             return true
         } catch (e: Exception) {
-            if (created) rollback(offer)
-            runCatching { channel.send(FAILURE) }
+            if (!committed) {
+                if (created) runCatching { rollback(offer) }
+                runCatching { channel.send(FAILURE) }
+            }
             throw e
         }
     }

@@ -2,6 +2,7 @@ package app.swiftdrop
 
 import android.content.Context
 import android.net.wifi.WifiManager
+import android.net.wifi.SoftApConfiguration
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -18,6 +19,7 @@ data class UltraHotspotState(
     val phase: UltraHotspotPhase = UltraHotspotPhase.Idle,
     val ssid: String = "",
     val passphrase: String = "",
+    val security: UltraWifiSecurity = UltraWifiSecurity.WPA2,
     val failureReason: Int? = null
 )
 
@@ -51,7 +53,8 @@ class UltraHotspotController(context: Context) {
                     state.value = UltraHotspotState(
                         phase = UltraHotspotPhase.Active,
                         ssid = credentials.first,
-                        passphrase = credentials.second
+                        passphrase = credentials.second,
+                        security = credentials.third
                     )
                 }
 
@@ -82,18 +85,27 @@ class UltraHotspotController(context: Context) {
     }
 
     @Suppress("DEPRECATION")
-    private fun credentials(lease: WifiManager.LocalOnlyHotspotReservation): Pair<String, String>? {
+    private fun credentials(lease: WifiManager.LocalOnlyHotspotReservation): Triple<String, String, UltraWifiSecurity>? {
         val ssid: String?
         val password: String?
+        val security: UltraWifiSecurity
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            ssid = lease.softApConfiguration.ssid
-            password = lease.softApConfiguration.passphrase
+            val ap = lease.softApConfiguration
+            ssid = ap.ssid
+            password = ap.passphrase
+            security = when (ap.securityType) {
+                SoftApConfiguration.SECURITY_TYPE_WPA2_PSK,
+                SoftApConfiguration.SECURITY_TYPE_WPA3_SAE_TRANSITION -> UltraWifiSecurity.WPA2
+                SoftApConfiguration.SECURITY_TYPE_WPA3_SAE -> UltraWifiSecurity.WPA3
+                else -> return null // Unsupported or unauthenticated hotspot
+            }
         } else {
             ssid = lease.wifiConfiguration?.SSID?.trim('"')
             password = lease.wifiConfiguration?.preSharedKey?.trim('"')
+            security = UltraWifiSecurity.WPA2
         }
         if (ssid.isNullOrBlank() || password.isNullOrBlank()) return null
-        return ssid to password
+        return Triple(ssid, password, security)
     }
 
     fun stop() {

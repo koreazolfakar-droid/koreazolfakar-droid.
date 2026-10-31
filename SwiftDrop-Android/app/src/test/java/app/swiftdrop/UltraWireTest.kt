@@ -54,6 +54,43 @@ class UltraWireTest {
         assertEquals(42,reply)
     }
 
+    @Test fun reusedFrameBufferDoesNotLeakStaleTailBytes() {
+        val key = UltraWire.newSecret()
+        socketPair(key, host={ channel ->
+            val frame=channel.read()
+            assertEquals(UltraFileWire.BLOCK, frame.type)
+            assertArrayEquals(byteArrayOf(1,2,3), frame.data)
+        }, sender={ channel ->
+            val buffer=ByteArray(UltraWire.CHUNK) { 55.toByte() }
+            buffer[0]=1
+            buffer[1]=2
+            buffer[2]=3
+            channel.send(UltraFileWire.BLOCK,buffer,3)
+        })
+    }
+
+    @Test fun eightMegabyteEncryptedLoopbackRecordsThroughputWithoutSpeedAssumption() {
+        val original = ByteArray(8 * 1024 * 1024).also(SecureRandom()::nextBytes)
+        val received = ByteArrayOutputStream()
+        val key = UltraWire.newSecret()
+        val start=System.nanoTime()
+        val done=socketPair(key,host={ channel ->
+            UltraFileWire.receive(channel,
+                allow={ it.name=="bulk.bin" && it.bytes==original.size.toLong() },
+                createOutput={received},
+                commit={ },
+                rollback={received.reset()})
+        },sender={ channel ->
+            assertTrue(UltraFileWire.send(channel,
+                UltraFileWire.Offer("bulk.bin",original.size.toLong()),
+                original.inputStream()))
+        })
+        val millis=(System.nanoTime()-start)/1_000_000
+        System.err.println("ULTRA_LOOPBACK_8MIB_MS=$millis (JVM loopback, NOT Wi-Fi speed)")
+        assertTrue(done)
+        assertArrayEquals(original, received.toByteArray())
+    }
+
     @Test fun verifiedStreamingFileAndExactLength() {
         val key = UltraWire.newSecret()
         val original = ByteArray(500_123).also(SecureRandom()::nextBytes)
@@ -71,6 +108,42 @@ class UltraWireTest {
         })
         assertTrue(hostResult)
         assertArrayEquals(original,received.toByteArray())
+    }
+
+    @Test fun lostFinalAcknowledgementNeverRollsBackCommittedFile() {
+        val key = UltraWire.newSecret()
+        val commits = java.util.concurrent.atomic.AtomicInteger(0)
+        val rollbacks = java.util.concurrent.atomic.AtomicInteger(0)
+        val payload = "verified bytes".toByteArray()
+        val received = ByteArrayOutputStream()
+        val receiverDetectedLostAck = socketPair(key,host={ channel ->
+            try {
+                UltraFileWire.receive(channel,
+                    allow={true},
+                    createOutput={received},
+                    commit={commits.incrementAndGet()},
+                    rollback={rollbacks.incrementAndGet()},
+                    acknowledge={throw IOException("Simulated lost final ACK")}
+                )
+                false
+            } catch (expected: IOException) {
+                true
+            }
+        },sender={ channel ->
+            try {
+                UltraFileWire.send(
+                    channel,UltraFileWire.Offer("verified.txt",payload.size.toLong()),
+                    payload.inputStream()
+                )
+            } catch (_: IOException) {
+                // Receiver has saved the file; the sender must not treat
+                // the missing ACK as proof that the file was rolled back.
+            }
+        })
+        assertTrue(receiverDetectedLostAck)
+        assertArrayEquals(payload, received.toByteArray())
+        assertEquals(1, commits.get())
+        assertEquals(0, rollbacks.get())
     }
 
     @Test fun denialReturnsFalseAndNeverCreatesFile() {

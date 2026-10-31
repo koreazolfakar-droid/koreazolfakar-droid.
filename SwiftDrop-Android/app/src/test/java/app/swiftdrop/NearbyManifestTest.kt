@@ -67,6 +67,7 @@ class NearbyManifestTest {
         assertTrue("Encrypted LAN sockets require INTERNET even without cloud access",
             permissions.containsKey("android.permission.INTERNET"))
         assertTrue(permissions.containsKey("android.permission.CHANGE_NETWORK_STATE"))
+        assertTrue(permissions.containsKey("android.permission.ACCESS_NETWORK_STATE"))
         listOf("QUERY_ALL_PACKAGES", "REQUEST_INSTALL_PACKAGES",
             "WRITE_EXTERNAL_STORAGE")
             .forEach { assertFalse("Unexpected permission $it",

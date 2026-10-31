@@ -65,7 +65,8 @@ class MainActivity : ComponentActivity() {
                 discover={withNearbyPermissions(PendingNearbyAction.Discover)},
                 openSettings={startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))},
                  openLocationSettings={startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))},
-                 scanQr={scanReceiverQr()},scanUltra={scanUltraQr()},overlay={
+                 scanQr={scanReceiverQr()},scanUltra={scanUltraQr()},
+                 startUltraHost={withNearbyPermissions(PendingNearbyAction.UltraHost)},overlay={
             previousCrash?.let { report ->
                 AlertDialog(
                     onDismissRequest = { previousCrash = null; CrashDiagnostics.clear(this@MainActivity) },
@@ -154,16 +155,13 @@ class MainActivity : ComponentActivity() {
             PendingNearbyAction.Receive -> manager.advertise()
             PendingNearbyAction.Discover -> manager.discover(manager.state.value.selected)
             PendingNearbyAction.UltraSend -> model.pendingUltraInvite?.let { manager.beginUltraSend(it) }.also { model.pendingUltraInvite = null }
+            PendingNearbyAction.UltraHost -> manager.startUltraHotspot()
         }
     }
 
     private fun withNearbyPermissions(action: PendingNearbyAction) {
-        val names = if (action == PendingNearbyAction.UltraSend) {
-            when {
-                Build.VERSION.SDK_INT >= 33 -> listOf(Manifest.permission.NEARBY_WIFI_DEVICES)
-                Build.VERSION.SDK_INT >= 29 -> listOf(Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION)
-                else -> emptyList()
-            }
+        val names = if (action == PendingNearbyAction.UltraSend || action == PendingNearbyAction.UltraHost) {
+            requiredUltraWifiPermissions(Build.VERSION.SDK_INT)
         } else requiredNearbyPermissions(Build.VERSION.SDK_INT)
         val missing = names.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty()) {

@@ -62,7 +62,7 @@ fun backDestination(page:String,appsParent:String="home"):String=when(page) {
 
 @Composable
 fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: InstalledAppsController,send: (Array<String>) -> Unit,
-                 receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,scanUltra: () -> Unit = {},
+                 receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,scanUltra: () -> Unit = {}, startUltraHost: () -> Unit = {},
                  mediaPermissionRevision: Int = 0, requestMedia: (MediaKind) -> Unit = {},
                  overlay: @Composable () -> Unit = {}) {
     val settings by preferences.state.collectAsState()
@@ -94,7 +94,7 @@ fun SwiftDropApp(manager: NearbyTransferManager,preferences: AppSettings,apps: I
         SwiftDropTheme(dark) {
         SwiftDropContent(manager,apps,settings,dark,preferences::setAppearance,preferences::setLanguage,
             {preferences.completeOnboarding();manager.setPage("home")},send,receive,discover,openSettings,openLocationSettings,scanQr,scanUltra,
-            mediaPermissionRevision,requestMedia)
+            mediaPermissionRevision,requestMedia,startUltraHost)
         overlay()
         }
     }
@@ -141,7 +141,8 @@ internal fun SwiftDropLocalizedProviders(
 private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsController,settings: SettingsState,dark: Boolean,
     appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit,welcomeDone: () -> Unit,send: (Array<String>) -> Unit,
     receive: () -> Unit,discover: () -> Unit,openSettings: () -> Unit,openLocationSettings: () -> Unit,scanQr: () -> Unit,
-    scanUltra: () -> Unit,mediaPermissionRevision: Int,requestMedia: (MediaKind) -> Unit) {
+    scanUltra: () -> Unit,mediaPermissionRevision: Int,requestMedia: (MediaKind) -> Unit,
+    startUltraHost: () -> Unit) {
     val state by manager.state.collectAsState()
     val ultra by manager.ultraHotspot.state.collectAsState()
     val lan by manager.ultraLan.state.collectAsState()
@@ -224,9 +225,9 @@ private fun SwiftDropContent(manager: NearbyTransferManager,apps: InstalledAppsC
                         "selection" -> SelectionScreen(state,{manager.armQrTarget(null);discover()},{guardedSend(arrayOf("*/*"))},scanQr,scanUltra)
                         "discover" -> DiscoveryScreen(state,manager::connect,discover,manager::disconnect,openRecoverySettings)
                         "receive" -> ReceiveScreen(state,receive,manager::disconnect,openRecoverySettings,
-                            ultra,manager::startUltraHotspot,manager::stopUltraHotspot,
+                            ultra,startUltraHost,manager::stopUltraHotspot,
                             lan,if(ultra.phase==UltraHotspotPhase.Active)
-                                manager.ultraLan.invitation(ultra.ssid,ultra.passphrase) else null)
+                                manager.ultraLan.invitation(ultra.ssid,ultra.passphrase,ultra.security) else null)
                         "ultra_transfer" -> UltraTransferScreen(lan,manager::disconnect)
                         "transfer" -> TransferScreen(state,{
                             if(state.progress?.outcome==TransferOutcome.Running) manager.cancelTransfer() else manager.disconnect()
