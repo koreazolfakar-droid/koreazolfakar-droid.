@@ -16,11 +16,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.swiftdrop.R
-import app.swiftdrop.ui.theme.SwiftDropDesign
+import app.swiftdrop.ui.theme.swiftMotionDurationMillis
 
 /** SwiftMotion's compact floating dock, retaining existing routes and tab semantics. */
 @Composable
 fun SwiftNavigationBar(current: String, navigate: (String) -> Unit) {
+    val duration = swiftMotionDurationMillis()
     Surface(color = MaterialTheme.colorScheme.background, tonalElevation = 1.dp) {
         Row(
             Modifier.fillMaxWidth().navigationBarsPadding()
@@ -35,7 +36,7 @@ fun SwiftNavigationBar(current: String, navigate: (String) -> Unit) {
                 val selected = current == page
                 val background by animateColorAsState(
                     if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                    tween(SwiftDropDesign.MotionMillis), label = "dock selection"
+                    tween(duration), label = "dock selection"
                 )
                 val ink = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
                     else MaterialTheme.colorScheme.onSurfaceVariant
