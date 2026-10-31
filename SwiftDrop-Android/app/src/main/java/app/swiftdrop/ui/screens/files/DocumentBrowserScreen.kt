@@ -367,16 +367,39 @@ fun DocumentBrowserScreen(back: () -> Unit, onSend: (List<Uri>) -> Unit, documen
                     label={Text(stringResource(label))})
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { chooseTree.launch(null) }, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.doc_choose_folder))
-            }
-            OutlinedButton(onClick = {
-                chooseFiles.launch(mimeTypesForFileFilter(typeFilter,documentsOnly))
-            },
-                modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.doc_choose_files))
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            val compact = maxWidth < 320.dp ||
+                androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.4f
+            if (compact) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { chooseTree.launch(null) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        shape = MaterialTheme.shapes.large
+                    ) { Text(stringResource(R.string.doc_choose_folder)) }
+                    OutlinedButton(
+                        onClick = {
+                            chooseFiles.launch(mimeTypesForFileFilter(typeFilter, documentsOnly))
+                        },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        shape = MaterialTheme.shapes.large
+                    ) { Text(stringResource(R.string.doc_choose_files)) }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { chooseTree.launch(null) },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        shape = MaterialTheme.shapes.large
+                    ) { Text(stringResource(R.string.doc_choose_folder)) }
+                    OutlinedButton(
+                        onClick = {
+                            chooseFiles.launch(mimeTypesForFileFilter(typeFilter, documentsOnly))
+                        },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        shape = MaterialTheme.shapes.large
+                    ) { Text(stringResource(R.string.doc_choose_files)) }
+                }
             }
         }
 
@@ -515,7 +538,8 @@ fun DocumentBrowserScreen(back: () -> Unit, onSend: (List<Uri>) -> Unit, documen
             }
         }
         if (selected.isNotEmpty()) {
-            Surface(color=MaterialTheme.colorScheme.surface) {
+            Surface(color=MaterialTheme.colorScheme.primaryContainer, shape=MaterialTheme.shapes.large,
+                modifier=Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp)) {
                 Row(Modifier.fillMaxWidth().padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
