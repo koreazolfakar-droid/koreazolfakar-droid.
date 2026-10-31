@@ -1,8 +1,14 @@
 package app.swiftdrop.ui.theme
 
+import android.content.Context
+import android.provider.Settings
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -12,10 +18,14 @@ import androidx.compose.ui.unit.sp
 
 // SwiftMotion UI v1: a distinct signal-and-flow identity for SwiftDrop.
 object SwiftDropDesign {
-    val Blue = Color(0xFF006C5B)
-    val Cyan = Color(0xFFF27B56)
-    val Navy = Color(0xFF152326)
+    val Signal = Color(0xFF006C5B)
+    val Spark = Color(0xFFF27B56)
+    val Ink = Color(0xFF152326)
     val Background = Color(0xFFF5F8F5)
+    // Legacy names retained for existing screen calls; use semantic names in new code.
+    val Blue = Signal
+    val Cyan = Spark
+    val Navy = Ink
     val Small = 8.dp
     val Medium = 16.dp
     val Large = 24.dp
@@ -24,11 +34,13 @@ object SwiftDropDesign {
     val ContentMaxWidth = 720.dp
     val Icon = 24.dp
     val TouchTarget = 48.dp
+    const val MotionQuickMillis = 150
     const val MotionMillis = 240
+    const val MotionEmphasisMillis = 300
 }
 
 private val LightColors = lightColorScheme(
-    primary = SwiftDropDesign.Blue, onPrimary = Color.White,
+    primary = SwiftDropDesign.Signal, onPrimary = Color.White,
     primaryContainer = Color(0xFFD8F5E9), onPrimaryContainer = Color(0xFF103F34),
     secondary = Color(0xFFA6472F), onSecondary = Color.White,
     secondaryContainer = Color(0xFFFFE5D9), onSecondaryContainer = Color(0xFF6E2C1E),
@@ -45,7 +57,7 @@ private val LightColors = lightColorScheme(
     surfaceContainerHighest = Color(0xFFDFE9E3),
     outline = Color(0xFF647B72), outlineVariant = Color(0xFFD7E4DB),
     inverseSurface = Color(0xFF213733), inverseOnSurface = Color(0xFFE9F7EF),
-    inversePrimary = Color(0xFF81F0D1), surfaceTint = SwiftDropDesign.Blue
+    inversePrimary = Color(0xFF81F0D1), surfaceTint = SwiftDropDesign.Signal
 )
 
 private val DarkColors = darkColorScheme(
@@ -88,11 +100,49 @@ private val AppTypography = Typography(
     labelMedium = type(12, 18, FontWeight.Medium), labelSmall = type(11, 16, FontWeight.Medium)
 )
 
+/**
+ * Motion preference is read once per app lifecycle resume, not once per animation frame.
+ * Sharing it through a composition local avoids a ContentResolver query for every media tile.
+ */
+private val LocalSwiftMotionEnabled = staticCompositionLocalOf { true }
+
+private fun readMotionEnabled(context: Context): Boolean = runCatching {
+    Settings.Global.getFloat(
+        context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f
+    ) > 0f
+}.getOrDefault(true)
+
+/** Honors Android's remove-animations setting for all SwiftMotion transitions. */
+@Composable
+fun swiftMotionDurationMillis(defaultMillis: Int = SwiftDropDesign.MotionMillis): Int =
+    if (LocalSwiftMotionEnabled.current) defaultMillis else 0
+
 @Composable
 fun SwiftDropTheme(dark: Boolean, content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (dark) DarkColors else LightColors,
-        typography = AppTypography,
-        shapes = Shapes(extraSmall = RoundedCornerShape(10.dp), small = RoundedCornerShape(16.dp),
-            medium = RoundedCornerShape(22.dp), large = RoundedCornerShape(28.dp),
-            extraLarge = RoundedCornerShape(32.dp)), content = content)
+    val context = LocalContext.current
+    val owner = LocalLifecycleOwner.current
+    var motionEnabled by remember(context) { mutableStateOf(readMotionEnabled(context)) }
+    DisposableEffect(context, owner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                motionEnabled = readMotionEnabled(context)
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
+    CompositionLocalProvider(LocalSwiftMotionEnabled provides motionEnabled) {
+        MaterialTheme(
+            colorScheme = if (dark) DarkColors else LightColors,
+            typography = AppTypography,
+            shapes = Shapes(
+                extraSmall = RoundedCornerShape(10.dp),
+                small = RoundedCornerShape(16.dp),
+                medium = RoundedCornerShape(22.dp),
+                large = RoundedCornerShape(28.dp),
+                extraLarge = RoundedCornerShape(32.dp)
+            ),
+            content = content
+        )
+    }
 }
