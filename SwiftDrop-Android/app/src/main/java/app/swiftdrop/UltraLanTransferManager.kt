@@ -132,6 +132,7 @@ class UltraLanTransferManager(
                     try {
                         val channel=UltraWire.host(remote.getInputStream(),remote.getOutputStream(),key)
                         var sink: PendingSink? = null
+                        var committed = false
                         val accepted = UltraFileWire.receive(
                             channel,
                             allow = { file ->
@@ -155,6 +156,7 @@ class UltraLanTransferManager(
                             },
                             commit = { file ->
                                 requireNotNull(sink).commit()
+                                committed = true
                                 state.update { it.copy(phase=UltraLanPhase.Complete,
                                     progress=TransferProgress(file.name,"Received",file.bytes,file.bytes,true)) }
                                 onHistory(HistoryEntry(file.name,"Ultra Wi-Fi","Received",file.bytes,
@@ -171,12 +173,20 @@ class UltraLanTransferManager(
                         // hotspot listener. Failed partial sinks are rolled back
                         // inside UltraFileWire.receive; a new peer may retry.
                         if (version.get() == session) state.update {
-                            it.copy(
-                                phase = UltraLanPhase.Waiting,
-                                pending = null,
-                                error = "Ultra receive failed: " + e.javaClass.simpleName,
-                                progress = it.progress?.copy(outcome = TransferOutcome.Failed)
-                            )
+                            if (committed) {
+                                // The file is already published: never suggest a
+                                // failed save just because the final ACK was lost.
+                                it.copy(
+                                    phase = UltraLanPhase.Complete, pending = null,
+                                    error = "File saved. Sender confirmation may have been lost."
+                                )
+                            } else {
+                                it.copy(
+                                    phase = UltraLanPhase.Waiting, pending = null,
+                                    error = "Ultra receive failed: " + e.javaClass.simpleName,
+                                    progress = it.progress?.copy(outcome = TransferOutcome.Failed)
+                                )
+                            }
                         }
                     } finally { if (transfer === remote) transfer = null }
                 }
