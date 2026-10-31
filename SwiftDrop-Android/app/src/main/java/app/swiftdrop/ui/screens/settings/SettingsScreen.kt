@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import app.swiftdrop.*
 import app.swiftdrop.R
 import app.swiftdrop.ui.components.*
-import app.swiftdrop.ui.theme.SwiftDropDesign
+import app.swiftdrop.ui.theme.swiftMotionDurationMillis
 
 @Composable
 fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit) {
@@ -109,8 +109,10 @@ private fun languageLabel(value: AppLanguage): String = stringResource(when(valu
 @Composable
 private fun ExpandableSetting(icon: Int,title: String,summary: String,content: @Composable () -> Unit) {
     var expanded by rememberSaveable {mutableStateOf(false)}
-    val rotation by animateFloatAsState(if(expanded) 180f else 0f,label="setting disclosure")
-    Column(Modifier.animateContentSize(animationSpec=tween(SwiftDropDesign.MotionMillis))) {
+    val duration = swiftMotionDurationMillis()
+    val rotation by animateFloatAsState(
+        if(expanded) 180f else 0f, animationSpec=tween(duration), label="setting disclosure")
+    Column(Modifier.animateContentSize(animationSpec=tween(duration))) {
         Column {
             Row(Modifier.fillMaxWidth().heightIn(min=72.dp).clickable(role=Role.Button) {expanded=!expanded}.padding(16.dp),
                 verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
