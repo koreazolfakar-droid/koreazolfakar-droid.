@@ -75,7 +75,7 @@ fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,languag
                 }
             }
         }
-        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+        Surface(shape=MaterialTheme.shapes.extraLarge,color=MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 Information(R.drawable.ic_security,R.string.privacy,stringResource(R.string.privacy_value))
                 HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
@@ -84,7 +84,7 @@ fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,languag
                 Information(R.drawable.ic_nearby,R.string.engine,stringResource(R.string.engine_value))
             }
         }
-        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+        Surface(shape=MaterialTheme.shapes.extraLarge,color=MaterialTheme.colorScheme.surface) {
             Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 BrandMark(Modifier.size(40.dp))
                 Column(Modifier.weight(1f)) {
