@@ -144,7 +144,7 @@ fun ReceiveScreen(
         item { if(state.hasError) ErrorNotice(messageText(state.status)) else Text(messageText(state.status),color=MaterialTheme.colorScheme.onSurfaceVariant) }
         if(state.hasError && report!=null) item { DiagnosticDetails(report) }
         item {
-            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.primaryContainer) {
+            Surface(shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.primaryContainer) {
                 Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     AppIcon(R.drawable.ic_security,tint=MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(stringResource(R.string.security_hint),Modifier.weight(1f),
@@ -174,13 +174,41 @@ fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: (
     val known = !state.loadingSelection && state.selectedFiles.size==state.selected.size && state.selectedFiles.all { it.bytes >= 0 }
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item { PageHeading(stringResource(R.string.selection_title),stringResource(R.string.selection_caption)) }
-        item { Text(pluralStringResource(R.plurals.selected_summary,state.selected.size,state.selected.size,
-            if(known) sizeLabel(state.selectedFiles.sumOf { it.bytes }) else stringResource(R.string.unknown)),
-            style=MaterialTheme.typography.titleMedium) }
+        item {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    IconBadge(R.drawable.ic_documents)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            stringResource(R.string.selection_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            pluralStringResource(
+                                R.plurals.selected_summary,
+                                state.selected.size, state.selected.size,
+                                if(known) sizeLabel(state.selectedFiles.sumOf { it.bytes })
+                                else stringResource(R.string.unknown)
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+        }
         if(state.loadingSelection) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         if(state.hasError) item { Text(messageText(state.status),color=MaterialTheme.colorScheme.error) }
         items(state.selectedFiles,key={it.uri.toString()}) { file ->
-            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+            Surface(shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surface) {
                 Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
                     app.swiftdrop.ui.screens.files.FilePreviewBadge(
                         file.uri,file.name,Modifier.size(48.dp))
