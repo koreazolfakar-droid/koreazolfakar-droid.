@@ -35,14 +35,17 @@ fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,languag
             Row(Modifier.fillMaxWidth().padding(18.dp),
                 verticalAlignment=Alignment.CenterVertically,
                 horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                LocalPageBack.current?.let { back ->
+                val back = LocalPageBack.current
+                if (back != null) {
                     IconButton(onClick = back) {
                         AppIcon(
                             R.drawable.ic_back, description = stringResource(R.string.back),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
-                } ?: IconBadge(R.drawable.ic_appearance)
+                } else {
+                    IconBadge(R.drawable.ic_appearance)
+                }
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.settings),
                         style=MaterialTheme.typography.headlineSmall,
