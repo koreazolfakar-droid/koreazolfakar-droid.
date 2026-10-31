@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import app.swiftdrop.*
 import app.swiftdrop.R
 import app.swiftdrop.ui.components.*
-import app.swiftdrop.ui.theme.SwiftDropDesign
+import app.swiftdrop.ui.theme.swiftMotionDurationMillis
 
 /** A measured, never simulated transfer dashboard. All values come from the live payload. */
 @Composable
@@ -40,9 +40,10 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
         null -> R.string.waiting
     }
     // The gate in the engine limits recompositions while this animation smooths visible updates.
+    val duration = swiftMotionDurationMillis()
     val progress by animateFloatAsState(
         targetValue = if(complete) 1f else p?.fraction ?: 0f,
-        animationSpec = tween(SwiftDropDesign.MotionMillis),label="file progress")
+        animationSpec = tween(duration),label="file progress")
     val success = MaterialTheme.colorScheme.tertiary
 
     Column(Modifier.fillMaxSize()) {
