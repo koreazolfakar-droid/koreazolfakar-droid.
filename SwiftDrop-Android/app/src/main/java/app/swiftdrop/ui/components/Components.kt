@@ -58,16 +58,27 @@ fun IconBadge(@DrawableRes icon: Int, secondary: Boolean = false) {
 
 @Composable
 fun EmptyTransfers() {
-    Surface(shape=MaterialTheme.shapes.medium, color=MaterialTheme.colorScheme.surface) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment=Alignment.CenterVertically,
-            horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             IconBadge(R.drawable.ic_history)
-            Column(Modifier.weight(1f), verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.no_transfers), style=MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.no_transfers_caption),
-                    color=MaterialTheme.colorScheme.onSurfaceVariant,
-                    style=MaterialTheme.typography.bodySmall)
-            }
+            Text(
+                stringResource(R.string.no_transfers),
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                stringResource(R.string.no_transfers_caption),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
@@ -82,27 +93,58 @@ fun fileIcon(name: String): Int = when(name.substringAfterLast('.', "").lowercas
 
 @Composable
 fun TransferHistoryItem(entry: HistoryEntry) {
-    Surface(shape=MaterialTheme.shapes.medium, color=MaterialTheme.colorScheme.surface) {
-        Row(Modifier.fillMaxWidth().heightIn(min=72.dp).padding(12.dp),
-            verticalAlignment=Alignment.CenterVertically,
-            horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            CategoryBadge(fileIcon(entry.name))
-            Column(Modifier.weight(1f), verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                Text(entry.name, style=MaterialTheme.typography.titleSmall,
-                    maxLines=1, overflow=TextOverflow.Ellipsis)
-                Text(sizeLabel(entry.bytes)+" · "+stringResource(
-                    if(entry.direction=="Sent") R.string.sent else R.string.received)+" · "+entry.peer,
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines=1, overflow=TextOverflow.Ellipsis)
-                val locale=LocalConfiguration.current.locales[0]
-                Text(JavaDateFormat.getDateTimeInstance(JavaDateFormat.SHORT,
-                    JavaDateFormat.SHORT,locale).format(Date(entry.timestamp)),
-                    style=MaterialTheme.typography.labelSmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 84.dp).padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            FileTypeBadge(entry.name)
+            Column(
+                Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    entry.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    sizeLabel(entry.bytes) + " · " +
+                        stringResource(if (entry.direction == "Sent") R.string.sent else R.string.received),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (entry.peer.isNotBlank()) {
+                    Text(
+                        entry.peer,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                val locale = LocalConfiguration.current.locales[0]
+                Text(
+                    JavaDateFormat.getDateTimeInstance(
+                        JavaDateFormat.SHORT, JavaDateFormat.SHORT, locale
+                    ).format(Date(entry.timestamp)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            AppIcon(R.drawable.ic_check, Modifier.size(18.dp),
-                description=stringResource(R.string.complete), tint=MaterialTheme.colorScheme.tertiary)
+            AppIcon(
+                R.drawable.ic_check,
+                Modifier.size(20.dp),
+                description = stringResource(R.string.complete),
+                tint = MaterialTheme.colorScheme.tertiary
+            )
         }
     }
 }

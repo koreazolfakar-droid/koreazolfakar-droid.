@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
@@ -21,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import app.swiftdrop.*
 import app.swiftdrop.R
 import app.swiftdrop.ui.components.*
-import app.swiftdrop.ui.theme.SwiftDropDesign
+import app.swiftdrop.ui.theme.swiftMotionDurationMillis
 
 /** A measured, never simulated transfer dashboard. All values come from the live payload. */
 @Composable
@@ -40,9 +41,10 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
         null -> R.string.waiting
     }
     // The gate in the engine limits recompositions while this animation smooths visible updates.
+    val duration = swiftMotionDurationMillis()
     val progress by animateFloatAsState(
         targetValue = if(complete) 1f else p?.fraction ?: 0f,
-        animationSpec = tween(SwiftDropDesign.MotionMillis),label="file progress")
+        animationSpec = tween(duration),label="file progress")
     val success = MaterialTheme.colorScheme.tertiary
 
     Column(Modifier.fillMaxSize()) {
@@ -70,40 +72,65 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
             }
         }
 
-        Box(Modifier.size(152.dp),contentAlignment=Alignment.Center) {
-            if(p==null || (p.total <= 0 && !terminal)) {
-                CircularProgressIndicator(Modifier.fillMaxSize().padding(9.dp),strokeWidth=7.dp)
-            } else {
-                CircularProgressIndicator(progress={progress},modifier=Modifier.fillMaxSize().padding(9.dp),
-                    strokeWidth=7.dp,
-                    color=if(failed) MaterialTheme.colorScheme.error else if(complete) success else MaterialTheme.colorScheme.primary,
-                    trackColor=MaterialTheme.colorScheme.primaryContainer)
-            }
-            if(complete) {
-                Surface(shape=androidx.compose.foundation.shape.CircleShape,
-                    color=MaterialTheme.colorScheme.tertiaryContainer) {
-                    AppIcon(R.drawable.ic_check,Modifier.padding(16.dp).size(44.dp),
-                        description=stringResource(R.string.complete),tint=success)
-                }
-            } else {
-                Column(horizontalAlignment=Alignment.CenterHorizontally) {
-                    Text(if(p!=null && p.total>0) "${p.percent}%" else "—",
-                        style=MaterialTheme.typography.headlineLarge)
-                    Text(stringResource(if(p!=null && p.total>0) R.string.per_file else R.string.measuring),
-                        style=MaterialTheme.typography.labelSmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+        // SwiftMotion: the orbit reads the transfer state; only an indeterminate wait animates.
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    stringResource(status),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = if (failed) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                SignalOrbit(
+                    fraction = if (complete) 1f else if (p != null && p.total > 0) progress else null,
+                    active = !terminal,
+                    complete = complete,
+                    failed = failed,
+                    modifier = Modifier.size(172.dp)
+                ) {
+                    if (complete) {
+                        Surface(
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            AppIcon(
+                                R.drawable.ic_check,
+                                Modifier.padding(14.dp).size(42.dp),
+                                description = stringResource(R.string.complete),
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                if (p != null && p.total > 0) "${p.percent}%" else "—",
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                stringResource(if (p != null && p.total > 0) R.string.per_file else R.string.measuring),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
                 }
             }
         }
-
-        Text(stringResource(status),style=MaterialTheme.typography.titleLarge,
-            color=if(failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
 
         Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically,
                     horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    CategoryBadge(fileIcon(p?.name ?: ""))
+                    FileTypeBadge(p?.name ?: "")
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         Text(p?.name ?: stringResource(R.string.ready_files),
                             style=MaterialTheme.typography.titleMedium,maxLines=2,
@@ -125,16 +152,40 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
             }
         }
 
-        if(working) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                DashboardMetric(R.drawable.ic_progress,stringResource(R.string.speed),
-                    p?.measurement?.bytesPerSecond?.let {
-                        stringResource(R.string.speed_value,sizeLabel(it.toLong()))
-                    } ?: stringResource(R.string.measuring),Modifier.weight(1f))
-                DashboardMetric(R.drawable.ic_history,stringResource(R.string.remaining),
-                    p?.measurement?.remainingSeconds?.let {
-                        pluralStringResource(R.plurals.eta_seconds,it.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),it)
-                    } ?: stringResource(R.string.estimating),Modifier.weight(1f))
+        if (working) {
+            val measuredSpeed = p?.measurement?.bytesPerSecond?.let {
+                stringResource(R.string.speed_value, sizeLabel(it.toLong()))
+            } ?: stringResource(R.string.measuring)
+            val measuredTime = p?.measurement?.remainingSeconds?.let {
+                pluralStringResource(
+                    R.plurals.eta_seconds, it.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), it
+                )
+            } ?: stringResource(R.string.estimating)
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val stacked = maxWidth < 330.dp || LocalDensity.current.fontScale >= 1.4f
+                if (stacked) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        DashboardMetric(
+                            R.drawable.ic_progress, stringResource(R.string.speed),
+                            measuredSpeed, Modifier.fillMaxWidth()
+                        )
+                        DashboardMetric(
+                            R.drawable.ic_history, stringResource(R.string.remaining),
+                            measuredTime, Modifier.fillMaxWidth()
+                        )
+                    }
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        DashboardMetric(
+                            R.drawable.ic_progress, stringResource(R.string.speed),
+                            measuredSpeed, Modifier.weight(1f)
+                        )
+                        DashboardMetric(
+                            R.drawable.ic_history, stringResource(R.string.remaining),
+                            measuredTime, Modifier.weight(1f)
+                        )
+                    }
+                }
             }
         }
 
@@ -149,7 +200,8 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
                     verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     itemsIndexed(state.selectedFiles,key={_,file -> file.uri.toString()}) { index,file ->
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                            CategoryBadge(fileIcon(file.name),Modifier.size(36.dp))
+                            app.swiftdrop.ui.screens.files.FilePreviewBadge(
+                                file.uri,file.name,Modifier.size(44.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(file.name,style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
                                 Text(sizeLabel(file.bytes),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)

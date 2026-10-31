@@ -1,6 +1,5 @@
 package app.swiftdrop.ui.components
 
-import android.provider.Settings
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,13 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.swiftdrop.R
-import app.swiftdrop.ui.theme.SwiftDropDesign
+import app.swiftdrop.ui.theme.swiftMotionDurationMillis
 
 // SwiftDrop @feature Codex 12/10/2026 Original brand and compact, shared Native Pro controls.
 @Composable
@@ -30,13 +29,14 @@ fun BrandMark(modifier: Modifier = Modifier) {
 
 @Composable
 fun BrandHeader(onSettings: (() -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically,
-        horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-        BrandMark()
-        Column(Modifier.weight(1f)) {
-            Text("SwiftDrop", style=MaterialTheme.typography.headlineMedium)
+    Row(Modifier.fillMaxWidth().heightIn(min=54.dp), verticalAlignment=Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+        BrandMark(Modifier.size(40.dp))
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)) {
+            Text("SwiftDrop", style=MaterialTheme.typography.headlineSmall)
             Text(stringResource(R.string.brand_tagline), style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines=1,overflow=TextOverflow.Ellipsis)
         }
         if(onSettings!=null) IconButton(onSettings) {
             AppIcon(R.drawable.ic_settings, description=stringResource(R.string.settings),
@@ -62,7 +62,7 @@ fun categoryColor(icon: Int): Color {
 @Composable
 fun CategoryBadge(icon: Int, modifier: Modifier = Modifier) {
     val color=categoryColor(icon)
-    Surface(modifier.size(44.dp), shape=MaterialTheme.shapes.small, color=color.copy(alpha=.12f)) {
+    Surface(modifier.size(36.dp), shape=MaterialTheme.shapes.small, color=color.copy(alpha=.09f)) {
         Box(contentAlignment=Alignment.Center) { AppIcon(icon, tint=color) }
     }
 }
@@ -81,23 +81,44 @@ fun ErrorNotice(message: String) {
 /** Honors Android's disabled animator setting; ripple remains native. */
 @Composable
 fun Modifier.pressScale(source: MutableInteractionSource): Modifier {
-    val context=LocalContext.current
-    val motion=remember(context) { runCatching {
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)>0f
-    }.getOrDefault(true) }
+    val duration = swiftMotionDurationMillis()
+    val motion = duration > 0
     val pressed by source.collectIsPressedAsState()
     val scale by animateFloatAsState(if(pressed && motion) .98f else 1f,
-        tween(if(motion) SwiftDropDesign.MotionMillis else 0), label="press")
+        tween(duration), label="press")
     return this.graphicsLayer { scaleX=scale; scaleY=scale }
 }
 
 @Composable
 fun SectionHeading(title: String, actionLabel: String? = null, action: (() -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth().heightIn(min=48.dp), verticalAlignment=Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f), style=MaterialTheme.typography.titleLarge)
-        if(action!=null && actionLabel!=null) TextButton(action) {
-            Text(actionLabel)
-            AppIcon(R.drawable.ic_chevron, Modifier.size(16.dp))
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val compact = maxWidth < 300.dp || LocalDensity.current.fontScale >= 1.45f
+        if (compact) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge)
+                if (action != null && actionLabel != null) {
+                    TextButton(action, modifier = Modifier.align(Alignment.End)) {
+                        Text(actionLabel)
+                        Spacer(Modifier.width(4.dp))
+                        AppIcon(R.drawable.ic_chevron, Modifier.size(16.dp))
+                    }
+                }
+            }
+        } else {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                if (action != null && actionLabel != null) {
+                    TextButton(action) {
+                        Text(actionLabel)
+                        Spacer(Modifier.width(4.dp))
+                        AppIcon(R.drawable.ic_chevron, Modifier.size(16.dp))
+                    }
+                }
+            }
         }
     }
 }

@@ -272,4 +272,33 @@
     <string name="music_queue_empty">The queue is empty</string>
     <string name="nearby_active">Nearby sharing is active</string>
     <plurals name="browser_item_count"><item quantity="one">%1$d item</item><item quantity="other">%1$d items</item></plurals>
+    <string name="ultra_hotspot_title">Ultra · Local Wi-Fi hotspot (preview)</string>
+    <string name="ultra_hotspot_description">Create a private local Wi-Fi network for the other phone. No internet connection is needed.</string>
+    <string name="ultra_hotspot_start">Create local hotspot</string>
+    <string name="ultra_hotspot_stop">Stop hotspot</string>
+    <string name="ultra_hotspot_active">Hotspot is ready</string>
+    <string name="ultra_hotspot_ssid">Network: %1$s</string>
+    <string name="ultra_hotspot_password">Password: %1$s</string>
+    <string name="ultra_hotspot_join">On the other phone, open Wi-Fi settings and join this network. Use Stop to switch back to normal Nearby sharing.</string>
+    <string name="ultra_hotspot_failed">Could not start local hotspot. Check Wi-Fi permissions and disable any other active hotspot.</string>
+    <string name="ultra_hotspot_use_nearby">Use Nearby instead</string>
+    <string name="ultra_hotspot_preview_notice">Experimental feature: encrypted LAN transfers need testing on two physical phones. For important files, use the proven Nearby mode.</string>
+    <string name="ultra_scan_qr">Ultra — scan receiver QR</string>
+    <string name="ultra_invalid_qr">This is not a valid SwiftDrop Ultra QR code.</string>
+    <string name="ultra_qr_title">Scan to join this local Wi-Fi network</string>
+    <string name="ultra_qr_hint">Share this QR only with your intended receiver/sender. It contains the Wi-Fi password and a short-lived encrypted transfer key.</string>
+    <string name="ultra_incoming_title">Incoming Ultra file</string>
+    <string name="ultra_incoming_message">Accept %1$s (%2$d bytes)?</string>
+    <string name="ultra_transfer_caption">Direct encrypted file transfer over your local Wi-Fi network.</string>
+    <string name="ultra_measured_speed">Measured speed: %1$.1f MB/s</string>
+    <string name="ultra_status_idle">Ready</string>
+    <string name="ultra_status_waiting">Waiting for a connected device</string>
+    <string name="ultra_status_joining">Joining receiver\'s local Wi-Fi</string>
+    <string name="ultra_status_connecting">Finding and authenticating the receiver</string>
+    <string name="ultra_status_sending">Sending over Ultra Wi-Fi</string>
+    <string name="ultra_status_receiving">Receiving over Ultra Wi-Fi</string>
+    <string name="ultra_status_complete">Transfer complete</string>
+    <string name="ultra_status_failed">Ultra transfer failed</string>
+    <string name="file_archives">Archives</string>
+    <string name="file_other">Other</string>
 </resources>

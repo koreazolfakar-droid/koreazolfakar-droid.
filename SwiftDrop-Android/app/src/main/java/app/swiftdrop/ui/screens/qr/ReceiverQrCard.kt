@@ -21,7 +21,11 @@ import com.google.zxing.MultiFormatWriter
 
 /** Session-only QR; the complete barcode remains local and is never uploaded. */
 @Composable
-fun ReceiverQrCard(payload: String) {
+fun ReceiverQrCard(
+    payload: String,
+    title: Int = R.string.qr_receiver_title,
+    hint: Int = R.string.qr_receiver_hint
+) {
     val bitmap = remember(payload) {
         val matrix = MultiFormatWriter().encode(
             payload,BarcodeFormat.QR_CODE,480,480,mapOf(EncodeHintType.MARGIN to 2)
@@ -33,21 +37,54 @@ fun ReceiverQrCard(payload: String) {
         }
         Bitmap.createBitmap(pixels,matrix.width,matrix.height,Bitmap.Config.ARGB_8888).asImageBitmap()
     }
-    Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
-        Column(Modifier.fillMaxWidth().padding(18.dp),
-            horizontalAlignment=Alignment.CenterHorizontally,
-            verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.qr_receiver_title),style=MaterialTheme.typography.titleMedium)
-            BoxWithConstraints(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
-                val qrSize = (maxWidth - 24.dp).coerceAtMost(240.dp).coerceAtLeast(120.dp)
-                Box(Modifier.background(androidx.compose.ui.graphics.Color.White, RoundedCornerShape(16.dp))
-                    .padding(12.dp),contentAlignment=Alignment.Center) {
-                    Image(bitmap,contentDescription=stringResource(R.string.qr_receiver_title),
-                        modifier=Modifier.size(qrSize))
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = MaterialTheme.shapes.large
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    app.swiftdrop.ui.components.AppIcon(
+                        R.drawable.ic_security,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        stringResource(title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
-            Text(stringResource(R.string.qr_receiver_hint),textAlign=TextAlign.Center,style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                // Preserve a real white quiet zone for reliable scanning in both themes.
+                val qrSize = (maxWidth - 36.dp).coerceAtMost(264.dp).coerceAtLeast(0.dp)
+                Surface(shape = RoundedCornerShape(24.dp), color = androidx.compose.ui.graphics.Color.White) {
+                    Box(Modifier.padding(14.dp), contentAlignment = Alignment.Center) {
+                        Image(
+                            bitmap, contentDescription = stringResource(title),
+                            modifier = Modifier.size(qrSize)
+                        )
+                    }
+                }
+            }
+            Text(
+                stringResource(hint),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

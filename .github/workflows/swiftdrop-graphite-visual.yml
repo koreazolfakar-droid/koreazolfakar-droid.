@@ -1,0 +1,73 @@
+name: SwiftDrop Graphite v2 Visual Preview
+
+on:
+  push:
+    branches: [design/swiftdrop-graphite-v2]
+    paths:
+      - '.github/workflows/swiftdrop-graphite-visual.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: SwiftDrop-Android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK
+        run: |
+          SDKMGR="$(command -v sdkmanager || find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f -print -quit)"
+          test -n "$SDKMGR"
+          "$SDKMGR" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Compile screenshot-only Android debug APK
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Enable emulator hardware acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Render actual Graphite Home in dark and light themes
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          emulator-boot-timeout: 180
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 3072
+          script: |
+            set -eu
+            APK=SwiftDrop-Android/app/build/outputs/apk/debug/app-debug.apk
+            adb install -r "$APK"
+            adb shell run-as app.swiftdrop mkdir -p shared_prefs
+            mkdir -p SwiftDrop-Android/app/build/visual
+            printf '%s' '<map><boolean name="onboarding_complete" value="true" /><string name="appearance">Dark</string></map>' | adb shell run-as app.swiftdrop tee shared_prefs/swiftdrop_settings.xml >/dev/null
+            adb shell cmd uimode night yes
+            adb shell am force-stop app.swiftdrop
+            adb shell am start -n app.swiftdrop/.MainActivity
+            sleep 8
+            adb shell screencap -p /sdcard/Download/graphite-home-dark.png
+            adb pull /sdcard/Download/graphite-home-dark.png SwiftDrop-Android/app/build/visual/home-dark.png
+            printf '%s' '<map><boolean name="onboarding_complete" value="true" /><string name="appearance">Light</string></map>' | adb shell run-as app.swiftdrop tee shared_prefs/swiftdrop_settings.xml >/dev/null
+            adb shell cmd uimode night no
+            adb shell am force-stop app.swiftdrop
+            adb shell am start -n app.swiftdrop/.MainActivity
+            sleep 5
+            adb shell screencap -p /sdcard/Download/graphite-home-light.png
+            adb pull /sdcard/Download/graphite-home-light.png SwiftDrop-Android/app/build/visual/home-light.png
+            test -s SwiftDrop-Android/app/build/visual/home-dark.png
+            test -s SwiftDrop-Android/app/build/visual/home-light.png
+      - name: Upload visual evidence (no APK release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftDrop-Graphite-V2-Android36-Screenshots
+          path: SwiftDrop-Android/app/build/visual/*.png
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,94 @@
+name: Publish SwiftDrop Graphite v2 Test Preview
+
+on:
+  push:
+    branches: [feature/swiftdrop-file-types-thumbnails]
+    paths:
+      - 'SwiftDrop-Android/**'
+      - '.github/workflows/swiftdrop-graphite-preview-publish.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: swiftdrop-graphite-test-preview-20261031
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/feature/swiftdrop-file-types-thumbnails'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      QA_RUN: "41228916285"
+      QA_SOURCE: "d148dd1a5e6d76fd2884dc6861db3775aadc6926"
+      RELEASE_TAG: "swiftdrop-graphite-v2-test-preview-20261031"
+    steps:
+      - name: Verify exact Android source tree against successful QA
+        run: |
+          set -euo pipefail
+          root_tree() {
+            gh api "repos/$GITHUB_REPOSITORY/commits/$1" --jq '.commit.tree.sha'
+          }
+          android_tree() {
+            gh api "repos/$GITHUB_REPOSITORY/git/trees/$(root_tree "$1")" \
+              --jq '.tree[] | select(.path == "SwiftDrop-Android") | .sha'
+          }
+          TESTED="$(android_tree "$QA_SOURCE")"
+          MERGED="$(android_tree "$GITHUB_SHA")"
+          echo "tested Android tree: $TESTED"
+          echo "merged Android tree: $MERGED"
+          test -n "$TESTED"
+          test "$TESTED" = "$MERGED"
+      - name: Confirm exact source QA run finished successfully
+        run: |
+          set -euo pipefail
+          SHA="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QA_RUN" --jq .head_sha)"
+          RESULT="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QA_RUN" --jq .conclusion)"
+          test "$SHA" = "$QA_SOURCE"
+          test "$RESULT" = success
+      - name: Download previously tested APK (not upgrade-signed)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/graphite"
+          gh run download "$QA_RUN" --repo "$GITHUB_REPOSITORY" \
+            --name SwiftDrop-Graphite-V2-UNTRUSTED-SIGNATURE-PREVIEW \
+            --dir "$RUNNER_TEMP/graphite"
+          test -s "$RUNNER_TEMP/graphite/app-debug.apk"
+          cp "$RUNNER_TEMP/graphite/app-debug.apk" SwiftDrop-Graphite-v2-TEST-ONLY.apk
+          sha256sum SwiftDrop-Graphite-v2-TEST-ONLY.apk > SHA256SUMS.txt
+      - name: Create clearly labeled test-only prerelease
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release tag already exists; refusing overwrite"
+            exit 1
+          fi
+          cat > "$RUNNER_TEMP/notes.md" <<'EOF'
+          # SwiftDrop Graphite v2 — DEVELOPMENT PREVIEW
+
+          **TEST DEVICE / FRESH INSTALL ONLY. NOT AN UPGRADE TO 0.5.0-ALPHA.**
+          This APK has a different debug signing certificate because the original
+          release signing keystore was unavailable to CI. Android will reject
+          an update over an existing SwiftDrop signed by the old key. DO NOT
+          uninstall your existing app merely to try this design, unless you
+          intentionally accept loss of app-private data. Prefer a spare device.
+
+          - Graphite light/dark interface, compact send/receive controls and file tiles
+          - Simpler navigation with no oversized pill dock
+          - Android package: app.swiftdrop; versionCode 23; versionName 0.5.0-alpha
+          - Kotlin unit tests, lint, debug APK build and androidTest compilation passed
+            on the source snapshot used to generate this APK
+          - Physical two-phone file-transfer tests are not confirmed
+
+          This prerelease is intended only for visual and manual QA. It is
+          not the production app update and will not overwrite the existing stable tag.
+          EOF
+          gh release create "$RELEASE_TAG" \
+            SwiftDrop-Graphite-v2-TEST-ONLY.apk SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "SwiftDrop Graphite v2 — test-only preview (different signature)" \
+            --notes-file "$RUNNER_TEMP/notes.md" --prerelease

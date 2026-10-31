@@ -1,5 +1,6 @@
 package app.swiftdrop.ui.screens.discovery
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -7,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -27,15 +29,37 @@ import app.swiftdrop.ui.components.*
 import app.swiftdrop.ui.theme.SwiftDropDesign
 import app.swiftdrop.ui.screens.qr.ReceiverQrCard
 
-// SwiftDrop @tweak Codex 12/10/2026 A live progress state, without decorative radar motion.
+// SwiftMotion: one recognisable orbit for sending and receiving, driven by discovery state.
 @Composable
 fun DiscoveryRadar(active: Boolean) {
-    Row(Modifier.fillMaxWidth().heightIn(min=64.dp),verticalAlignment=Alignment.CenterVertically,
-        horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-        IconBadge(R.drawable.ic_nearby)
-        Text(stringResource(if(active) R.string.nearby_active else R.string.nearby_devices),
-            Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
-        if(active) CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp)
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 116.dp).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            SignalOrbit(fraction = null, active = active, modifier = Modifier.size(84.dp)) {
+                AppIcon(
+                    R.drawable.ic_nearby, Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    stringResource(if (active) R.string.nearby_active else R.string.nearby_devices),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    stringResource(if (active) R.string.searching else R.string.discovery_caption),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
     }
 }
 
@@ -60,7 +84,9 @@ fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -
         }
         items(state.peers,key={it.id}) { peer ->
             Card(onClick={connect(peer)},enabled=state.connectingId==null && state.pending==null,
-                colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)) {
+                shape=MaterialTheme.shapes.large,
+                colors=CardDefaults.cardColors(containerColor=if(state.connectingId==peer.id)
+                    MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)) {
                 Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,
                     horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     IconBadge(R.drawable.ic_nearby)
@@ -69,7 +95,9 @@ fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -
                         Text(stringResource(if(state.connectingId==peer.id) R.string.connecting else R.string.available,peer.name),
                             style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    if(state.connectingId==peer.id) CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp)
+                    AnimatedVisibility(visible=state.connectingId==peer.id) {
+                        CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp)
+                    }
                 }
             }
         }
@@ -91,10 +119,22 @@ fun DiscoveryScreen(state: TransferUiState, connect: (Peer) -> Unit, retry: () -
 }
 
 @Composable
-fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit, openRecoverySettings: () -> Unit) {
+fun ReceiveScreen(
+    state: TransferUiState,
+    retry: () -> Unit,
+    cancel: () -> Unit,
+    openRecoverySettings: () -> Unit,
+    hotspot: UltraHotspotState = UltraHotspotState(),
+    startUltra: () -> Unit = {},
+    stopUltra: () -> Unit = {},
+    transport: UltraLanState = UltraLanState(),
+    inviteQr: String? = null
+) {
     val report = state.diagnostics
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item { PageHeading(stringResource(R.string.receive_files),stringResource(R.string.receive_caption)) }
+        item { UltraHotspotPanel(hotspot, startUltra, stopUltra, transport, inviteQr) }
+        if (hotspot.phase == UltraHotspotPhase.Idle) {
         item { DiscoveryRadar(state.isAdvertising) }
         item { Text(stringResource(when {state.hasError -> R.string.receive_unavailable;state.isAdvertising -> R.string.waiting_sender;else -> R.string.making_visible}),style=MaterialTheme.typography.titleLarge) }
         if(state.isAdvertising) item {Text(stringResource(R.string.device_visible,android.os.Build.MODEL),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)}
@@ -104,7 +144,7 @@ fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit,
         item { if(state.hasError) ErrorNotice(messageText(state.status)) else Text(messageText(state.status),color=MaterialTheme.colorScheme.onSurfaceVariant) }
         if(state.hasError && report!=null) item { DiagnosticDetails(report) }
         item {
-            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.primaryContainer) {
+            Surface(shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.primaryContainer) {
                 Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     AppIcon(R.drawable.ic_security,tint=MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(stringResource(R.string.security_hint),Modifier.weight(1f),
@@ -124,23 +164,54 @@ fun ReceiveScreen(state: TransferUiState, retry: () -> Unit, cancel: () -> Unit,
                 OutlinedButton(cancel,Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(stringResource(R.string.stop_receiving)) }
             }
         }
+        }
     }
 }
 
 @Composable
-fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: () -> Unit, scanQr: () -> Unit) {
+fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: () -> Unit,
+    scanQr: () -> Unit, scanUltra: () -> Unit = {}) {
     val known = !state.loadingSelection && state.selectedFiles.size==state.selected.size && state.selectedFiles.all { it.bytes >= 0 }
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item { PageHeading(stringResource(R.string.selection_title),stringResource(R.string.selection_caption)) }
-        item { Text(pluralStringResource(R.plurals.selected_summary,state.selected.size,state.selected.size,
-            if(known) sizeLabel(state.selectedFiles.sumOf { it.bytes }) else stringResource(R.string.unknown)),
-            style=MaterialTheme.typography.titleMedium) }
+        item {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    IconBadge(R.drawable.ic_documents)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            stringResource(R.string.selection_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            pluralStringResource(
+                                R.plurals.selected_summary,
+                                state.selected.size, state.selected.size,
+                                if(known) sizeLabel(state.selectedFiles.sumOf { it.bytes })
+                                else stringResource(R.string.unknown)
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+        }
         if(state.loadingSelection) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         if(state.hasError) item { Text(messageText(state.status),color=MaterialTheme.colorScheme.error) }
         items(state.selectedFiles,key={it.uri.toString()}) { file ->
-            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+            Surface(shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surface) {
                 Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
-                    CategoryBadge(fileIcon(file.name))
+                    app.swiftdrop.ui.screens.files.FilePreviewBadge(
+                        file.uri,file.name,Modifier.size(48.dp))
                     Column(Modifier.weight(1f)) {
                         Text(file.name,style=MaterialTheme.typography.titleSmall,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         Text(sizeLabel(file.bytes),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -158,6 +229,10 @@ fun SelectionScreen(state: TransferUiState, discover: () -> Unit, chooseAgain: (
                     AppIcon(R.drawable.ic_qr,tint=LocalContentColor.current)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.qr_scan))
+                }
+                OutlinedButton(scanUltra,Modifier.fillMaxWidth().heightIn(min=48.dp),
+                    enabled=!state.loadingSelection && !state.hasError && state.selectedFiles.isNotEmpty()) {
+                    Text(stringResource(R.string.ultra_scan_qr))
                 }
                 OutlinedButton(chooseAgain,Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(stringResource(R.string.change_selection)) }
             }

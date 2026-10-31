@@ -1,0 +1,126 @@
+name: SwiftDrop Files and Thumbnails QA
+
+on:
+  pull_request:
+    branches: [swiftdrop-android-v0.1-alpha]
+    paths:
+      - 'SwiftDrop-Android/**'
+      - '.github/workflows/swiftdrop-files-qa.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: swiftdrop-files-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: SwiftDrop-Android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK
+        run: |
+          SDKMGR="$(command -v sdkmanager || find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f -print -quit)"
+          test -n "$SDKMGR"
+          "$SDKMGR" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Restore stable app signing identity
+        id: signing
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/swiftdrop-debug.keystore
+          key: swiftdrop-android-debug-keystore-v1
+      - name: Fail closed if developer signing key is unavailable
+        env:
+          SIGNING_CACHE_HIT: ${{ steps.signing.outputs.cache-hit }}
+          SWIFTDROP_DEBUG_KEYSTORE: ${{ runner.temp }}/swiftdrop-debug.keystore
+        run: |
+          test "$SIGNING_CACHE_HIT" = true
+          test -s "$SWIFTDROP_DEBUG_KEYSTORE"
+      - name: Test file formats and build APK
+        env:
+          SWIFTDROP_DEBUG_KEYSTORE: ${{ runner.temp }}/swiftdrop-debug.keystore
+        run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Prepare Android 16 emulator image with retry
+        run: |
+          set -euo pipefail
+          SDKMGR="$(command -v sdkmanager || find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f -print -quit)"
+          test -n "$SDKMGR"
+          IMAGE="system-images;android-36;google_apis;x86_64"
+          DIR="$ANDROID_HOME/system-images/android-36/google_apis/x86_64"
+          for attempt in 1 2 3; do
+            echo "Android system image installation attempt $attempt/3"
+            if "$SDKMGR" --install "$IMAGE" && test -s "$DIR/system.img"; then
+              echo "Android 16 emulator image verified."
+              break
+            fi
+            echo "::warning::Android system image download incomplete; retrying."
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Failed to install a valid Android 16 image."
+              exit 1
+            fi
+            rm -rf "$DIR" "$ANDROID_HOME/.temp"
+            sleep 15
+          done
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Android 16 Compose UI regression tests
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          SWIFTDROP_DEBUG_KEYSTORE: ${{ runner.temp }}/swiftdrop-debug.keystore
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          emulator-boot-timeout: 180
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 3072
+          script: |
+            timeout --signal=TERM --kill-after=15s 360s gradle --project-dir SwiftDrop-Android --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.timeout_msec=90000
+      - name: Verify APK identity, signer and version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" |
+            head -1 | grep -F "package: name='app.swiftdrop' versionCode='23' versionName='0.5.0-alpha'"
+          gh release download swiftdrop-v0.5.0-alpha --repo "$GITHUB_REPOSITORY" \
+            --pattern SwiftDrop-v0.5.0-alpha.apk --dir "$RUNNER_TEMP/stable"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" > "$RUNNER_TEMP/current-cert"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs \
+            "$RUNNER_TEMP/stable/SwiftDrop-v0.5.0-alpha.apk" > "$RUNNER_TEMP/stable-cert"
+          C="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/current-cert")"
+          S="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/stable-cert")"
+          test -n "$C"
+          test "$C" = "$S"
+          sha256sum "$APK"
+      - name: Save test-only APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftDrop-Files-Thumbnails-PREVIEW-APK
+          path: SwiftDrop-Android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+      - name: Retain test diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftDrop-Files-QA-Failure-Reports
+          path: |
+            SwiftDrop-Android/app/build/reports
+            SwiftDrop-Android/app/build/test-results
+            SwiftDrop-Android/app/build/outputs/androidTest-results
+          if-no-files-found: warn
+          retention-days: 7

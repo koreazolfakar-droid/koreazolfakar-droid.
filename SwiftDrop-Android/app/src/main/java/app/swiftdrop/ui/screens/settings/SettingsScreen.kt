@@ -2,6 +2,8 @@ package app.swiftdrop.ui.screens.settings
 
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,12 +23,40 @@ import androidx.compose.ui.unit.dp
 import app.swiftdrop.*
 import app.swiftdrop.R
 import app.swiftdrop.ui.components.*
+import app.swiftdrop.ui.theme.swiftMotionDurationMillis
 
 @Composable
 fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,language: (AppLanguage) -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-        PageHeading(stringResource(R.string.settings),stringResource(R.string.settings_caption))
-        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=18.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        Surface(
+            shape=MaterialTheme.shapes.extraLarge,
+            color=MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Row(Modifier.fillMaxWidth().padding(18.dp),
+                verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                val back = LocalPageBack.current
+                if (back != null) {
+                    IconButton(onClick = back) {
+                        AppIcon(
+                            R.drawable.ic_back, description = stringResource(R.string.back),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                } else {
+                    IconBadge(R.drawable.ic_appearance)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.settings),
+                        style=MaterialTheme.typography.headlineSmall,
+                        color=MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(stringResource(R.string.settings_caption),
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+            }
+        }
+        Surface(shape=MaterialTheme.shapes.extraLarge,color=MaterialTheme.colorScheme.surface) {
             Column {
                 ExpandableSetting(R.drawable.ic_appearance,stringResource(R.string.appearance),appearanceLabel(state.appearance)) {
                     Column(Modifier.selectableGroup()) {
@@ -45,7 +75,7 @@ fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,languag
                 }
             }
         }
-        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+        Surface(shape=MaterialTheme.shapes.extraLarge,color=MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 Information(R.drawable.ic_security,R.string.privacy,stringResource(R.string.privacy_value))
                 HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
@@ -54,7 +84,7 @@ fun SettingsScreen(state: SettingsState,appearance: (Appearance) -> Unit,languag
                 Information(R.drawable.ic_nearby,R.string.engine,stringResource(R.string.engine_value))
             }
         }
-        Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+        Surface(shape=MaterialTheme.shapes.extraLarge,color=MaterialTheme.colorScheme.surface) {
             Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 BrandMark(Modifier.size(40.dp))
                 Column(Modifier.weight(1f)) {
@@ -79,10 +109,12 @@ private fun languageLabel(value: AppLanguage): String = stringResource(when(valu
 @Composable
 private fun ExpandableSetting(icon: Int,title: String,summary: String,content: @Composable () -> Unit) {
     var expanded by rememberSaveable {mutableStateOf(false)}
-    val rotation by animateFloatAsState(if(expanded) 180f else 0f,label="setting disclosure")
-    Column {
+    val duration = swiftMotionDurationMillis()
+    val rotation by animateFloatAsState(
+        if(expanded) 180f else 0f, animationSpec=tween(duration), label="setting disclosure")
+    Column(Modifier.animateContentSize(animationSpec=tween(duration))) {
         Column {
-            Row(Modifier.fillMaxWidth().heightIn(min=64.dp).clickable(role=Role.Button) {expanded=!expanded}.padding(16.dp),
+            Row(Modifier.fillMaxWidth().heightIn(min=72.dp).clickable(role=Role.Button) {expanded=!expanded}.padding(16.dp),
                 verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 IconBadge(icon)
                 Column(Modifier.weight(1f)) {
@@ -98,7 +130,7 @@ private fun ExpandableSetting(icon: Int,title: String,summary: String,content: @
 
 @Composable
 private fun Choice(label: String,selected: Boolean,onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min=48.dp).selectable(selected=selected,role=Role.RadioButton,onClick=onClick)
+    Row(Modifier.fillMaxWidth().heightIn(min=52.dp).selectable(selected=selected,role=Role.RadioButton,onClick=onClick)
         .padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
         RadioButton(selected,onClick=null)
         Text(label,Modifier.weight(1f),style=MaterialTheme.typography.bodyLarge)
