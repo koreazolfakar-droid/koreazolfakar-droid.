@@ -71,3 +71,21 @@ Current verification remains **source-only**: no Gradle, instrumentation, or phy
 device validation has run. No release or merge is authorized based on source checks
 alone. No transfer protocol, file persistence, activity result ownership, version,
 signing or permission changes are part of this work.
+
+## Third refinement (2026-10-31): canonical DESIGN.md
+
+- New `SwiftDrop-Android/DESIGN.md` is the primary product-specific visual contract.
+  Expo/Linear reference studies informed content hierarchy and understated
+  surface layering, **not brand colors or layouts**.
+- Semantic `Signal`, `Spark`, `Ink` roles added with aliases for older screen code.
+- `swiftMotionDurationMillis()` derives from one lifecycle-aware app preference,
+  with no per-frame settings lookups; reduced motion now covers dock transitions,
+  press effects, settings and media selection as well as live transfer progress.
+- Primary/secondary action palette has white text on dark enough fills. New
+  `SwiftMotionDesignContractTest` checks action contrast and touch-target tokens.
+- History items and empty records, section headings at large font, dock labels,
+  transfer speed/ETA layout and SignalOrbit progress semantics were improved.
+- Validation performed: static source/diff review and independent contrast
+  calculation. Kotlin/JUnit tests, Gradle build, instrumentation and hardware
+  transfer were **not** executed, and the draft must not be merged yet.
+
