@@ -11,11 +11,14 @@ import java.util.Base64
  *
  * Treat this QR as a sensitive short-lived invitation, do not log or persist it.
  */
+enum class UltraWifiSecurity { WPA2, WPA3 }
+
 data class UltraInvitation(
     val ssid: String,
     val password: String,
     val port: Int,
-    val secret: ByteArray
+    val secret: ByteArray,
+    val security: UltraWifiSecurity = UltraWifiSecurity.WPA2
 ) {
     init {
         require(ssid.isNotEmpty() && ssid.toByteArray(Charsets.UTF_8).size <= 32)
@@ -26,7 +29,8 @@ data class UltraInvitation(
     fun encode(): String {
         fun param(v:String) = URLEncoder.encode(v,"UTF-8")
         return "swiftdrop://ultra/v1?ssid=${param(ssid)}&pw=${param(password)}" +
-            "&port=$port&key=${Base64.getUrlEncoder().withoutPadding().encodeToString(secret)}"
+            "&port=$port&key=${Base64.getUrlEncoder().withoutPadding().encodeToString(secret)}" +
+            (if (security == UltraWifiSecurity.WPA3) "&security=wpa3" else "")
     }
     companion object {
         fun parse(qr: String?): UltraInvitation? {
@@ -43,13 +47,19 @@ data class UltraInvitation(
                     key to value
                 }
                 val fields = entries.toMap()
-                require(entries.size == 4 && fields.size == 4 &&
-                    fields.keys == setOf("ssid","pw","port","key"))
+                val legacyKeys = setOf("ssid","pw","port","key")
+                require(entries.size == fields.size &&
+                    (fields.keys == legacyKeys || fields.keys == legacyKeys + "security"))
+                val security = when (fields["security"]) {
+                    null, "wpa2" -> UltraWifiSecurity.WPA2
+                    "wpa3" -> UltraWifiSecurity.WPA3
+                    else -> throw IllegalArgumentException("Unsupported Wi-Fi security")
+                }
                 val secret = Base64.getUrlDecoder().decode(requireNotNull(fields["key"]))
                 UltraInvitation(requireNotNull(fields["ssid"]),
                     requireNotNull(fields["pw"]),
                     requireNotNull(fields["port"]).toInt(),
-                    secret)
+                    secret, security)
             }.getOrNull()
         }
     }
