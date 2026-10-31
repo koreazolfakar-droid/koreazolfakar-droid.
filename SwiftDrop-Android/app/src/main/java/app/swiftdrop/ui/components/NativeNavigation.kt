@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.swiftdrop.R
@@ -57,7 +58,7 @@ fun SwiftNavigationBar(current: String, navigate: (String) -> Unit) {
                         AppIcon(icon, tint = ink)
                         Text(
                             stringResource(label), style = MaterialTheme.typography.labelSmall,
-                            color = ink, maxLines = 1
+                            color = ink, maxLines = 2, textAlign = TextAlign.Center
                         )
                     }
                 }
