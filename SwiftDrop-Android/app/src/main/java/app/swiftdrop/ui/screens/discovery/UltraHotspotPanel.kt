@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -26,12 +27,22 @@ fun UltraHotspotPanel(
     transport: UltraLanState = UltraLanState(),
     inviteQr: String? = null
 ) {
-    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
+    Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surface) {
         Column(
             Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(stringResource(R.string.ultra_hotspot_title), style = MaterialTheme.typography.titleMedium)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                app.swiftdrop.ui.components.IconBadge(R.drawable.ic_nearby)
+                Text(
+                    stringResource(R.string.ultra_hotspot_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f)
+                )
+            }
             Text(
                 stringResource(R.string.ultra_hotspot_description),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -63,7 +74,7 @@ fun UltraHotspotPanel(
                         Text(stringResource(R.string.ultra_status_receiving),
                             style = MaterialTheme.typography.titleSmall)
                         transport.progress?.let { p ->
-                            LinearProgressIndicator(progress = { p.fraction },modifier = Modifier.fillMaxWidth())
+                            LinearProgressIndicator(progress = { p.fraction.coerceIn(0f, 1f) },modifier = Modifier.fillMaxWidth())
                             Text("${p.percent}% — ${p.bytes} / ${p.total} bytes")
                         }
                     }
