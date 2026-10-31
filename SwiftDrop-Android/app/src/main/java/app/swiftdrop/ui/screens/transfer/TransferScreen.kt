@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
@@ -151,16 +152,40 @@ fun TransferScreen(state: TransferUiState,disconnect: () -> Unit,sendMore: (() -
             }
         }
 
-        if(working) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                DashboardMetric(R.drawable.ic_progress,stringResource(R.string.speed),
-                    p?.measurement?.bytesPerSecond?.let {
-                        stringResource(R.string.speed_value,sizeLabel(it.toLong()))
-                    } ?: stringResource(R.string.measuring),Modifier.weight(1f))
-                DashboardMetric(R.drawable.ic_history,stringResource(R.string.remaining),
-                    p?.measurement?.remainingSeconds?.let {
-                        pluralStringResource(R.plurals.eta_seconds,it.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),it)
-                    } ?: stringResource(R.string.estimating),Modifier.weight(1f))
+        if (working) {
+            val measuredSpeed = p?.measurement?.bytesPerSecond?.let {
+                stringResource(R.string.speed_value, sizeLabel(it.toLong()))
+            } ?: stringResource(R.string.measuring)
+            val measuredTime = p?.measurement?.remainingSeconds?.let {
+                pluralStringResource(
+                    R.plurals.eta_seconds, it.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), it
+                )
+            } ?: stringResource(R.string.estimating)
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val stacked = maxWidth < 330.dp || LocalDensity.current.fontScale >= 1.4f
+                if (stacked) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        DashboardMetric(
+                            R.drawable.ic_progress, stringResource(R.string.speed),
+                            measuredSpeed, Modifier.fillMaxWidth()
+                        )
+                        DashboardMetric(
+                            R.drawable.ic_history, stringResource(R.string.remaining),
+                            measuredTime, Modifier.fillMaxWidth()
+                        )
+                    }
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        DashboardMetric(
+                            R.drawable.ic_progress, stringResource(R.string.speed),
+                            measuredSpeed, Modifier.weight(1f)
+                        )
+                        DashboardMetric(
+                            R.drawable.ic_history, stringResource(R.string.remaining),
+                            measuredTime, Modifier.weight(1f)
+                        )
+                    }
+                }
             }
         }
 
