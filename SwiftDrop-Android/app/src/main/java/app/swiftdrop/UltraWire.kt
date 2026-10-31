@@ -230,7 +230,9 @@ internal object UltraFileWire {
         createOutput: (Offer) -> OutputStream,
         commit: (Offer) -> Unit,
         rollback: (Offer) -> Unit,
-        onProgress: (Long, Long) -> Unit = { _,_ -> }
+        onProgress: (Long, Long) -> Unit = { _,_ -> },
+        // Injectable only for deterministic ACK-loss tests; production sends COMPLETE.
+        acknowledge: (UltraWire.Channel) -> Unit = { it.send(COMPLETE) }
     ): Boolean {
         val first = channel.read()
         requireType(first,OFFER)
@@ -240,6 +242,7 @@ internal object UltraFileWire {
             return false
         }
         var created = false
+        var committed = false
         try {
             val target = createOutput(offer)
             created = true
@@ -272,11 +275,16 @@ internal object UltraFileWire {
                 output.flush()
             }
             commit(offer)
-            channel.send(COMPLETE)
+            committed = true
+            // Once MediaStore has published the verified file, a lost final
+            // acknowledgement must NEVER delete it or signal a false rollback.
+            acknowledge(channel)
             return true
         } catch (e: Exception) {
-            if (created) rollback(offer)
-            runCatching { channel.send(FAILURE) }
+            if (!committed) {
+                if (created) runCatching { rollback(offer) }
+                runCatching { channel.send(FAILURE) }
+            }
             throw e
         }
     }
