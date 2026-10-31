@@ -56,3 +56,18 @@ from `SwiftDrop-Android` with JDK 17 and Android SDK 36. Run instrumented
 UI tests, two-device transfer tests and regression checks before merge.
 Confirm version/signing identity and never trigger auto-release merely for
 a visual review. No engine, transport or permissions were changed by this batch.
+
+## Second refinement batch (2026-10-31)
+- Refined file/media selection bar for narrow widths and 140%+ font scale.
+- Document tree and file-picker actions adapt from two columns to stacked buttons.
+- Photo/video/music selection receives consistent shapes and subtle state transitions.
+- History overview presents total transferred bytes and count responsively.
+- Settings disclosure, theme/language cards and header were refreshed without losing Back.
+- Onboarding, permission recovery and receive pairing QR share SwiftMotion surfaces.
+- Ultra hotspot invitation card and file review summary now align with the wider UI.
+- The pairing QR deliberately retains its white quiet zone and session-local encoding.
+
+Current verification remains **source-only**: no Gradle, instrumentation, or physical
+device validation has run. No release or merge is authorized based on source checks
+alone. No transfer protocol, file persistence, activity result ownership, version,
+signing or permission changes are part of this work.
