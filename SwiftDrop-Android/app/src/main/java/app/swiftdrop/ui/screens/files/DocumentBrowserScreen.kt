@@ -386,7 +386,7 @@ fun DocumentBrowserScreen(back: () -> Unit, onSend: (List<Uri>) -> Unit, documen
                     ) { Text(stringResource(R.string.doc_choose_files)) }
                 }
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { chooseTree.launch(null) },
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
