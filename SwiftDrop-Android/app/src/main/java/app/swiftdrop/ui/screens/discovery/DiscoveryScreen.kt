@@ -1,5 +1,6 @@
 package app.swiftdrop.ui.screens.discovery
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
