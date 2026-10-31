@@ -13,6 +13,25 @@ class UltraInvitationTest {
         assertArrayEquals(original.secret,restored.secret)
     }
 
+    @Test fun wpa3RoundTripAndLegacyWpa2AreBothSupported() {
+        val original = UltraInvitation(
+            "Galaxy-Receiver", "correcthorse123", 53021,
+            UltraWire.newSecret(), UltraWifiSecurity.WPA3
+        )
+        val qr = original.encode()
+        assertTrue(qr.contains("security=wpa3"))
+        val restored = requireNotNull(UltraInvitation.parse(qr))
+        assertEquals(UltraWifiSecurity.WPA3, restored.security)
+        assertArrayEquals(original.secret, restored.secret)
+        val legacy = UltraInvitation(
+            "Old-Receiver", "abcdefgh", 50001, UltraWire.newSecret()
+        )
+        assertFalse(legacy.encode().contains("security="))
+        assertEquals(UltraWifiSecurity.WPA2, UltraInvitation.parse(legacy.encode())?.security)
+        assertNull(UltraInvitation.parse(qr.replace("security=wpa3", "security=unknown")))
+        assertNull(UltraInvitation.parse(qr + "&security=wpa2"))
+    }
+
     @Test fun nearbyQrAndMalformedUltraLinksAreRejected() {
         assertNull(UltraInvitation.parse("swiftdrop://pair/v1/0123456789abcdef0123456789abcdef"))
         assertNull(UltraInvitation.parse("https://example.com"))
