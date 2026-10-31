@@ -11,6 +11,7 @@ import android.provider.Settings
 import java.text.DateFormat
 import java.util.Date
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -137,7 +138,7 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
         }
         if(!standaloneCategory && storage!=null && storage.first>0) {
             Surface(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=5.dp),
-                shape=MaterialTheme.shapes.small,color=MaterialTheme.colorScheme.surfaceVariant) {
+                shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surfaceVariant) {
                 Row(Modifier.padding(horizontal=12.dp,vertical=10.dp),
                     verticalAlignment=Alignment.CenterVertically,
                     horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -160,17 +161,17 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
                 FilterChip(selected=tab==index,onClick={
                     tab=index
                     if(index==3)refreshApps()
-                },label={Text(stringResource(label))})
+                },label={Text(stringResource(label))}, shape=MaterialTheme.shapes.large)
             }
             AssistChip(onClick={
                 if (openDocuments != null) openDocuments()
                 else choose(arrayOf("application/pdf","text/*","application/msword",
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-            }, label={Text(stringResource(R.string.documents))})
+            }, label={Text(stringResource(R.string.documents))},shape=MaterialTheme.shapes.large)
             AssistChip(onClick={
                 if (openStorage != null) openStorage()
                 else choose(arrayOf("*/*"))
-            }, label={Text(stringResource(R.string.all_files))})
+            }, label={Text(stringResource(R.string.all_files))},shape=MaterialTheme.shapes.large)
         }
         Box(Modifier.weight(1f)) {
             if(tab==3) {
@@ -192,22 +193,64 @@ fun MediaGalleryScreen(choose: (Array<String>) -> Unit, apps: () -> Unit,
             }
         }
         if(selected.isNotEmpty()) {
-            val known=selected.values.all { it.bytes>=0 }
-            val total=selected.values.sumOf { it.bytes.coerceAtLeast(0L) }
-            Surface(tonalElevation=3.dp,color=MaterialTheme.colorScheme.primaryContainer) {
-                Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
-                    verticalAlignment=Alignment.CenterVertically,
-                    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        Text(pluralStringResource(R.plurals.media_selected_count,selected.size,selected.size),
-                            style=MaterialTheme.typography.labelMedium,
-                            color=MaterialTheme.colorScheme.onPrimaryContainer)
-                        if(known) Text(sizeLabel(total),style=MaterialTheme.typography.labelSmall,
-                            color=MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                    TextButton(onClick={selected.clear()}) { Text(stringResource(R.string.media_clear)) }
-                    Button(onClick={sendSelected(selected.keys.toList())}) {
-                        Text(stringResource(R.string.media_send_selected))
+            val known = selected.values.all { it.bytes >= 0 }
+            val total = selected.values.sumOf { it.bytes.coerceAtLeast(0L) }
+            Surface(
+                tonalElevation = 3.dp,
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
+                    val compact = maxWidth < 330.dp || LocalDensity.current.fontScale >= 1.4f
+                    if (compact) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                pluralStringResource(
+                                    R.plurals.media_selected_count, selected.size, selected.size
+                                ) + if (known) " · " + sizeLabel(total) else "",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                TextButton(
+                                    onClick = { selected.clear() }, modifier = Modifier.weight(1f)
+                                ) { Text(stringResource(R.string.media_clear)) }
+                                Button(
+                                    onClick = { sendSelected(selected.keys.toList()) },
+                                    modifier = Modifier.weight(1f)
+                                ) { Text(stringResource(R.string.media_send_selected)) }
+                            }
+                        }
+                    } else {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    pluralStringResource(
+                                        R.plurals.media_selected_count, selected.size, selected.size
+                                    ),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                if (known) Text(
+                                    sizeLabel(total), style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            TextButton(onClick = { selected.clear() }) {
+                                Text(stringResource(R.string.media_clear))
+                            }
+                            Button(onClick = { sendSelected(selected.keys.toList()) }) {
+                                Text(stringResource(R.string.media_send_selected))
+                            }
+                        }
                     }
                 }
             }
