@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,20 +47,19 @@ fun HomeScreen(state: TransferUiState, send: (Array<String>) -> Unit, receive: (
         HomeCategory(R.drawable.ic_documents,R.string.home_docs_short,openDocuments))
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        .padding(horizontal=SwiftDropDesign.ScreenPadding).padding(top=16.dp,bottom=20.dp),
+        .padding(horizontal=SwiftDropDesign.ScreenPadding).padding(top=12.dp,bottom=32.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)) {
         BrandHeader(onSettings)
-        Spacer(Modifier.height(4.dp))
         ConnectionStatus(state,status,if(active) resume else receive)
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val stacked=maxWidth<320.dp || LocalDensity.current.fontScale>=1.35f
-            if(stacked) Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            if(stacked) Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
                 TransferAction(R.drawable.ic_send,R.string.send_files,R.string.choose_files,
                     openFiles,Modifier.fillMaxWidth(),compact=true)
                 TransferAction(R.drawable.ic_receive,R.string.receive_files,R.string.make_visible,
                     receive,Modifier.fillMaxWidth(),receiving=true,compact=true,
                     busy=state.isAdvertising || state.connectingId!=null)
-            } else Row(Modifier.height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            } else Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 TransferAction(R.drawable.ic_send,R.string.send_files,R.string.choose_files,
                     openFiles,Modifier.weight(1f).fillMaxHeight())
                 TransferAction(R.drawable.ic_receive,R.string.receive_files,R.string.make_visible,
@@ -75,7 +75,7 @@ fun HomeScreen(state: TransferUiState, send: (Array<String>) -> Unit, receive: (
         Surface(onClick=openFiles,modifier=Modifier.then(Modifier.pressScale(qrPress)),
             interactionSource=qrPress,shape=MaterialTheme.shapes.medium,
             color=MaterialTheme.colorScheme.surface) {
-            Row(Modifier.fillMaxWidth().heightIn(min=68.dp).padding(12.dp),
+            Row(Modifier.fillMaxWidth().heightIn(min=60.dp).padding(12.dp),
                 verticalAlignment=Alignment.CenterVertically,
                 horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 IconBadge(R.drawable.ic_qr)
@@ -129,10 +129,23 @@ private fun ConnectionStatus(state:TransferUiState,error:String,action:()->Unit)
         state.isAdvertising -> stringResource(R.string.waiting_sender)
         else -> stringResource(R.string.home_ready_to_share)
     }
-    Surface(onClick=action,shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surface) {
-        Row(Modifier.fillMaxWidth().heightIn(min=68.dp).padding(12.dp),
-            verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            IconBadge(if(state.hasError) R.drawable.ic_error else R.drawable.ic_nearby)
+    Surface(
+        onClick=action,
+        shape=MaterialTheme.shapes.medium,
+        color=MaterialTheme.colorScheme.surface,
+        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Row(Modifier.fillMaxWidth().heightIn(min=62.dp).padding(horizontal=14.dp,vertical=10.dp),
+            verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            Surface(shape=MaterialTheme.shapes.small,
+                color=MaterialTheme.colorScheme.surfaceVariant) {
+                Box(Modifier.size(38.dp),contentAlignment=Alignment.Center) {
+                    AppIcon(if(state.hasError) R.drawable.ic_error else R.drawable.ic_nearby,
+                        Modifier.size(20.dp),
+                        tint=if(state.hasError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                }
+            }
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
                 Text(Build.MODEL,style=MaterialTheme.typography.titleSmall,
                     maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -147,7 +160,8 @@ private fun ConnectionStatus(state:TransferUiState,error:String,action:()->Unit)
                         overflow=TextOverflow.Ellipsis)
                 }
             }
-            AppIcon(R.drawable.ic_chevron,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+            AppIcon(R.drawable.ic_chevron,Modifier.size(18.dp),
+                tint=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -156,25 +170,41 @@ private fun ConnectionStatus(state:TransferUiState,error:String,action:()->Unit)
 private fun TransferAction(@DrawableRes icon:Int,@StringRes title:Int,@StringRes caption:Int,
     action:()->Unit,modifier:Modifier,receiving:Boolean=false,compact:Boolean=false,busy:Boolean=false) {
     val source=remember { MutableInteractionSource() }
-    val background=if(receiving) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
-    val ink=if(receiving) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
-    Card(onClick=action,modifier=modifier.then(Modifier.pressScale(source)),interactionSource=source,
-        shape=MaterialTheme.shapes.extraLarge,colors=CardDefaults.cardColors(containerColor=background)) {
-        Column(Modifier.fillMaxWidth().heightIn(min=if(compact) 132.dp else 164.dp).padding(18.dp),
-            verticalArrangement=Arrangement.spacedBy(14.dp)) {
-            Surface(shape=CircleShape,color=ink.copy(alpha=.10f)) {
-                Box(Modifier.size(40.dp),contentAlignment=Alignment.Center) {
-                    if(busy) CircularProgressIndicator(Modifier.size(22.dp),color=ink,strokeWidth=2.dp)
-                    else AppIcon(icon,Modifier.size(24.dp),tint=ink)
+    val tint=if(receiving) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+    val ink=MaterialTheme.colorScheme.onSurface
+    Card(
+        onClick=action,
+        modifier=modifier.then(Modifier.pressScale(source)),
+        interactionSource=source,
+        shape=MaterialTheme.shapes.medium,
+        colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),
+        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().heightIn(min=if(compact) 94.dp else 116.dp)
+                .padding(horizontal=14.dp,vertical=14.dp),
+            verticalArrangement=Arrangement.SpaceBetween
+        ) {
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Surface(shape=MaterialTheme.shapes.small,
+                    color=if(receiving) MaterialTheme.colorScheme.secondaryContainer
+                        else MaterialTheme.colorScheme.primaryContainer) {
+                    Box(Modifier.size(38.dp),contentAlignment=Alignment.Center) {
+                        if(busy) CircularProgressIndicator(
+                            Modifier.size(20.dp),color=tint,strokeWidth=2.dp)
+                        else AppIcon(icon,Modifier.size(22.dp),tint=tint)
+                    }
                 }
+                Spacer(Modifier.weight(1f))
+                AppIcon(R.drawable.ic_chevron,Modifier.size(17.dp),
+                    tint=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Row(verticalAlignment=Alignment.CenterVertically) {
-                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                    Text(stringResource(title),style=MaterialTheme.typography.titleMedium,color=ink)
-                    Text(stringResource(caption),style=MaterialTheme.typography.bodySmall,
-                        color=actionCaptionColor(ink))
-                }
-                AppIcon(R.drawable.ic_chevron,Modifier.size(18.dp),tint=ink)
+            Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                Text(stringResource(title),style=MaterialTheme.typography.titleMedium,color=ink,
+                    maxLines=2,overflow=TextOverflow.Ellipsis)
+                Text(stringResource(caption),style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines=2,overflow=TextOverflow.Ellipsis)
             }
         }
     }
@@ -188,12 +218,13 @@ private fun CategoryTile(category:HomeCategory,modifier:Modifier) {
     Card(onClick=category.action,modifier=modifier.then(Modifier.pressScale(source)),interactionSource=source,
         shape=MaterialTheme.shapes.small,
         colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.fillMaxWidth().heightIn(min=88.dp).padding(horizontal=4.dp,vertical=12.dp),
+        Column(Modifier.fillMaxWidth().heightIn(min=75.dp).padding(horizontal=3.dp,vertical=10.dp),
             horizontalAlignment=Alignment.CenterHorizontally,
-            verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            CategoryBadge(category.icon,Modifier.size(36.dp))
+            verticalArrangement=Arrangement.spacedBy(7.dp)) {
+            CategoryBadge(category.icon,Modifier.size(32.dp))
             Text(stringResource(category.title),style=MaterialTheme.typography.labelMedium,
-                textAlign=TextAlign.Center)
+                textAlign=TextAlign.Center,maxLines=2,
+                overflow=TextOverflow.Ellipsis)
         }
     }
 }

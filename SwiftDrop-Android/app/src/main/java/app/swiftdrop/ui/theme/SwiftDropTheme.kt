@@ -16,14 +16,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// SwiftMotion UI v1: a distinct signal-and-flow identity for SwiftDrop.
+// SwiftDrop Graphite v2: premium neutral surfaces, restricted electric-blue signal.
+// The old token aliases remain to protect existing screens and regression tests.
 object SwiftDropDesign {
-    val Signal = Color(0xFF006C5B)
-    val Spark = Color(0xFFA6472F)
-    val SparkHighlight = Color(0xFFF27B56)
-    val Ink = Color(0xFF152326)
-    val Background = Color(0xFFF5F8F5)
-    // Legacy names retained for existing screen calls; use semantic names in new code.
+    val Signal = Color(0xFF315ED1)
+    val Spark = Color(0xFF4E5B70)
+    val SparkHighlight = Color(0xFF7294EF)
+    val Ink = Color(0xFF172231)
+    val Background = Color(0xFFF5F7FB)
     val Blue = Signal
     val Cyan = SparkHighlight
     val Navy = Ink
@@ -42,44 +42,44 @@ object SwiftDropDesign {
 
 private val LightColors = lightColorScheme(
     primary = SwiftDropDesign.Signal, onPrimary = Color.White,
-    primaryContainer = Color(0xFFD8F5E9), onPrimaryContainer = Color(0xFF103F34),
+    primaryContainer = Color(0xFFDCE6FF), onPrimaryContainer = Color(0xFF15346E),
     secondary = SwiftDropDesign.Spark, onSecondary = Color.White,
-    secondaryContainer = Color(0xFFFFE5D9), onSecondaryContainer = Color(0xFF6E2C1E),
-    tertiary = Color(0xFF526B0D), onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFE8F3C9), onTertiaryContainer = Color(0xFF344900),
-    error = Color(0xFFB32635), onError = Color.White,
-    errorContainer = Color(0xFFFFE8EA), onErrorContainer = Color(0xFF8D172A),
-    background = SwiftDropDesign.Background, onBackground = SwiftDropDesign.Navy,
-    surface = Color.White, onSurface = SwiftDropDesign.Navy,
-    surfaceVariant = Color(0xFFEAF1EC), onSurfaceVariant = Color(0xFF4C625B),
-    surfaceDim = Color(0xFFDCE6E0), surfaceBright = Color.White,
-    surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFFAFCFA),
-    surfaceContainer = Color(0xFFF0F5F1), surfaceContainerHigh = Color(0xFFE8F0EB),
-    surfaceContainerHighest = Color(0xFFDFE9E3),
-    outline = Color(0xFF647B72), outlineVariant = Color(0xFFD7E4DB),
-    inverseSurface = Color(0xFF213733), inverseOnSurface = Color(0xFFE9F7EF),
-    inversePrimary = Color(0xFF81F0D1), surfaceTint = SwiftDropDesign.Signal
+    secondaryContainer = Color(0xFFE9EDF3), onSecondaryContainer = Color(0xFF283444),
+    tertiary = Color(0xFF267452), onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFDCF2E6), onTertiaryContainer = Color(0xFF164B35),
+    error = Color(0xFFAD2A40), onError = Color.White,
+    errorContainer = Color(0xFFFFE6EB), onErrorContainer = Color(0xFF7E1E30),
+    background = SwiftDropDesign.Background, onBackground = SwiftDropDesign.Ink,
+    surface = Color.White, onSurface = SwiftDropDesign.Ink,
+    surfaceVariant = Color(0xFFEDF1F7), onSurfaceVariant = Color(0xFF526173),
+    surfaceDim = Color(0xFFE7ECF4), surfaceBright = Color.White,
+    surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFFCFDFF),
+    surfaceContainer = Color(0xFFF0F3F9), surfaceContainerHigh = Color(0xFFE6EBF3),
+    surfaceContainerHighest = Color(0xFFDCE4EF),
+    outline = Color(0xFF64738A), outlineVariant = Color(0xFFDCE3EE),
+    inverseSurface = Color(0xFF172231), inverseOnSurface = Color(0xFFF4F7FE),
+    inversePrimary = Color(0xFFB3C8FF), surfaceTint = SwiftDropDesign.Signal
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF81F0D1), onPrimary = Color(0xFF063C33),
-    primaryContainer = Color(0xFF164E43), onPrimaryContainer = Color(0xFFD4FBEF),
-    secondary = Color(0xFFFFB096), onSecondary = Color(0xFF602A1D),
-    secondaryContainer = Color(0xFF552E27), onSecondaryContainer = Color(0xFFFFD8CA),
-    tertiary = Color(0xFFD2EB87), onTertiary = Color(0xFF2A3A0A),
-    tertiaryContainer = Color(0xFF394D1E), onTertiaryContainer = Color(0xFFEBF9B4),
-    error = Color(0xFFFFB1B8), onError = Color(0xFF660C1B),
-    errorContainer = Color(0xFF51242C), onErrorContainer = Color(0xFFFFDDE0),
-    background = Color(0xFF081317), onBackground = Color(0xFFE7F3EE),
-    surface = Color(0xFF112125), onSurface = Color(0xFFE7F3EE),
-    surfaceVariant = Color(0xFF253539), onSurfaceVariant = Color(0xFFABC6BC),
-    surfaceDim = Color(0xFF0C191D), surfaceBright = Color(0xFF314347),
-    surfaceContainerLowest = Color(0xFF081317), surfaceContainerLow = Color(0xFF0E1B1F),
-    surfaceContainer = Color(0xFF16262A), surfaceContainerHigh = Color(0xFF1D3033),
-    surfaceContainerHighest = Color(0xFF294044),
-    outline = Color(0xFF8BA9A0), outlineVariant = Color(0xFF334A45),
-    inverseSurface = Color(0xFFDCEDE6), inverseOnSurface = Color(0xFF1F3932),
-    inversePrimary = Color(0xFF006C5B), surfaceTint = Color(0xFF81F0D1)
+    primary = Color(0xFFABC2FF), onPrimary = Color(0xFF102C69),
+    primaryContainer = Color(0xFF23345A), onPrimaryContainer = Color(0xFFDCE6FF),
+    secondary = Color(0xFFBBC7D9), onSecondary = Color(0xFF273447),
+    secondaryContainer = Color(0xFF2B3545), onSecondaryContainer = Color(0xFFDFE6F1),
+    tertiary = Color(0xFF79D3A7), onTertiary = Color(0xFF10442F),
+    tertiaryContainer = Color(0xFF1C4335), onTertiaryContainer = Color(0xFFBEF1D6),
+    error = Color(0xFFFFAEBB), onError = Color(0xFF651B29),
+    errorContainer = Color(0xFF512936), onErrorContainer = Color(0xFFFFDDE4),
+    background = Color(0xFF0B1019), onBackground = Color(0xFFEFF2F8),
+    surface = Color(0xFF151C28), onSurface = Color(0xFFEFF2F8),
+    surfaceVariant = Color(0xFF202A38), onSurfaceVariant = Color(0xFFABB7CA),
+    surfaceDim = Color(0xFF0C121D), surfaceBright = Color(0xFF303B4A),
+    surfaceContainerLowest = Color(0xFF0B1019), surfaceContainerLow = Color(0xFF111824),
+    surfaceContainer = Color(0xFF182230), surfaceContainerHigh = Color(0xFF222D3D),
+    surfaceContainerHighest = Color(0xFF2D3A4D),
+    outline = Color(0xFF8898AF), outlineVariant = Color(0xFF354154),
+    inverseSurface = Color(0xFFE5EBF5), inverseOnSurface = Color(0xFF192638),
+    inversePrimary = SwiftDropDesign.Signal, surfaceTint = Color(0xFFABC2FF)
 )
 
 private fun type(size: Int, height: Int, weight: FontWeight = FontWeight.Normal) = TextStyle(
@@ -87,13 +87,13 @@ private fun type(size: Int, height: Int, weight: FontWeight = FontWeight.Normal)
     lineHeight = height.sp, letterSpacing = 0.sp
 )
 private val AppTypography = Typography(
-    displayLarge = type(44, 52, FontWeight.Medium),
+    displayLarge = type(40, 49, FontWeight.Medium),
     displayMedium = type(38, 46, FontWeight.Medium),
     displaySmall = type(34, 42, FontWeight.Medium),
-    headlineLarge = type(30, 38, FontWeight.SemiBold),
-    headlineMedium = type(26, 34, FontWeight.SemiBold),
-    headlineSmall = type(23, 30, FontWeight.SemiBold),
-    titleLarge = type(20, 28, FontWeight.SemiBold),
+    headlineLarge = type(28, 36, FontWeight.SemiBold),
+    headlineMedium = type(24, 32, FontWeight.SemiBold),
+    headlineSmall = type(22, 30, FontWeight.SemiBold),
+    titleLarge = type(19, 27, FontWeight.SemiBold),
     titleMedium = type(16, 24, FontWeight.Medium),
     titleSmall = type(14, 20, FontWeight.Medium),
     bodyLarge = type(16, 24), bodyMedium = type(14, 21), bodySmall = type(12, 18),
@@ -137,11 +137,11 @@ fun SwiftDropTheme(dark: Boolean, content: @Composable () -> Unit) {
             colorScheme = if (dark) DarkColors else LightColors,
             typography = AppTypography,
             shapes = Shapes(
-                extraSmall = RoundedCornerShape(10.dp),
-                small = RoundedCornerShape(16.dp),
-                medium = RoundedCornerShape(22.dp),
-                large = RoundedCornerShape(28.dp),
-                extraLarge = RoundedCornerShape(32.dp)
+                extraSmall = RoundedCornerShape(6.dp),
+                small = RoundedCornerShape(10.dp),
+                medium = RoundedCornerShape(14.dp),
+                large = RoundedCornerShape(18.dp),
+                extraLarge = RoundedCornerShape(22.dp)
             ),
             content = content
         )

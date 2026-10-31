@@ -29,13 +29,14 @@ fun BrandMark(modifier: Modifier = Modifier) {
 
 @Composable
 fun BrandHeader(onSettings: (() -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically,
-        horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-        BrandMark()
-        Column(Modifier.weight(1f)) {
-            Text("SwiftDrop", style=MaterialTheme.typography.headlineMedium)
+    Row(Modifier.fillMaxWidth().heightIn(min=54.dp), verticalAlignment=Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+        BrandMark(Modifier.size(40.dp))
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)) {
+            Text("SwiftDrop", style=MaterialTheme.typography.headlineSmall)
             Text(stringResource(R.string.brand_tagline), style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines=1,overflow=TextOverflow.Ellipsis)
         }
         if(onSettings!=null) IconButton(onSettings) {
             AppIcon(R.drawable.ic_settings, description=stringResource(R.string.settings),
@@ -61,7 +62,7 @@ fun categoryColor(icon: Int): Color {
 @Composable
 fun CategoryBadge(icon: Int, modifier: Modifier = Modifier) {
     val color=categoryColor(icon)
-    Surface(modifier.size(44.dp), shape=MaterialTheme.shapes.small, color=color.copy(alpha=.12f)) {
+    Surface(modifier.size(36.dp), shape=MaterialTheme.shapes.small, color=color.copy(alpha=.09f)) {
         Box(contentAlignment=Alignment.Center) { AppIcon(icon, tint=color) }
     }
 }
