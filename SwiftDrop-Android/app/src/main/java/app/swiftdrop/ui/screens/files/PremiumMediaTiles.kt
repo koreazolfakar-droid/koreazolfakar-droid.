@@ -2,6 +2,7 @@ package app.swiftdrop.ui.screens.files
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -49,11 +50,11 @@ fun formatMediaDuration(durationMs: Long): String {
 @Composable
 internal fun PhotoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit,
     selectionMode:Boolean=false) {
-    val scale by animateFloatAsState(if(checked) .96f else 1f,tween(130),label="photo selection")
+    val scale by animateFloatAsState(if(checked) .96f else 1f,tween(210),label="SwiftMotion photo selection")
     Card(Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer(scaleX=scale,scaleY=scale)
         .semantics { contentDescription=item.name }
         .combinedClickable(onClick=onOpen,onLongClick=onToggle),
-        shape=RoundedCornerShape(10.dp),
+        shape=MaterialTheme.shapes.medium,
         border=if(checked) BorderStroke(2.dp,MaterialTheme.colorScheme.primary) else null,
         colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceVariant)) {
         Box(Modifier.fillMaxSize()) {
@@ -70,18 +71,18 @@ internal fun PhotoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle
 @Composable
 internal fun VideoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit,
     selectionMode:Boolean=false) {
-    val scale by animateFloatAsState(if(checked) .97f else 1f,tween(130),label="video selection")
+    val scale by animateFloatAsState(if(checked) .97f else 1f,tween(210),label="SwiftMotion video selection")
     Card(Modifier.fillMaxWidth().graphicsLayer(scaleX=scale,scaleY=scale)
         .semantics { contentDescription=item.name }
         .combinedClickable(onClick=onOpen,onLongClick=onToggle),
-        shape=RoundedCornerShape(10.dp),
+        shape=MaterialTheme.shapes.medium,
         border=if(checked) BorderStroke(2.dp,MaterialTheme.colorScheme.primary) else null,
         colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)) {
         Column {
             Box(Modifier.fillMaxWidth().aspectRatio(16f/9f)) {
                 MediaArt(item.uri,MediaKind.Videos,Modifier.fillMaxSize())
                 Surface(Modifier.align(Alignment.BottomEnd).padding(5.dp),
-                    shape=RoundedCornerShape(5.dp),color=Color.Black.copy(alpha=.72f)) {
+                    shape=MaterialTheme.shapes.small,color=Color.Black.copy(alpha=.72f)) {
                     Text(formatMediaDuration(item.duration),Modifier.padding(horizontal=5.dp,vertical=2.dp),
                         style=MaterialTheme.typography.labelSmall,color=Color.White)
                 }
@@ -104,7 +105,11 @@ internal fun VideoTile(item: LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MusicRow(item:LocalMedia,checked:Boolean,onOpen:()->Unit,onToggle:()->Unit,onPlay:()->Unit) {
-    Surface(shape=MaterialTheme.shapes.small,color=if(checked) MaterialTheme.colorScheme.primaryContainer else Color.Transparent) {
+    val tone by animateColorAsState(
+        if(checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        animationSpec=tween(210),label="SwiftMotion music selection"
+    )
+    Surface(shape=MaterialTheme.shapes.medium,color=tone) {
         Row(Modifier.fillMaxWidth().heightIn(min=66.dp).padding(horizontal=8.dp,vertical=7.dp),
             verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             IconButton(onClick=onPlay,modifier=Modifier.size(48.dp).semantics { contentDescription=item.name }) {
