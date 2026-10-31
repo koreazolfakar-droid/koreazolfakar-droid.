@@ -66,11 +66,12 @@ class UltraLanTransferManager(
     @Volatile private var callback: ConnectivityManager.NetworkCallback? = null
     @Volatile private var pendingApproval: CompletableFuture<Boolean>? = null
 
-    fun invitation(ssid: String, password: String): String? {
+    fun invitation(ssid: String, password: String,
+                   security: UltraWifiSecurity = UltraWifiSecurity.WPA2): String? {
         val key = secret ?: return null
         val port = state.value.hostPort
         if (port == 0 || key.size != 32) return null
-        return runCatching { UltraInvitation(ssid,password,port,key).encode() }.getOrNull()
+        return runCatching { UltraInvitation(ssid,password,port,key,security).encode() }.getOrNull()
     }
 
     fun host() {
@@ -208,8 +209,11 @@ class UltraLanTransferManager(
             return
         }
         try {
-            val specifier=WifiNetworkSpecifier.Builder().setSsid(invite.ssid)
-                .setWpa2Passphrase(invite.password).build()
+            val builder=WifiNetworkSpecifier.Builder().setSsid(invite.ssid)
+            val specifier=when (invite.security) {
+                UltraWifiSecurity.WPA2 -> builder.setWpa2Passphrase(invite.password).build()
+                UltraWifiSecurity.WPA3 -> builder.setWpa3Passphrase(invite.password).build()
+            }
             val request=NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                 .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
