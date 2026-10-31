@@ -19,12 +19,13 @@ import androidx.compose.ui.unit.sp
 // SwiftMotion UI v1: a distinct signal-and-flow identity for SwiftDrop.
 object SwiftDropDesign {
     val Signal = Color(0xFF006C5B)
-    val Spark = Color(0xFFF27B56)
+    val Spark = Color(0xFFA6472F)
+    val SparkHighlight = Color(0xFFF27B56)
     val Ink = Color(0xFF152326)
     val Background = Color(0xFFF5F8F5)
     // Legacy names retained for existing screen calls; use semantic names in new code.
     val Blue = Signal
-    val Cyan = Spark
+    val Cyan = SparkHighlight
     val Navy = Ink
     val Small = 8.dp
     val Medium = 16.dp
@@ -42,7 +43,7 @@ object SwiftDropDesign {
 private val LightColors = lightColorScheme(
     primary = SwiftDropDesign.Signal, onPrimary = Color.White,
     primaryContainer = Color(0xFFD8F5E9), onPrimaryContainer = Color(0xFF103F34),
-    secondary = Color(0xFFA6472F), onSecondary = Color.White,
+    secondary = SwiftDropDesign.Spark, onSecondary = Color.White,
     secondaryContainer = Color(0xFFFFE5D9), onSecondaryContainer = Color(0xFF6E2C1E),
     tertiary = Color(0xFF526B0D), onTertiary = Color.White,
     tertiaryContainer = Color(0xFFE8F3C9), onTertiaryContainer = Color(0xFF344900),
