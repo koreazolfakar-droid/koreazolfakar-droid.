@@ -16,6 +16,7 @@ class UltraHotspotManifestTest {
         val attrs = (0 until nodes.length).map { nodes.item(it) as Element }
             .associateBy { it.getAttributeNS(ns, "name") }
         for (permission in listOf("android.permission.CHANGE_WIFI_STATE",
+            "android.permission.ACCESS_NETWORK_STATE",
             "android.permission.NEARBY_WIFI_DEVICES",
             "android.permission.ACCESS_FINE_LOCATION")) {
             val found = requireNotNull(attrs[permission]) { permission }
