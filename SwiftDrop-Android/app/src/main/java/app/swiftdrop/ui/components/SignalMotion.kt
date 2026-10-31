@@ -9,7 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -64,7 +64,7 @@ fun SignalOrbit(
     val track = colors.outlineVariant
     val knownProgress = fraction?.coerceIn(0f, 1f)
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(160.dp)) {
+        Canvas(Modifier.matchParentSize()) {
             val width = 9.dp.toPx()
             val radius = (size.minDimension - width) / 2f - 6.dp.toPx()
             drawCircle(track, radius = radius, style = Stroke(width))
